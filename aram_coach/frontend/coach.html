@@ -138,6 +138,21 @@ html, body {
     text-align: center; font-size: 10px; color: #566573;
     margin-top: 16px;
 }
+
+.deep-section {
+    margin-top: 20px;
+    border-top: 1px solid #1e2d3d;
+    padding-top: 16px;
+}
+.deep-btn {
+    width: 100%;
+    background: linear-gradient(135deg, #a855f7, #ec4899);
+    border: none; color: white; border-radius: 12px;
+    padding: 14px 16px; font-size: 14px; font-weight: 700; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    text-decoration: none;
+}
+.deep-btn:hover { filter: brightness(1.15); }
 </style>
 </head>
 <body>
@@ -155,6 +170,10 @@ html, body {
     </div>
 
     <div class="timestamp" id="ts"></div>
+
+    <div class="deep-section">
+        <a class="deep-btn" href="/deep">🔍 打开深度分析报告 →</a>
+    </div>
 </div>
 
 <script>

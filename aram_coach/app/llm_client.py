@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import httpx
@@ -175,6 +176,7 @@ class LLMClient:
         self,
         state: Dict[str, Any],
         question: str = "",
+        kb: Optional[Dict[str, Any]] = None,
     ) -> AsyncGenerator[str, None]:
         """流式生成对局分析"""
         if not self.enabled:
@@ -184,6 +186,10 @@ class LLMClient:
         prompt = _format_state_for_prompt(state)
         if question:
             prompt += f"\n\n【玩家追问】{question}"
+
+        if kb:
+            kb_text = json.dumps(kb, ensure_ascii=False, indent=2)
+            prompt += f"\n\n【乱斗知识库（版本参考）】\n{kb_text}"
 
         messages = [
             {"role": "system", "content": SYSTEM_PROMPT},
@@ -198,42 +204,41 @@ class LLMClient:
         payload = {
             "model": self.model,
             "messages": messages,
-            "stream": True,
+            "stream": False,
             "temperature": self.temperature,
-            "max_tokens": 1500,
+            "max_tokens": 16000,
+            "reasoning_effort": "low",
         }
 
         client = await self._get_client()
-        try:
-            async with client.stream("POST", url, json=payload, headers=headers) as resp:
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                resp = await client.post(url, json=payload, headers=headers)
+                if resp.status_code == 429:
+                    log.warning("LLM 429 rate limited, retry %d/%d in 2s", attempt + 1, max_retries)
+                    await asyncio.sleep(2)
+                    continue
                 if resp.status_code != 200:
-                    body = await resp.aread()
-                    log.error("LLM API error %s: %s", resp.status_code, body.decode()[:300])
-                    yield f"❌ API 错误 {resp.status_code}: {body.decode()[:200]}"
+                    log.error("LLM API error %s: %s", resp.status_code, resp.text[:300])
+                    yield f"❌ API 错误 {resp.status_code}: {resp.text[:200]}"
                     return
 
-                buffer = ""
-                async for line in resp.aiter_lines():
-                    if not line:
-                        continue
-                    if line.startswith("data:"):
-                        data = line[5:].strip()
-                        if data == "[DONE]":
-                            break
-                        try:
-                            chunk = json.loads(data)
-                            delta = chunk.get("choices", [{}])[0].get("delta", {})
-                            content = delta.get("content", "")
-                            if content:
-                                yield content
-                        except json.JSONDecodeError:
-                            continue
-        except httpx.TimeoutException:
-            log.error("LLM request timeout")
-            yield "⏱️ 请求超时了，网络可能有问题"
-        except Exception as e:
-            log.error("LLM stream error: %s", e)
-            yield f"❌ 出错了: {str(e)[:200]}"
+                data = resp.json()
+                content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+                if content:
+                    yield content
+                return
+            except httpx.TimeoutException:
+                log.error("LLM request timeout")
+                yield "⏱️ 请求超时了，网络可能有问题"
+                return
+            except Exception as e:
+                log.error("LLM error: %s", e)
+                yield f"❌ 出错了: {str(e)[:200]}"
+                return
+
+        yield "⏳ LLM 接口繁忙，请稍后再试（月之暗面账户并发限制）"
 
     async def close(self):
         if self._client:

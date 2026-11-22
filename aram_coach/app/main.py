@@ -1581,6 +1581,11 @@ async def coach_page():
     return FileResponse(str(BASE_DIR / "frontend" / "coach.html"))
 
 
+@app.get("/deep")
+async def deep_page():
+    return FileResponse(str(BASE_DIR / "frontend" / "deep.html"))
+
+
 @app.get("/api/state")
 async def api_state():
     return await collect_game_state()
@@ -1671,6 +1676,377 @@ async def api_coach_quick():
         return HTMLResponse(content=html)
     except Exception as e:
         return HTMLResponse(content=f"<div style='color:#ef5350;padding:20px;'>❌ 生成失败: {e}</div>")
+
+
+def _deep_analysis(state: Dict[str, Any]) -> str:
+    lines = []
+    lcd = state.get("lcd") or {}
+    active = lcd.get("active") or {}
+    stats = active.get("champion_stats") or {}
+    team_map = lcd.get("team_map") or {}
+    order = team_map.get("ORDER", [])
+    chaos = team_map.get("CHAOS", [])
+
+    my_info = None
+    for p in list(order) + list(chaos):
+        if p.get("is_me"):
+            my_info = p
+            break
+
+    my_champ = state.get("my_champion_name") or "未知"
+    my_role = (state.get("my_coach") or {}).get("role", "")
+    game_time = lcd.get("game_time", 0)
+    m, s = int(game_time // 60), int(game_time % 60)
+    gold = int(my_info.get("gold", 0)) if my_info else 0
+    level = my_info.get("level", "?") if my_info else "?"
+    phase = state.get("phase", "Unknown")
+    hp_pct = stats.get("hp_pct", 0)
+
+    my_team_gold = sum(int(p.get("gold", 0)) for p in order)
+    enemy_team_gold = sum(int(p.get("gold", 0)) for p in chaos)
+    gold_diff = my_team_gold - enemy_team_gold
+    my_alive = sum(1 for p in order if not p.get("is_dead", False))
+    enemy_alive = sum(1 for p in chaos if not p.get("is_dead", False))
+
+    kb = KNOWLEDGE_BASE
+    tier = kb.get("tier_list", {})
+    t0_raw = tier.get("t0", [])
+    t1_raw = tier.get("t1", [])
+    t0_names = set(x.get("name", x) if isinstance(x, dict) else x for x in t0_raw)
+    t1_names = set(x.get("name", x) if isinstance(x, dict) else x for x in t1_raw)
+    role_formulas = kb.get("core_build_recipes", {})
+    tips_kb = kb.get("champion_tips", {})
+
+    my_tier = ""
+    if my_champ in t0_names:
+        my_tier = "T0"
+    elif my_champ in t1_names:
+        my_tier = "T1"
+
+    lines.append("=" * 50)
+    lines.append(f"🎮 乱斗深度分析 · {my_champ} Lv.{level}")
+    lines.append(f"⏱️ {m}:{s} · 💰 {gold}G · ❤️ HP {hp_pct:.0f}%")
+    if my_tier:
+        lines.append(f"⭐ 英雄定位: {my_tier} {my_role}")
+    else:
+        lines.append(f"⭐ 英雄定位: {my_role}")
+    lines.append(f"📊 团队金币: 我方 {my_team_gold}G vs 敌方 {enemy_team_gold}G (差 {gold_diff:+d})")
+    lines.append("=" * 50)
+    lines.append("")
+
+    # 1. 局势判断
+    lines.append("🎯 一、局势深度判断")
+    lines.append("-" * 30)
+
+    adv_score = 0
+    reasons = []
+    if gold_diff > 1000:
+        adv_score += 2
+        reasons.append(f"团队经济领先 {gold_diff}G，装备压制")
+    elif gold_diff > 0:
+        adv_score += 1
+        reasons.append(f"团队经济小优 +{gold_diff}G")
+    elif gold_diff < -1000:
+        adv_score -= 2
+        reasons.append(f"团队经济落后 {-gold_diff}G，需要避战")
+    elif gold_diff < 0:
+        adv_score -= 1
+        reasons.append(f"团队经济小劣 {gold_diff}G")
+
+    if my_alive > enemy_alive + 1:
+        adv_score += 2
+        reasons.append(f"我方 {my_alive} 人存活 vs 敌方 {enemy_alive} 人，人数碾压")
+    elif my_alive > enemy_alive:
+        adv_score += 1
+        reasons.append(f"人数小优 ({my_alive} vs {enemy_alive})")
+    elif my_alive < enemy_alive - 1:
+        adv_score -= 2
+        reasons.append(f"我方 {my_alive} vs 敌方 {enemy_alive}，人数劣势")
+    elif my_alive < enemy_alive:
+        adv_score -= 1
+        reasons.append(f"人数小劣 ({my_alive} vs {enemy_alive})")
+
+    if my_tier == "T0":
+        adv_score += 1
+        reasons.append(f"T0 英雄自带强度加成")
+
+    if hp_pct < 30:
+        adv_score -= 2
+        reasons.append(f"血量极低 ({hp_pct:.0f}%)，容易被秒")
+    elif hp_pct < 50:
+        adv_score -= 1
+        reasons.append(f"血量偏低 ({hp_pct:.0f}%)，谨慎操作")
+
+    if adv_score >= 4:
+        verdict = "🟢 大优势 · 主动开团"
+    elif adv_score >= 1:
+        verdict = "🟡 小优势 · 稳扎稳打"
+    elif adv_score >= 0:
+        verdict = "⚪ 均势 · 找机会"
+    elif adv_score >= -2:
+        verdict = "🟠 小劣势 · 避战发育"
+    else:
+        verdict = "🔴 大劣势 · 缩塔等队友"
+
+    lines.append(f"结论: {verdict}")
+    for r in reasons:
+        lines.append(f"  • {r}")
+    if not reasons:
+        lines.append("  • 无明显优劣势，看操作")
+    lines.append("")
+
+    # 2. 属性面板解读
+    lines.append("💪 二、属性面板解读")
+    lines.append("-" * 30)
+    lines.append(f"  AD  {stats.get('ad', 0):.0f}    AP  {stats.get('ap', 0):.0f}")
+    lines.append(f"  护甲 {stats.get('armor', 0):.0f}    魔抗 {stats.get('mr', 0):.0f}")
+    lines.append(f"  攻速 {stats.get('attack_speed', 0):.2f}    移速 {stats.get('move_speed', 0):.0f}")
+    lines.append(f"  技能急速 {stats.get('ability_haste', 0):.0f}    暴击 {(stats.get('crit_chance', 0) * 100):.0f}%")
+    lines.append(f"  护穿 {stats.get('armor_pen_flat', 0):.0f}({(stats.get('armor_pen_pct', 0) * 100):.0f}%)    法穿 {stats.get('magic_pen_flat', 0):.0f}({(stats.get('magic_pen_pct', 0) * 100):.0f}%)")
+
+    panel_tips = []
+    if my_role in ("坦克", "战士"):
+        if stats.get('armor', 0) < 60 and any(champ in [p.get("champion","") for p in chaos] for champ in ["诺克萨斯之手","皮城执法官","祖安怒兽"]):
+            panel_tips.append("护甲偏低，对面有 AD 爆发，优先补护甲装")
+        if stats.get('mr', 0) < 50 and any(champ in [p.get("champion","") for p in chaos] for champ in ["黑暗之女","虚空之眼","邪恶小法师"]):
+            panel_tips.append("魔抗偏低，对面有 AP 爆发，考虑加魔抗")
+        if stats.get('ability_haste', 0) < 80:
+            panel_tips.append("技能急速偏低，大乱斗节奏快，CD 很重要")
+    elif my_role in ("法师",):
+        if stats.get('ap', 0) < 200:
+            panel_tips.append("法强偏低，优先堆法强（卢登/永霜/暗夜收割者）")
+        if stats.get('magic_pen_flat', 0) + stats.get('magic_pen_pct', 0) < 0.1:
+            panel_tips.append("法穿不足，对面有魔抗时需要法穿棒或虚空之杖")
+        if stats.get('hp_pct', 1) < 0.5:
+            panel_tips.append("法师脆皮，注意站位，别被雪球拉脸")
+    elif my_role in ("射手",):
+        if stats.get('attack_speed', 0) < 1.2:
+            panel_tips.append("攻速偏低，考虑补狂战士胫甲或鬼索")
+        if stats.get('crit_chance', 0) < 0.5:
+            panel_tips.append("暴击率不足，射手核心输出靠暴击")
+        if stats.get('armor_pen_pct', 0) < 0.15:
+            panel_tips.append("护穿不足，对面坦克多时需要塞瑞尔达或黑切")
+    elif my_role in ("刺客",):
+        if stats.get('armor', 0) < 40:
+            panel_tips.append("刺客太脆，进场容易被秒，考虑死亡之舞/守护天使")
+        if stats.get('ability_haste', 0) < 60:
+            panel_tips.append("刺客靠技能连招，CD 很重要")
+    if panel_tips:
+        lines.append("")
+        lines.append("面板建议:")
+        for t in panel_tips:
+            lines.append(f"  ⚠️ {t}")
+    lines.append("")
+
+    # 3. 装备路线
+    lines.append("🛒 三、装备路线规划")
+    lines.append("-" * 30)
+
+    my_items = []
+    if my_info:
+        my_items = [it.get("name", "") for it in my_info.get("items", []) if it.get("name")]
+    coach_build = (state.get("my_coach") or {}).get("build", [])
+
+    role_key = ""
+    for k in role_formulas:
+        if k in my_role or my_role in k:
+            role_key = k
+            break
+    if not role_key:
+        for k in ["坦克", "战士", "法师", "射手", "刺客"]:
+            if k in my_role:
+                role_key = k
+                break
+
+    formula = role_formulas.get(role_key, {}) if role_key else {}
+    formula_name = formula.get("name", "")
+    formula_items = formula.get("items", [])
+    formula_note = formula.get("note", "")
+
+    lines.append(f"你的角色: {my_role}")
+    if my_items:
+        lines.append(f"已购买: {' → '.join(my_items)}")
+    lines.append(f"知识库版本公式: {formula_name}")
+    if formula_items:
+        lines.append(f"推荐路线: {' → '.join(formula_items)}")
+    if coach_build:
+        lines.append(f"champions.json 路线: {' → '.join(coach_build)}")
+    if formula_note:
+        lines.append(f"版本备注: {formula_note}")
+
+    gold_needed = 0
+    next_item = ""
+    if coach_build and gold > 0:
+        for item_name in coach_build:
+            if item_name not in my_items:
+                for item_key, item_data in ITEM_MAP.items():
+                    if item_data.get("name") == item_name:
+                        gold_needed = item_data.get("gold", 0)
+                        break
+                next_item = item_name
+                break
+
+    if next_item and gold_needed:
+        lines.append("")
+        lines.append(f"下一件: 【{next_item}】 需 {gold_needed}G，你有 {gold}G")
+        if gold >= gold_needed:
+            lines.append("  ✅ 金币充足，回城立即出！")
+        else:
+            lines.append(f"  还需 {gold_needed - gold}G，大概 {max(1, (gold_needed - gold) // 25)} 波兵")
+
+    # 海克斯大乱斗专属
+    lines.append("")
+    lines.append("📐 海克斯大乱斗专属提示:")
+    if my_role in ("坦克",):
+        lines.append("  • 心之钢叠层是核心，别断！雪球拉脸接控再开团")
+        lines.append("  • 日炎圣盾对线期清兵快，可先出")
+    elif my_role in ("法师",):
+        lines.append("  • 珠光护手+炼狱导管是版本 T0 组合")
+        lines.append("  • 暗夜收割者比卢登更适合乱斗持续输出")
+    elif my_role in ("射手",):
+        lines.append("  • 不朽盾弓防暴毙，比狂风之力好")
+        lines.append("  • 海妖杀手打肉快，对面坦多就换")
+    elif my_role in ("刺客",):
+        lines.append("  • 巨蛇之牙破石像鬼，必备！")
+        lines.append("  • 幽梦之灵 + 暮刃双穿秒后排")
+    elif my_role in ("战士",):
+        lines.append("  • 焚天 + 黑切是版本答案")
+        lines.append("  • 死舞比渴血更适合乱斗节奏")
+    lines.append("")
+
+    # 4. 敌方威胁评估
+    lines.append("🔥 四、敌方威胁评估")
+    lines.append("-" * 30)
+
+    enemy_threats = []
+    for p in chaos:
+        champ = p.get("champion", "?")
+        k = p.get("kills", 0)
+        d = p.get("deaths", 0)
+        a = p.get("assists", 0)
+        dead = p.get("is_dead", False)
+        tier_tag = ""
+        if champ in t0_names:
+            tier_tag = " 🔥T0"
+        elif champ in t1_names:
+            tier_tag = " ⚡T1"
+
+        kda = k / max(1, d) + a / 2
+        threat = kda
+        if champ in t0_names:
+            threat += 3
+        elif champ in t1_names:
+            threat += 1.5
+        if dead:
+            threat -= 5
+
+        enemy_threats.append((threat, champ, k, d, a, dead, tier_tag))
+
+    enemy_threats.sort(key=lambda x: -x[0])
+
+    for threat, champ, k, d, a, dead, tier_tag in enemy_threats:
+        dead_tag = " 💀复活中" if dead else ""
+        lines.append(f"  • {champ} KDA={k}/{d}/{a}{dead_tag}{tier_tag}")
+
+    top_threat = enemy_threats[0] if enemy_threats else None
+    if top_threat and not top_threat[5]:
+        lines.append("")
+        lines.append(f"⚠️ 最需要盯防的: {top_threat[1]}{top_threat[6]}")
+        if top_threat[1] in t0_names:
+            lines.append("  这英雄版本 T0，即使 KDA 不高也别让他发育起来")
+    lines.append("")
+
+    # 5. 操作技巧
+    lines.append("⚡ 五、操作与团战技巧")
+    lines.append("-" * 30)
+
+    champ_tips = tips_kb.get(my_champ, [])
+    if champ_tips:
+        lines.append(f"【{my_champ} 专属技巧】")
+        for t in champ_tips[:5]:
+            lines.append(f"  🎯 {t}")
+        lines.append("")
+
+    lines.append("【雪球技巧】")
+    lines.append("  • 先 Q 再雪球：很多英雄技能命中后雪球更准")
+    lines.append("  • 雪球飞一半按回城：骗对面走位")
+    lines.append("  • 草丛躲雪球：雪球没视野会断")
+
+    lines.append("")
+    lines.append("【团战站位】")
+    if my_role in ("坦克",):
+        lines.append("  • 你在前排扛伤害，雪球拉敌方后排")
+        lines.append("  • 别冲太深，保护我方 C 位")
+    elif my_role in ("法师",):
+        lines.append("  • 站第二排 poke，别被雪球拉脸")
+        lines.append("  • 利用草丛卡视野放技能")
+    elif my_role in ("射手",):
+        lines.append("  • 最远输出距离，保持安全")
+        lines.append("  • 石像鬼或不朽盾弓防暴毙")
+    elif my_role in ("刺客",):
+        lines.append("  • 等对面 C 位露头或关键技能交了再进")
+        lines.append("  • 雪球进场 + 秒后排 + 撤")
+    elif my_role in ("战士",):
+        lines.append("  • 半前排，可进可退")
+        lines.append("  • 黑切叠层后追着砍")
+    lines.append("")
+
+    lines.append("【兵线与经济】")
+    lines.append(f"  • 你有 {gold}G，回城优先级：大件 > 小件 > 药水")
+    if gold < 500:
+        lines.append("  • 金币太少，清兵/助攻攒一波再回")
+    elif gold > 2000:
+        lines.append("  • 金币很多了，别贪，回城把装备拉满")
+    lines.append("")
+
+    # 6. 海克斯大乱斗强化符文
+    augments = kb.get("hextech_augments", {})
+    if augments:
+        lines.append("🎲 六、海克斯强化符文指南")
+        lines.append("-" * 30)
+
+        top_t0_augments = augments.get("t0_recommended", [])[:3]
+        if top_t0_augments:
+            lines.append("版本 T0 强化:")
+            for a in top_t0_augments:
+                lines.append(f"  ⭐ {a.get('name', a)} - {a.get('effect', '')}")
+
+        role_augments = augments.get(my_role, [])
+        if role_augments:
+            lines.append(f"")
+            lines.append(f"适合 {my_role} 的强化:")
+            for a in role_augments[:3]:
+                if isinstance(a, dict):
+                    lines.append(f"  • {a.get('name', a)} - {a.get('effect', '')}")
+                else:
+                    lines.append(f"  • {a}")
+        lines.append("")
+
+    lines.append("=" * 50)
+    lines.append(f"💡 以上基于本地知识库 v{kb.get('version', '?')} 生成 · 零延迟 · 零网络依赖")
+    lines.append("=" * 50)
+
+    return "\n".join(lines)
+
+
+@app.get("/api/coach/deep")
+async def api_coach_deep():
+    try:
+        state = await collect_game_state()
+        if llm_client.enabled:
+            log.info("Deep analysis: using LLM (%s)", llm_client.model)
+            chunks = []
+            async for chunk in llm_client.analyze(state, kb=KNOWLEDGE_BASE):
+                chunks.append(chunk)
+            text = "".join(chunks)
+            return {"analysis": text, "mode": "llm", "model": llm_client.model}
+        else:
+            log.info("Deep analysis: LLM not configured, fallback to rules")
+            text = _deep_analysis(state)
+            return {"analysis": text, "mode": "rules"}
+    except Exception as e:
+        log.exception("Deep analysis failed")
+        return {"analysis": f"❌ 分析失败: {e}"}
 
 
 @app.get("/api/lcu/status")
