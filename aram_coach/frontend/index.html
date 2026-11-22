@@ -1,0 +1,2212 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>ARAM Coach - 大乱斗实时指导</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: #0a0e17;
+    color: #e0e6ed;
+    min-height: 100vh;
+    padding: 20px;
+}
+.container {
+    max-width: 960px;
+    margin: 0 auto;
+}
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, #1a1f2e, #0f1420);
+    border: 1px solid #2a3142;
+    border-radius: 12px;
+    margin-bottom: 20px;
+}
+.header h1 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #4fc3f7;
+    letter-spacing: 0.5px;
+}
+.status-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+}
+.status-pill .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+.status-connected {
+    background: rgba(76, 175, 80, 0.15);
+    color: #81c784;
+    border: 1px solid rgba(76, 175, 80, 0.3);
+}
+.status-connected .dot { background: #4caf50; animation: pulse 2s infinite; }
+.status-waiting {
+    background: rgba(255, 193, 7, 0.1);
+    color: #ffb74d;
+    border: 1px solid rgba(255, 193, 7, 0.3);
+}
+.status-waiting .dot { background: #ffb74d; }
+.status-disconnected {
+    background: rgba(244, 67, 54, 0.1);
+    color: #ef5350;
+    border: 1px solid rgba(244, 67, 54, 0.3);
+}
+.status-disconnected .dot { background: #f44336; }
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+
+.phase-badge {
+    padding: 4px 12px;
+    background: rgba(79, 195, 247, 0.1);
+    border: 1px solid rgba(79, 195, 247, 0.3);
+    color: #4fc3f7;
+    border-radius: 6px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.panel {
+    background: linear-gradient(135deg, #1a1f2e, #0f1420);
+    border: 1px solid #2a3142;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+}
+.panel h2 {
+    font-size: 15px;
+    color: #90a4ae;
+    margin-bottom: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-weight: 600;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #607d8b;
+}
+.empty-state .icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+}
+.empty-state p {
+    font-size: 14px;
+    line-height: 1.8;
+}
+
+.champion-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid #2a3142;
+    border-radius: 10px;
+    padding: 18px;
+    margin-bottom: 12px;
+}
+.champion-card:last-child { margin-bottom: 0; }
+.champion-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #2a3142;
+}
+.champion-name {
+    font-size: 18px;
+    font-weight: 700;
+    color: #4fc3f7;
+}
+.champion-role {
+    padding: 2px 10px;
+    background: rgba(79, 195, 247, 0.15);
+    border: 1px solid rgba(79, 195, 247, 0.25);
+    color: #4fc3f7;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+}
+.champion-header.my-card .champion-name { color: #66bb6a; }
+.champion-header.my-card .champion-role {
+    background: rgba(102, 187, 106, 0.15);
+    border-color: rgba(102, 187, 106, 0.25);
+    color: #81c784;
+}
+
+.section { margin-bottom: 14px; }
+.section:last-child { margin-bottom: 0; }
+.section-title {
+    font-size: 12px;
+    color: #78909c;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.rune-box {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid #3a4558;
+    border-radius: 6px;
+    font-size: 13px;
+}
+.rune-primary { border-color: #ff9800; color: #ffb74d; }
+.rune-secondary { border-color: #9c27b0; color: #ba68c8; }
+
+.rune-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+.rune-chip {
+    padding: 3px 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+    font-size: 12px;
+    color: #cfd8dc;
+}
+
+.build-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+.build-item {
+    padding: 8px 14px;
+    background: linear-gradient(135deg, #2a3142, #1e2432);
+    border: 1px solid #3a4558;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+}
+.build-arrow {
+    color: #546e7a;
+    font-size: 14px;
+}
+
+.situational-item {
+    padding: 8px 12px;
+    background: rgba(255, 193, 7, 0.05);
+    border-left: 3px solid #ffb74d;
+    border-radius: 0 4px 4px 0;
+    margin-bottom: 6px;
+    font-size: 13px;
+}
+.situational-item:last-child { margin-bottom: 0; }
+.situational-item strong {
+    color: #ffb74d;
+    font-size: 12px;
+    margin-right: 6px;
+}
+
+.tips-list { list-style: none; }
+.tips-list li {
+    position: relative;
+    padding: 6px 0 6px 18px;
+    font-size: 13px;
+    color: #b0bec5;
+    line-height: 1.5;
+}
+.tips-list li::before {
+    content: '•';
+    position: absolute;
+    left: 0;
+    color: #4fc3f7;
+    font-weight: bold;
+}
+
+.special-tips {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+.special-tip {
+    padding: 12px;
+    background: rgba(79, 195, 247, 0.05);
+    border: 1px solid rgba(79, 195, 247, 0.2);
+    border-radius: 8px;
+}
+.special-tip-title {
+    font-size: 11px;
+    color: #4fc3f7;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+.special-tip-content {
+    font-size: 12px;
+    color: #b0bec5;
+    line-height: 1.5;
+}
+
+.team-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+.team-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid #2a3142;
+    border-radius: 10px;
+    padding: 14px;
+}
+.team-title {
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #2a3142;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+.team-ally .team-title { color: #81c784; border-color: rgba(102, 187, 106, 0.3); }
+.team-enemy .team-title { color: #ef5350; border-color: rgba(244, 67, 54, 0.3); }
+.team-role {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+    font-size: 13px;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+.team-role:last-child { border-bottom: none; }
+.team-role .role-name { color: #78909c; }
+.team-role .role-count { color: #cfd8dc; font-weight: 600; }
+
+.balance-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+.balance-even { background: rgba(76,175,80,0.15); color: #81c784; }
+.balance-minus { background: rgba(244,67,54,0.15); color: #ef5350; }
+.balance-plus { background: rgba(255,193,7,0.15); color: #ffb74d; }
+
+.quick-coach-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(135deg, #1a1f2e, #0f1420);
+    border-top: 2px solid #4fc3f7;
+    padding: 14px 20px;
+    z-index: 100;
+    transform: translateY(100%);
+    transition: transform 0.3s ease;
+}
+.quick-coach-bar.visible { transform: translateY(0); }
+.quick-coach-inner {
+    max-width: 960px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+.quick-coach-name {
+    font-size: 18px;
+    font-weight: 700;
+    color: #66bb6a;
+    min-width: 80px;
+}
+.quick-coach-text {
+    flex: 1;
+    font-size: 13px;
+    color: #cfd8dc;
+    line-height: 1.5;
+}
+.quick-coach-close {
+    background: none;
+    border: 1px solid #3a4558;
+    color: #78909c;
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+}
+.quick-coach-close:hover { border-color: #4fc3f7; color: #4fc3f7; }
+
+.role-bar {
+    display: flex;
+    gap: 4px;
+    margin-top: 4px;
+}
+.role-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    font-size: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    color: #0a0e17;
+}
+.role-tank { background: #ff9800; }
+.role-mage { background: #9c27b0; }
+.role-marksman { background: #f44336; }
+.role-assassin { background: #e91e63; }
+.role-fighter { background: #4caf50; }
+.role-support { background: #2196f3; }
+
+.reroll-card {
+    background: linear-gradient(135deg, #2a1f2e, #1a1420);
+    border: 2px solid #ffb74d;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+}
+.reroll-card.decision-reroll { border-color: #ef5350; background: linear-gradient(135deg, #2e1a1a, #201010); }
+.reroll-card.decision-keep { border-color: #66bb6a; background: linear-gradient(135deg, #1a2e1a, #102010); }
+.reroll-card.decision-consider { border-color: #ffb74d; background: linear-gradient(135deg, #2e2a1a, #201e10); }
+
+.reroll-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.reroll-emoji { font-size: 32px; }
+.reroll-title { font-size: 18px; font-weight: 700; }
+.reroll-decision-reroll .reroll-title { color: #ef5350; }
+.reroll-decision-keep .reroll-title { color: #66bb6a; }
+.reroll-decision-consider .reroll-title { color: #ffb74d; }
+.reroll-dice {
+    margin-left: auto;
+    display: flex;
+    gap: 4px;
+}
+.reroll-dice .dice {
+    width: 28px; height: 28px;
+    border-radius: 6px;
+    background: #3a4558;
+    border: 1px solid #546e7a;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700;
+    color: #78909c;
+}
+.reroll-dice .dice.available {
+    background: linear-gradient(135deg, #ffb74d, #ff9800);
+    border-color: #ff9800;
+    color: #fff;
+    box-shadow: 0 0 8px rgba(255,183,77,0.4);
+}
+
+.reroll-scores {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 12px;
+}
+.reroll-score-item {
+    flex: 1;
+    text-align: center;
+    padding: 10px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 8px;
+}
+.reroll-score-value {
+    font-size: 24px;
+    font-weight: 700;
+}
+.reroll-score-label {
+    font-size: 11px;
+    color: #78909c;
+    margin-top: 2px;
+}
+.score-high { color: #66bb6a; }
+.score-mid { color: #ffb74d; }
+.score-low { color: #ef5350; }
+
+.reroll-reason {
+    font-size: 14px;
+    color: #cfd8dc;
+    margin-bottom: 10px;
+    font-weight: 500;
+}
+.reroll-suggestions {
+    list-style: none;
+}
+.reroll-suggestions li {
+    font-size: 12px;
+    color: #90a4ae;
+    padding: 3px 0 3px 14px;
+    position: relative;
+}
+.reroll-suggestions li::before {
+    content: '▸';
+    position: absolute;
+    left: 0;
+    color: #ffb74d;
+}
+
+.live-status-bar {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 14px 18px;
+    background: linear-gradient(135deg, #1a2a1f, #101815);
+    border: 2px solid #66bb6a;
+    border-radius: 12px;
+    margin-bottom: 14px;
+}
+.live-stat {
+    text-align: center;
+    min-width: 70px;
+}
+.live-stat-value {
+    font-size: 22px;
+    font-weight: 700;
+    color: #66bb6a;
+}
+.live-stat-value.gold { color: #ffd54f; }
+.live-stat-value.hp-low { color: #ef5350; }
+.live-stat-label {
+    font-size: 10px;
+    color: #78909c;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 2px;
+}
+.live-hp-bar {
+    flex: 1;
+    max-width: 220px;
+}
+.live-hp-bar-inner {
+    height: 14px;
+    background: #2a3142;
+    border-radius: 7px;
+    overflow: hidden;
+}
+.live-hp-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4caf50, #66bb6a);
+    border-radius: 7px;
+    transition: width 0.3s;
+}
+.live-hp-fill.low { background: linear-gradient(90deg, #f44336, #ef5350); }
+.live-hp-fill.mid { background: linear-gradient(90deg, #ff9800, #ffb74d); }
+.live-hp-text {
+    font-size: 11px;
+    color: #90a4ae;
+    text-align: center;
+    margin-top: 3px;
+}
+.live-abilities {
+    display: flex;
+    gap: 6px;
+}
+.live-ab {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: #2a3142;
+    border: 1px solid #3a4558;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+}
+.live-ab.level { border-color: #ffd54f; color: #ffd54f; background: rgba(255,213,79,0.1); }
+.live-ab .lv { font-size: 10px; color: #78909c; font-weight: 500; }
+.live-ab .sym { font-size: 16px; color: #cfd8dc; }
+.live-ab.level .sym { color: #ffd54f; }
+
+.live-team-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    margin-bottom: 4px;
+    font-size: 13px;
+}
+.live-team-row.dead { background: rgba(244,67,54,0.1); opacity: 0.6; }
+.live-team-row.alive { background: rgba(76,175,80,0.08); }
+.live-team-row .lt-name { flex: 1; font-weight: 600; }
+.live-team-row .lt-dead { color: #ef5350; font-size: 11px; font-weight: 700; }
+.live-team-row .lt-kda { color: #90a4ae; font-size: 12px; }
+.live-team-row .lt-items { display: flex; gap: 2px; }
+.live-team-row .lt-item {
+    width: 20px; height: 20px;
+    border-radius: 3px;
+    background: #3a4558;
+    border: 1px solid #546e7a;
+    font-size: 9px;
+    display: flex; align-items: center; justify-content: center;
+    color: #cfd8dc;
+}
+.live-team-row .lt-respawn { color: #ff7043; font-size: 11px; }
+
+.attrs-panel {
+    background: #1a2332;
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-top: 10px;
+}
+.attrs-toggle {
+    cursor: pointer;
+    font-size: 12px;
+    color: #64b5f6;
+    font-weight: 600;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.attrs-toggle:hover { color: #90caf9; }
+.attrs-toggle .arrow { transition: transform 0.2s; }
+.attrs-toggle.open .arrow { transform: rotate(90deg); }
+.attrs-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px 12px;
+    margin-top: 10px;
+    font-size: 12px;
+}
+.attrs-grid.hidden { display: none; }
+.attr-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 2px 6px;
+    background: #0f1923;
+    border-radius: 4px;
+}
+.attr-row .attr-label { color: #78909c; }
+.attr-row .attr-val { color: #e0e0e0; font-weight: 600; }
+.attr-row .attr-val.pos { color: #81c784; }
+.attr-row .attr-val.gold { color: #ffd54f; }
+
+.team-panel {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-top: 10px;
+}
+.team-col-title {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #37474f;
+}
+.team-col-title.my { color: #66bb6a; }
+.team-col-title.enemy { color: #ef5350; }
+
+.player-card {
+    background: #1a2332;
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    border-left: 3px solid #546e7a;
+}
+.player-card.me { border-left-color: #ffd54f; background: #2a2510; }
+.player-card.dead { opacity: 0.55; border-left-color: #ef5350; }
+.player-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    font-weight: 600;
+}
+.player-head .name { color: #e0e0e0; }
+.player-head .name.me { color: #ffd54f; }
+.player-head .champ { color: #90a4ae; font-size: 11px; margin-left: 4px; }
+.player-head .lvl { background: #37474f; padding: 1px 6px; border-radius: 10px; font-size: 10px; color: #b0bec5; }
+.player-head .dead-tag { color: #ef5350; font-size: 11px; font-weight: 700; }
+.player-stats-row {
+    display: flex;
+    gap: 12px;
+    font-size: 11px;
+    color: #90a4ae;
+    margin-top: 3px;
+}
+.player-stats-row .kda { color: #e0e0e0; font-weight: 600; }
+.player-stats-row .gold-earned { color: #ffd54f; }
+.player-stats-row .dmg { color: #ff8a65; }
+.player-stats-row .kda-val.good { color: #81c784; }
+.player-stats-row .kda-val.mid { color: #ffd54f; }
+.player-stats-row .kda-val.bad { color: #ef5350; }
+.player-items-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    margin-top: 5px;
+}
+.player-item-chip {
+    background: #2a3545;
+    border: 1px solid #455a64;
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-size: 10px;
+    color: #b0bec5;
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.player-item-chip.empty {
+    background: transparent;
+    border: 1px dashed #37474f;
+    color: #455a64;
+}
+
+.gold-summary {
+    background: #1a2332;
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-top: 10px;
+    display: flex;
+    justify-content: space-around;
+    font-size: 13px;
+}
+.gold-summary .gs-item { text-align: center; }
+.gold-summary .gs-val { font-weight: 700; font-size: 16px; }
+.gold-summary .gs-label { color: #78909c; font-size: 11px; margin-top: 2px; }
+.gold-summary .diff-pos .gs-val { color: #66bb6a; }
+.gold-summary .diff-neg .gs-val { color: #ef5350; }
+
+.ai-coach-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 12px;
+}
+.ai-coach-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(102,126,234,0.4); }
+.ai-coach-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+.coach-btn-row { display: flex; gap: 10px; margin-top: 12px; }
+.coach-btn-row .ai-coach-btn { margin-top: 0; flex: 1; justify-content: center; font-size: 12px; padding: 8px 12px; }
+.md-export-btn { background: linear-gradient(135deg, #43cea2 0%, #185a9d 100%); }
+.md-export-btn:hover { box-shadow: 0 4px 15px rgba(67,206,162,0.4); }
+
+.md-viewer-overlay {
+    position: fixed; inset: 0; z-index: 10000;
+    background: rgba(10,15,25,0.85);
+    display: flex; align-items: center; justify-content: center;
+}
+.md-viewer {
+    width: 90%; max-width: 900px; height: 85vh;
+    background: #0f1923; border-radius: 14px;
+    border: 1px solid #1e2d3d;
+    display: flex; flex-direction: column; overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+.md-viewer-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 20px; border-bottom: 1px solid #1e2d3d;
+    background: linear-gradient(90deg, #1a2942, #0f1923);
+}
+.md-viewer-header h3 { margin: 0; font-size: 15px; color: #43cea2; }
+.md-viewer-header .md-close {
+    background: none; border: none; color: #8899aa; font-size: 20px;
+    cursor: pointer; padding: 4px 10px; border-radius: 6px;
+}
+.md-viewer-header .md-close:hover { background: #1e2d3d; color: #fff; }
+.md-viewer-body {
+    flex: 1; overflow: auto; padding: 20px;
+    font-family: "Cascadia Code", "Consolas", monospace;
+    font-size: 12.5px; line-height: 1.7;
+    color: #c8d6e5; white-space: pre-wrap; word-wrap: break-word;
+}
+.md-viewer-footer {
+    padding: 10px 20px; border-top: 1px solid #1e2d3d;
+    display: flex; gap: 10px; justify-content: flex-end;
+}
+.md-viewer-footer button {
+    background: #1e2d3d; color: #c8d6e5; border: 1px solid #2d4a5a;
+    padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 12px;
+}
+.md-viewer-footer button:hover { background: #2d4a5a; }
+.md-viewer-footer .md-copy-btn { background: linear-gradient(135deg, #43cea2, #185a9d); border: none; }
+
+.ai-modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.ai-modal {
+    background: #1a2332;
+    border-radius: 14px;
+    width: 560px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    border: 1px solid #37474f;
+    overflow: hidden;
+}
+.ai-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 18px;
+    border-bottom: 1px solid #2a3545;
+    background: linear-gradient(135deg, #667eea22, #764ba222);
+}
+.ai-modal-header h3 { margin: 0; color: #e0e0e0; font-size: 15px; }
+.ai-modal-close {
+    background: none; border: none; color: #78909c;
+    font-size: 20px; cursor: pointer; line-height: 1;
+}
+.ai-modal-close:hover { color: #e0e0e0; }
+.quick-refresh-btn {
+    background: linear-gradient(135deg, #43cea2, #185a9d);
+    border: none; color: white; font-size: 15px;
+    width: 30px; height: 30px; border-radius: 50%;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.quick-refresh-btn:hover { filter: brightness(1.2); }
+
+.ai-modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px 18px;
+}
+.ai-answer {
+    background: #0f1923;
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-size: 13px;
+    line-height: 1.7;
+    color: #cfd8dc;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.ai-answer.loading::after {
+    content: '▊';
+    color: #667eea;
+    animation: blink 1s step-end infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+.ai-quick-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+.ai-quick-chip {
+    background: #2a3545;
+    border: 1px solid #455a64;
+    border-radius: 14px;
+    padding: 4px 12px;
+    font-size: 11px;
+    color: #b0bec5;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.ai-quick-chip:hover { background: #3a4758; color: #e0e0e0; border-color: #667eea; }
+
+.ai-input-row {
+    display: flex;
+    gap: 8px;
+    padding: 12px 18px;
+    border-top: 1px solid #2a3545;
+    background: #0f1923;
+}
+.ai-input-row input {
+    flex: 1;
+    background: #1a2332;
+    border: 1px solid #37474f;
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: #e0e0e0;
+    font-size: 13px;
+    outline: none;
+}
+.ai-input-row input:focus { border-color: #667eea; }
+.ai-input-row button {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 0 20px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.ai-input-row button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.event-stream {
+    max-height: 180px;
+    overflow-y: auto;
+}
+.event-stream::-webkit-scrollbar { width: 4px; }
+.event-stream::-webkit-scrollbar-thumb { background: #3a4558; border-radius: 2px; }
+.event-item {
+    padding: 5px 10px;
+    font-size: 12px;
+    border-left: 3px solid #3a4558;
+    margin-bottom: 2px;
+    background: rgba(255,255,255,0.02);
+    border-radius: 0 4px 4px 0;
+}
+.event-item.ekill { border-color: #f44336; color: #ef9a9a; }
+.event-item.edragon { border-color: #ff9800; color: #ffcc80; }
+.event-item.eturret { border-color: #2196f3; color: #90caf9; }
+.event-item.ebaron { border-color: #9c27b0; color: #ce93d8; }
+.event-item.einhib { border-color: #00bcd4; color: #80deea; }
+
+.build-progress {
+    background: linear-gradient(135deg, #1a2a1f, #102015);
+    border: 2px solid #ffd54f;
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin-bottom: 14px;
+}
+.build-progress-title {
+    font-size: 12px;
+    color: #ffd54f;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+.build-progress-items {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+.bp-item {
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    border: 1px solid #3a4558;
+    background: rgba(255,255,255,0.03);
+}
+.bp-item.have {
+    background: rgba(76,175,80,0.15);
+    border-color: rgba(76,175,80,0.4);
+    color: #81c784;
+}
+.bp-item.next {
+    background: rgba(255,193,7,0.15);
+    border-color: #ffb74d;
+    color: #ffb74d;
+    font-weight: 700;
+    box-shadow: 0 0 6px rgba(255,183,77,0.3);
+}
+.bp-item.later { color: #607d8b; }
+.bp-arrow { color: #546e7a; font-size: 12px; }
+
+@media (max-width: 600px) {
+    .team-section { grid-template-columns: 1fr; }
+    .special-tips { grid-template-columns: 1fr; }
+    .live-status-bar { flex-wrap: wrap; gap: 10px; }
+}
+
+.composite-panel {
+    background: linear-gradient(135deg, #1e2a3a, #0f1923);
+    border: 1px solid #2d4a6a;
+    border-radius: 12px;
+    padding: 18px;
+    margin-bottom: 16px;
+    position: relative;
+    overflow: hidden;
+}
+.composite-panel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #64b5f6, #42a5f5, #1e88e5);
+}
+.composite-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+}
+.composite-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #64b5f6;
+    letter-spacing: 1px;
+}
+.composite-score {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.score-circle {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: 800;
+    color: #fff;
+    flex-shrink: 0;
+}
+.score-circle.high { background: linear-gradient(135deg, #4caf50, #2e7d32); box-shadow: 0 0 16px rgba(76,175,80,0.5); }
+.score-circle.mid { background: linear-gradient(135deg, #ff9800, #e65100); box-shadow: 0 0 16px rgba(255,152,0,0.5); }
+.score-circle.low { background: linear-gradient(135deg, #f44336, #b71c1c); box-shadow: 0 0 16px rgba(244,67,54,0.5); }
+.score-breakdown {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.score-breakdown-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: #b0bec5;
+}
+.score-breakdown-bar {
+    flex: 1;
+    height: 6px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 3px;
+    overflow: hidden;
+    min-width: 60px;
+    max-width: 120px;
+}
+.score-breakdown-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.5s ease;
+}
+.score-breakdown-fill.high { background: linear-gradient(90deg, #4caf50, #66bb6a); }
+.score-breakdown-fill.mid { background: linear-gradient(90deg, #ff9800, #ffa726); }
+.score-breakdown-fill.low { background: linear-gradient(90deg, #f44336, #ef5350); }
+.action-card {
+    background: rgba(0,0,0,0.25);
+    border-left: 3px solid #64b5f6;
+    padding: 12px 14px;
+    border-radius: 6px;
+    margin-bottom: 12px;
+}
+.action-card.highlight { border-left-color: #ffd54f; background: rgba(255,213,79,0.08); }
+.action-title { font-size: 12px; color: #78909c; margin-bottom: 4px; }
+.action-value { font-size: 15px; font-weight: 600; color: #eceff1; }
+.advice-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+.advice-tip-card {
+    background: rgba(255,255,255,0.04);
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #cfd8dc;
+}
+.advice-tip-card .label { font-size: 11px; color: #78909c; margin-bottom: 4px; text-transform: uppercase; }
+.advice-tip-card.gold { border-left: 3px solid #ffd54f; }
+.advice-tip-card.hp { border-left: 3px solid #ef5350; }
+.teamfight-card {
+    background: rgba(0,0,0,0.3);
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+}
+.tf-side { text-align: center; }
+.tf-label { font-size: 11px; color: #78909c; margin-bottom: 4px; }
+.tf-count { font-size: 24px; font-weight: 800; }
+.tf-count.me { color: #42a5f5; }
+.tf-count.enemy { color: #ef5350; }
+.tf-vs { font-size: 18px; color: #546e7a; font-weight: 700; }
+.tf-adv { font-size: 12px; font-weight: 600; }
+.tf-adv.plus { color: #4caf50; }
+.tf-adv.minus { color: #ef5350; }
+.suggestions-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.suggestions-list li {
+    padding: 8px 12px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 6px;
+    margin-bottom: 6px;
+    font-size: 13px;
+    color: #b0bec5;
+    border-left: 2px solid transparent;
+}
+.suggestions-list li:first-child { border-left-color: #ffd54f; }
+.build-rec-card {
+    background: linear-gradient(135deg, #2a1f3a, #1a1428);
+    border: 1px solid #4a3f5a;
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 12px;
+}
+.build-rec-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+.build-rec-title { font-size: 13px; color: #ce93d8; font-weight: 600; }
+.build-rec-progress { font-size: 12px; color: #9575cd; }
+.build-rec-items {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.build-rec-item {
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+}
+.build-rec-item.done {
+    background: rgba(76,175,80,0.2);
+    color: #81c784;
+    text-decoration: line-through;
+}
+.build-rec-item.next {
+    background: rgba(255,213,79,0.2);
+    color: #ffd54f;
+    border: 1px solid #ffd54f;
+    animation: pulse 1.5s infinite;
+}
+.build-rec-item.later {
+    background: rgba(255,255,255,0.05);
+    color: #607d8b;
+}
+@keyframes pulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(255,213,79,0.4); }
+    50% { box-shadow: 0 0 0 6px rgba(255,213,79,0); }
+}
+
+#dice-toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    width: 340px;
+    background: linear-gradient(135deg, #1a2744, #0f1a2e);
+    border: 1px solid #4a6fa5;
+    border-radius: 14px;
+    z-index: 9999;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 24px rgba(100,181,246,0.3);
+    transform: translateX(120%);
+    opacity: 0;
+    transition: all 0.35s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+    overflow: hidden;
+}
+#dice-toast.show {
+    transform: translateX(0);
+    opacity: 1;
+}
+.dt-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: linear-gradient(90deg, rgba(100,181,246,0.2), transparent);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.dt-icon { font-size: 24px; }
+.dt-title { font-size: 15px; font-weight: 700; color: #64b5f6; letter-spacing: 1px; flex: 1; }
+.dt-close { color: #78909c; cursor: pointer; font-size: 16px; transition: color 0.2s; }
+.dt-close:hover { color: #eceff1; }
+.dt-body { padding: 14px 16px; }
+.dt-champ { font-size: 14px; color: #b0bec5; margin-bottom: 12px; }
+.dt-champ strong { color: #ffd54f; font-size: 16px; }
+.dt-score-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+.dt-score-circle {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: 800; color: #fff; flex-shrink: 0;
+}
+.dt-score-circle.high { background: linear-gradient(135deg, #4caf50, #2e7d32); }
+.dt-score-circle.mid { background: linear-gradient(135deg, #ff9800, #e65100); }
+.dt-score-circle.low { background: linear-gradient(135deg, #f44336, #b71c1c); }
+.dt-breakdowns { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.dt-breakdown { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #90a4ae; }
+.dt-breakdown span:first-child { width: 44px; }
+.dt-bar { flex: 1; height: 5px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; }
+.dt-fill { height: 100%; border-radius: 3px; }
+.dt-fill.high { background: #4caf50; }
+.dt-fill.mid { background: #ff9800; }
+.dt-fill.low { background: #f44336; }
+.dt-action {
+    background: rgba(255,213,79,0.1);
+    border-left: 3px solid #ffd54f;
+    padding: 8px 10px;
+    border-radius: 4px;
+    font-size: 13px;
+    color: #ffd54f;
+    margin-bottom: 8px;
+}
+.dt-tip { font-size: 12px; color: #78909c; }
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>🎯 ARAM Coach</h1>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <span class="phase-badge" id="phase-badge">等待中</span>
+            <span class="status-pill" id="lcu-status">
+                <span class="dot"></span>
+                <span id="lcu-text">等待 LoL 客户端连接</span>
+            </span>
+        </div>
+    </div>
+
+    <div id="main-content">
+        <div class="panel">
+            <div class="empty-state">
+                <div class="icon">🎮</div>
+                <p>
+                    ARAM Coach 已启动<br>
+                    请启动 LoL 客户端并进入大乱斗对局<br>
+                    连接成功后这里会实时显示指导内容
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="quick-coach-bar" id="quick-bar">
+    <div class="quick-coach-inner">
+        <div class="quick-coach-name" id="quick-name">--</div>
+        <div class="quick-coach-text" id="quick-tip">--</div>
+        <button class="quick-coach-close" onclick="hideQuick()">忽略</button>
+    </div>
+</div>
+
+<script>
+let ws = null;
+let currentState = null;
+let phaseCounts = {};
+
+function connectWS() {
+    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    ws = new WebSocket(`${proto}//${location.host}/ws`);
+    ws.onopen = () => console.log('WS connected');
+    ws.onmessage = (ev) => {
+        const msg = JSON.parse(ev.data);
+        if (msg.type === 'initial' || msg.type === 'state_update') {
+            currentState = msg.data;
+            render();
+        } else if (msg.type === 'phase_change') {
+            currentState = msg.data;
+            render();
+            flashPhase();
+        } else if (msg.type === 'dice_rolled') {
+            const d = msg.data;
+            showDiceToast(d);
+        } else if (msg.type === 'level_up') {
+            const d = msg.data;
+            showLevelUpToast(d);
+        }
+    };
+    ws.onclose = () => {
+        setTimeout(connectWS, 2000);
+    };
+}
+
+function flashPhase() {
+    const bar = document.getElementById('quick-bar');
+    const name = document.getElementById('quick-name');
+    const tip = document.getElementById('quick-tip');
+    if (currentState && currentState.my_coach) {
+        name.textContent = currentState.my_champion_name || currentState.my_coach.name;
+        tip.textContent = currentState.my_coach.tips[0] || '进入大乱斗，加油！';
+        bar.classList.add('visible');
+        setTimeout(hideQuick, 8000);
+    }
+}
+
+function hideQuick() {
+    document.getElementById('quick-bar').classList.remove('visible');
+}
+
+function showDiceToast(d) {
+    let toast = document.getElementById('dice-toast');
+    if (toast) toast.remove();
+    toast = document.createElement('div');
+    toast.id = 'dice-toast';
+    const ca = d.composite || {};
+    const score = ca.score || 0;
+    const sc = scoreClass(score);
+    const breakdown = ca.score_breakdown || {};
+    const breakdownHtml = Object.entries(breakdown).map(([k, v]) =>
+        `<div class="dt-breakdown"><span>${k}</span><div class="dt-bar"><div class="dt-fill ${scoreClass(v)}" style="width:${v}%"></div></div><span>${Math.round(v)}</span></div>`
+    ).join('');
+    let actionText = ca.immediate_action || '';
+    const newName = d.new_champion_name || '???';
+    toast.innerHTML = `
+        <div class="dt-header">
+            <span class="dt-icon">🎲</span>
+            <span class="dt-title">骰子重随！</span>
+            <span class="dt-close">✕</span>
+        </div>
+        <div class="dt-body">
+            <div class="dt-champ">新英雄: <strong>${newName}</strong></div>
+            <div class="dt-score-wrap">
+                <div class="dt-score-circle ${sc}">${score}</div>
+                <div class="dt-breakdowns">${breakdownHtml}</div>
+            </div>
+            ${actionText ? `<div class="dt-action">🎯 ${actionText}</div>` : ''}
+            <div class="dt-tip">剩余骰子: ${d.remaining_dice}</div>
+        </div>
+    `;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.classList.add('show'), 10);
+    toast.querySelector('.dt-close').onclick = () => toast.remove();
+    setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 8000);
+}
+
+function showLevelUpToast(d) {
+    let toast = document.getElementById('levelup-toast');
+    if (toast) toast.remove();
+    toast = document.createElement('div');
+    toast.id = 'levelup-toast';
+    const ca = d.composite || {};
+    const score = ca.score || 0;
+    const sc = scoreClass(score);
+    toast.innerHTML = `
+        <div class="dt-header" style="background: linear-gradient(90deg, rgba(255,152,0,0.2), transparent);">
+            <span class="dt-icon">⭐</span>
+            <span class="dt-title" style="color:#ffb74d">升级了！Lv.${d.old_level} → Lv.${d.new_level}</span>
+            <span class="dt-close">✕</span>
+        </div>
+        <div class="dt-body">
+            <div class="dt-champ">可能触发<strong style="color:#ffb74d">强化符文</strong>选择界面</div>
+            <div class="dt-score-wrap">
+                <div class="dt-score-circle ${sc}">${score}</div>
+                <div class="dt-breakdowns">
+                    <div class="dt-breakdown"><span>金币</span><span style="color:#ffd54f">${d.gold || 0}</span></div>
+                </div>
+            </div>
+            ${ca.immediate_action ? `<div class="dt-action">🎯 ${ca.immediate_action}</div>` : ''}
+            <div class="dt-tip">趁升级窗口，想想要不要重随符文？</div>
+        </div>
+    `;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.classList.add('show'), 10);
+    toast.querySelector('.dt-close').onclick = () => toast.remove();
+    setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 6000);
+}
+
+function render() {
+    if (!currentState) return;
+    const s = currentState;
+
+    const status = document.getElementById('lcu-status');
+    const lcuText = document.getElementById('lcu-text');
+    if (s.lcu_connected) {
+        status.className = 'status-pill status-connected';
+        lcuText.textContent = 'LoL 已连接';
+    } else {
+        status.className = 'status-pill status-waiting';
+        lcuText.textContent = '等待 LoL 客户端';
+    }
+
+    const phaseLabel = {
+        'None': '空闲', 'Lobby': '大厅', 'Matchmaking': '匹配中',
+        'ReadyCheck': '准备确认', 'ChampSelect': '选英雄',
+        'GameStart': '加载中', 'InProgress': '对局中',
+        'Reconnect': '重连中', 'WaitingForStats': '结算',
+        'PreEndOfGame': '结算', 'EndOfGame': '已结束'
+    };
+    document.getElementById('phase-badge').textContent = phaseLabel[s.phase] || s.phase;
+
+    const main = document.getElementById('main-content');
+    if (!s.lcu_connected) {
+        main.innerHTML = emptyPanel();
+    } else if (s.phase === 'ChampSelect') {
+        main.innerHTML = renderChampSelect(s);
+    } else if (['GameStart', 'InProgress', 'Reconnect'].includes(s.phase)) {
+        main.innerHTML = renderInGame(s);
+    } else {
+        main.innerHTML = emptyPanel('等待进入大乱斗对局...', '请点击 Play → ARAM 开始匹配');
+    }
+}
+
+function emptyPanel(title, subtitle) {
+    return `<div class="panel">
+        <div class="empty-state">
+            <div class="icon">🎮</div>
+            <p>${title || '等待 LoL 客户端连接'}${subtitle ? '<br>' + subtitle : ''}</p>
+        </div>
+    </div>`;
+}
+
+function renderRerollCard(a) {
+    if (!a) return '';
+    const emojis = { reroll: '🎲', keep: '✅', consider: '🤔' };
+    const titles = { reroll: '建议骰子重随', keep: '建议保留这个英雄', consider: '看你自己喜好' };
+    const scoreClass = s => s >= 70 ? 'score-high' : s >= 50 ? 'score-mid' : 'score-low';
+    const strengthClass = scoreClass(a.strength);
+    const fitnessClass = scoreClass(a.fitness);
+    const diceHtml = [0, 1].map(i =>
+        `<div class="dice ${i < a.remaining_dice ? 'available' : ''}">⚀</div>`
+    ).join('');
+    const suggestionsHtml = (a.suggestions || []).length
+        ? `<ul class="reroll-suggestions">${a.suggestions.map(r => `<li>${r}</li>`).join('')}</ul>` : '';
+
+    return `
+        <div class="reroll-card decision-${a.decision} reroll-decision-${a.decision}">
+            <div class="reroll-header">
+                <span class="reroll-emoji">${emojis[a.decision] || '🎲'}</span>
+                <span class="reroll-title">${titles[a.decision] || '骰子建议'}</span>
+                <div class="reroll-dice">${diceHtml}</div>
+            </div>
+            <div class="reroll-scores">
+                <div class="reroll-score-item">
+                    <div class="reroll-score-value ${strengthClass}">${a.strength}</div>
+                    <div class="reroll-score-label">英雄强度</div>
+                </div>
+                <div class="reroll-score-item">
+                    <div class="reroll-score-value ${fitnessClass}">${a.fitness}</div>
+                    <div class="reroll-score-label">阵容适配</div>
+                </div>
+                <div class="reroll-score-item">
+                    <div class="reroll-score-value ${scoreClass(a.score)}">${a.score}</div>
+                    <div class="reroll-score-label">综合分</div>
+                </div>
+            </div>
+            <div class="reroll-reason">${a.reason}</div>
+            ${suggestionsHtml}
+        </div>`;
+}
+
+function renderChampSelect(s) {
+    let myHtml = '';
+    if (s.my_coach) {
+        myHtml = renderCoachCard(s.my_coach, true);
+    } else {
+        myHtml = `<div class="panel"><div class="empty-state"><div class="icon">🎲</div><p>等待随机英雄...</p></div></div>`;
+    }
+
+    const compositeHtml = renderCompositePanel(s);
+
+    let rerollHtml = '';
+    if (s.reroll_advice) {
+        rerollHtml = renderRerollCard(s.reroll_advice);
+    }
+
+    let teamAnalysis = '';
+    if ((s.my_team && s.my_team.length) || (s.enemy_team && s.enemy_team.length)) {
+        teamAnalysis = renderTeamAnalysis(s.my_team || [], s.enemy_team || []);
+    }
+
+    return compositeHtml + rerollHtml + myHtml + teamAnalysis;
+}
+
+function renderMatchupAnalysis(m) {
+    if (!m) return '';
+    const itemAdvHtml = (m.item_advs || []).map(a => `<div class="situational-item" style="border-left:3px solid #ffb74d;"><strong>🛡️</strong>${a}</div>`).join('');
+    const tipsHtml = (m.tips || []).map(t => `<div class="situational-item" style="border-left:3px solid #ef5350;"><strong>💀</strong>${t}</div>`).join('');
+    const apRatio = m.enemy_ap_count / Math.max(1, m.enemy_ap_count + m.enemy_ad_count);
+
+    return `
+        <div class="panel" style="background:linear-gradient(135deg,#1a2a3a,#16202b);">
+            <div class="champion-header" style="border-bottom:1px solid rgba(255,255,255,0.1);">
+                <span class="champion-name">🎯 敌方阵容分析</span>
+                <span style="margin-left:auto;font-size:12px;color:#78909c;">
+                    AP ${m.enemy_ap_count} · AD ${m.enemy_ad_count} (${Math.round(apRatio*100)}% AP)
+                </span>
+            </div>
+            ${itemAdvHtml ? `<div class="section" style="margin-bottom:8px;">${itemAdvHtml}</div>` : ''}
+            ${tipsHtml ? `<div class="section">${tipsHtml}</div>` : ''}
+        </div>`;
+}
+
+function renderEnemyMiniList(enemies) {
+    if (!enemies || !enemies.length) return '';
+    return `<div class="panel" style="padding:14px 18px;">
+        <div style="font-size:13px;font-weight:600;color:#ef9a9a;margin-bottom:10px;">⚔️ 敌方英雄</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+            ${enemies.map(e => `
+                <div style="display:flex;align-items:center;gap:6px;background:rgba(239,83,80,0.12);border:1px solid rgba(239,83,80,0.3);border-radius:6px;padding:4px 10px;font-size:13px;">
+                    <span>${e.champion_name || '?'}</span>
+                    ${e.coach ? `<span style="color:#78909c;font-size:11px;">${e.coach.role}</span>` : ''}
+                </div>
+            `).join('')}
+        </div>
+    </div>`;
+}
+
+function renderInGame(s) {
+    let liveHtml = '';
+    if (s.lcd && s.lcd.available) {
+        liveHtml = renderLiveStatus(s.lcd);
+    }
+    const compositeHtml = renderCompositePanel(s);
+    let matchupHtml = renderMatchupAnalysis(s.matchup_analysis);
+    let buildProgHtml = '';
+    if (s.lcd && s.lcd.available && s.my_coach) {
+        buildProgHtml = renderBuildProgress(s.lcd, s.my_coach);
+    }
+    let teamHtml = '';
+    if (s.lcd && s.lcd.available) {
+        teamHtml = renderLiveTeamPanel(s.lcd);
+    }
+    let eventHtml = '';
+    if (s.lcd && s.lcd.available && s.lcd.events && s.lcd.events.length) {
+        eventHtml = renderEventStream(s.lcd.events);
+    }
+    let coachHtml = '';
+    if (s.my_coach) {
+        coachHtml = renderCoachCard(s.my_coach, true);
+    } else {
+        coachHtml = `<div class="panel"><div class="empty-state"><div class="icon">⚔️</div><p>对局中...<br>英雄数据加载中</p></div></div>`;
+    }
+    return liveHtml + compositeHtml + buildProgHtml + matchupHtml + teamHtml + eventHtml + coachHtml;
+}
+
+function renderLiveStatus(lcd) {
+    const a = lcd.active || {};
+    const st = a.champion_stats || {};
+    const gold = Math.round(a.gold || 0);
+    const level = a.level || 1;
+    const hp = Math.round(st.hp || 0);
+    const maxHp = Math.round(st.max_hp || 1);
+    const hpPct = st.hp_pct || (maxHp > 0 ? Math.max(0, Math.min(100, (hp / maxHp) * 100)) : 0);
+    const hpClass = hpPct < 25 ? 'low' : hpPct < 50 ? 'mid' : '';
+    const abilities = a.abilities || {};
+    const gameTime = lcd.game_time || 0;
+    const gMin = Math.floor(gameTime / 60);
+    const gSec = Math.floor(gameTime % 60);
+
+    const abSymbols = { Q: 'Q', W: 'W', E: 'E', R: 'R', Passive: '被动' };
+    const abOrder = ['Q', 'W', 'E', 'R'];
+    const abHtml = abOrder.map(k => {
+        const ab = abilities[k] || {};
+        const lv = ab.level;
+        const cls = lv ? 'level' : '';
+        return `<div class="live-ab ${cls}"><span class="sym">${abSymbols[k]}</span>${lv ? `<span class="lv">Lv${lv}</span>` : ''}</div>`;
+    }).join('');
+
+    const attrGroups = [
+        {
+            title: '🗡️ 输出',
+            items: [
+                ['攻击力', st.ad],
+                ['法强', st.ap],
+                ['攻击速度', st.attack_speed],
+                ['暴击率', st.crit_chance ? (st.crit_chance * 100).toFixed(1) + '%' : 0],
+                ['暴击伤害', st.crit_damage ? (st.crit_damage * 100).toFixed(1) + '%' : 0],
+                ['攻击范围', st.attack_range],
+            ],
+        },
+        {
+            title: '🛡️ 生存',
+            items: [
+                ['护甲', st.armor],
+                ['魔抗', st.mr],
+                ['生命值', hp + '/' + maxHp],
+                ['生命回复', st.health_regen],
+                ['吸血', st.life_steal ? (st.life_steal * 100).toFixed(1) + '%' : 0],
+                ['全能吸血', st.omnivamp ? (st.omnivamp * 100).toFixed(1) + '%' : 0],
+                ['物理吸血', st.physical_vamp ? (st.physical_vamp * 100).toFixed(1) + '%' : 0],
+                ['法术吸血', st.spell_vamp ? (st.spell_vamp * 100).toFixed(1) + '%' : 0],
+                ['治疗护盾', st.heal_shield_power ? (st.heal_shield_power * 100).toFixed(1) + '%' : 0],
+                ['韧性', st.tenacity ? (st.tenacity * 100).toFixed(1) + '%' : 0],
+            ],
+        },
+        {
+            title: '⚡ 穿透 & 机动',
+            items: [
+                ['护甲穿透(固定)', st.armor_pen_flat],
+                ['护甲穿透(%)', st.armor_pen_pct ? (st.armor_pen_pct * 100).toFixed(1) + '%' : 0],
+                ['额外护甲穿透', st.bonus_armor_pen_pct ? (st.bonus_armor_pen_pct * 100).toFixed(1) + '%' : 0],
+                ['法术穿透(固定)', st.magic_pen_flat],
+                ['法术穿透(%)', st.magic_pen_pct ? (st.magic_pen_pct * 100).toFixed(1) + '%' : 0],
+                ['额外法穿', st.bonus_magic_pen_pct ? (st.bonus_magic_pen_pct * 100).toFixed(1) + '%' : 0],
+                ['物理穿透', st.physical_lethality],
+                ['法术穿透', st.magic_lethality],
+                ['移速', st.move_speed],
+                ['技能急速', st.ability_haste],
+            ],
+        },
+        {
+            title: '💧 资源',
+            items: [
+                ['资源类型', st.resource_type || '-'],
+                ['当前值', st.resource_value],
+                ['最大值', st.resource_max],
+                ['回复速度', st.resource_regen],
+            ],
+        },
+    ];
+
+    const attrsHtml = attrGroups.map(g => {
+        const rows = g.items.map(([label, val]) =>
+            `<div class="attr-row"><span class="attr-label">${label}</span><span class="attr-val">${val}</span></div>`
+        ).join('');
+        return `<div style="margin-bottom:10px;"><div style="font-size:11px;color:#64b5f6;font-weight:600;margin-bottom:4px;">${g.title}</div><div class="attrs-grid">${rows}</div></div>`;
+    }).join('');
+
+    return `<div class="live-status-bar">
+        <div class="live-stat">
+            <div class="live-stat-value gold">${gold}</div>
+            <div class="live-stat-label">金币</div>
+        </div>
+        <div class="live-stat">
+            <div class="live-stat-value">Lv${level}</div>
+            <div class="live-stat-label">等级</div>
+        </div>
+        <div class="live-stat">
+            <div class="live-stat-value">${gMin}:${String(gSec).padStart(2,'0')}</div>
+            <div class="live-stat-label">游戏时间</div>
+        </div>
+        <div class="live-hp-bar">
+            <div class="live-hp-bar-inner">
+                <div class="live-hp-fill ${hpClass}" style="width:${hpPct}%;"></div>
+            </div>
+            <div class="live-hp-text">HP ${hp} / ${maxHp} (${Math.round(hpPct)}%)</div>
+        </div>
+        <div class="live-abilities">${abHtml}</div>
+    </div>
+    <div class="attrs-panel">
+        <div class="attrs-toggle" onclick="document.getElementById('attrsBody').classList.toggle('hidden'); this.classList.toggle('open');">
+            <span class="arrow">▶</span> 📊 属性面板（点击展开）
+        </div>
+        <div id="attrsBody" class="attrs-grid hidden">${attrsHtml}</div>
+    </div>`;
+}
+
+function renderBuildProgress(lcd, coach) {
+    const a = lcd.active || {};
+    const gold = Math.round(a.gold || 0);
+    const build = coach.build || [];
+    if (!build.length) return '';
+
+    const coreCost = coach.core_cost || 0;
+    const havePct = coreCost > 0 ? Math.min(100, Math.round((gold / coreCost) * 100)) : 0;
+
+    const itemsHtml = build.map((item, i, arr) => {
+        let cls = 'later';
+        if (i === 0) cls = 'next';
+        return `<span class="bp-item ${cls}">${item}</span>`;
+    }).join('<span class="bp-arrow">→</span>');
+
+    return `<div class="build-progress">
+        <div class="build-progress-title">🗡️ 出装进度 · ${gold}G / 核心约${coreCost}G (${havePct}%)</div>
+        <div class="build-progress-items">${itemsHtml}</div>
+    </div>`;
+}
+
+function renderLiveTeamPanel(lcd) {
+    const tm = lcd.team_map || {};
+    const myList = tm['ORDER'] || [];
+    const enemyList = tm['CHAOS'] || [];
+
+    function kdaRatio(k, d, a) {
+        if (!k && !a) return 0;
+        return d > 0 ? ((k + a) / d).toFixed(2) : ((k + a) * 1.0).toFixed(2);
+    }
+    function kdaClass(ratio) {
+        if (ratio >= 4) return 'good';
+        if (ratio >= 2) return 'mid';
+        return 'bad';
+    }
+
+    function renderPlayerCard(p, isMine) {
+        const dead = p.is_dead;
+        const ratio = kdaRatio(p.kills || 0, p.deaths || 0, p.assists || 0);
+        const itemsHtml = [];
+        for (let i = 0; i < 6; i++) {
+            const it = (p.items || [])[i];
+            if (it && it.name) {
+                itemsHtml.push(`<div class="player-item-chip" title="${it.name} (${it.price || 0}G)">${it.name}</div>`);
+            } else {
+                itemsHtml.push(`<div class="player-item-chip empty" title="空">·</div>`);
+            }
+        }
+
+        const goldEarned = Math.round(p.gold_earned || 0);
+        const damage = Math.round(p.total_damage_champs || 0);
+        const cs = p.minions_killed || 0;
+        const wardsP = p.ward_placed || 0;
+        const multiKill = p.largest_multi_kill || 0;
+
+        return `<div class="player-card ${dead ? 'dead' : ''} ${p.is_me ? 'me' : ''}">
+            <div class="player-head">
+                <span>
+                    <span class="name ${p.is_me ? 'me' : ''}">${p.name}</span>
+                    <span class="champ">${p.champion}</span>
+                    <span class="lvl">Lv${p.level || 1}</span>
+                </span>
+                ${dead ? `<span class="dead-tag">💀 ${p.respawn_timer || 0}s</span>` : (multiKill > 1 ? `<span class="dead-tag">🔥${multiKill}连杀</span>` : '')}
+            </div>
+            <div class="player-stats-row">
+                <span class="kda">KDA <span class="kda-val ${kdaClass(ratio)}">${p.kills || 0}/${p.deaths || 0}/${p.assists || 0}</span> <span style="color:#b0bec5;">(${ratio})</span></span>
+            </div>
+            <div class="player-stats-row">
+                <span class="gold-earned">💰 ${Math.round(p.gold || 0)}G (累计${goldEarned}G)</span>
+                <span class="dmg">⚔️ ${damage}伤害</span>
+            </div>
+            ${(cs > 0 || wardsP > 0) ? `<div class="player-stats-row">
+                ${cs > 0 ? `<span>🌾 ${cs}补刀</span>` : ''}
+                ${wardsP > 0 ? `<span>👁️ ${wardsP}插眼</span>` : ''}
+            </div>` : ''}
+            <div class="player-items-row">${itemsHtml.join('')}</div>
+        </div>`;
+    }
+
+    function renderCol(list, isMine) {
+        const totalGold = list.reduce((s, p) => s + Math.round(p.gold || 0), 0);
+        const totalKills = list.reduce((s, p) => s + (p.kills || 0), 0);
+        const totalDeaths = list.reduce((s, p) => s + (p.deaths || 0), 0);
+        const totalDamage = list.reduce((s, p) => s + Math.round(p.total_damage_champs || 0), 0);
+        const aliveCount = list.filter(p => !p.is_dead).length;
+        return `<div>
+            <div class="team-col-title ${isMine ? 'my' : 'enemy'}">${isMine ? '🟢 我方' : '🔴 敌方'} · ${aliveCount}/5 存活</div>
+            ${list.map(p => renderPlayerCard(p, isMine)).join('')}
+            <div style="margin-top:6px;padding:6px 10px;background:#0f1923;border-radius:6px;font-size:11px;color:#78909c;">
+                总计: KDA ${totalKills}/${totalDeaths}/${list.reduce((s,p)=>s+(p.assists||0),0)} · 💰${totalGold}G · ⚔️${totalDamage}
+            </div>
+        </div>`;
+    }
+
+    const myTotalGold = myList.reduce((s, p) => s + Math.round(p.gold || 0), 0);
+    const enemyTotalGold = enemyList.reduce((s, p) => s + Math.round(p.gold || 0), 0);
+    const goldDiff = myTotalGold - enemyTotalGold;
+    const diffAbs = Math.abs(goldDiff);
+
+    return `<div class="panel">
+        <h2>👥 实时对局状态</h2>
+        <div class="gold-summary">
+            <div class="gs-item">
+                <div class="gs-val" style="color:#66bb6a;">${myTotalGold}G</div>
+                <div class="gs-label">我方总金币</div>
+            </div>
+            <div class="gs-item ${goldDiff >= 0 ? 'diff-pos' : 'diff-neg'}">
+                <div class="gs-val">${goldDiff >= 0 ? '+' : '-'}${diffAbs}G</div>
+                <div class="gs-label">金币差</div>
+            </div>
+            <div class="gs-item">
+                <div class="gs-val" style="color:#ef5350;">${enemyTotalGold}G</div>
+                <div class="gs-label">敌方总金币</div>
+            </div>
+        </div>
+        <div class="team-panel">
+            ${renderCol(myList, true)}
+            ${renderCol(enemyList, false)}
+        </div>
+    </div>`;
+}
+
+function renderEventStream(events) {
+    const recent = events.slice(-12);
+    const html = recent.map(e => {
+        const name = e.EventName || '';
+        const t = Math.floor((e.EventTime || 0) / 60) + ':' + String(Math.floor((e.EventTime || 0) % 60)).padStart(2, '0');
+        let cls = '';
+        let text = '';
+        if (name === 'ChampionKill') {
+            cls = 'ekill';
+            const killer = e.KillerName || '';
+            const victim = e.VictimName || '';
+            text = `💀 ${killer} 击杀了 ${victim}`;
+        } else if (name === 'Multikill') {
+            cls = 'ekill';
+            text = `🔥 ${e.KillerName} 连杀 ${e.KillStreak}`;
+        } else if (name === 'TurretKilled') {
+            cls = 'eturret';
+            text = `🏰 防御塔被摧毁`;
+        } else if (name === 'InhibKilled') {
+            cls = 'einhib';
+            text = `💎 水晶被摧毁`;
+        } else if (name === 'DragonKill') {
+            cls = 'edragon';
+            text = `🐉 ${e.KillerName} 击杀龙`;
+        } else if (name === 'BaronKill') {
+            cls = 'ebaron';
+            text = `👑 ${e.KillerName} 击杀男爵`;
+        } else if (name === 'HeraldKill') {
+            cls = 'edragon';
+            text = `🦅 ${e.KillerName} 击杀峡谷先锋`;
+        } else {
+            text = name;
+        }
+        return `<div class="event-item ${cls}"><span style="color:#546e7a;margin-right:6px;">${t}</span>${text}</div>`;
+    }).join('');
+
+    return `<div class="panel">
+        <h2>📜 实时事件</h2>
+        <div class="event-stream">${html}</div>
+    </div>`;
+}
+
+function scoreClass(score) {
+    if (score >= 65) return 'high';
+    if (score >= 45) return 'mid';
+    return 'low';
+}
+
+function renderCompositePanel(s) {
+    const ca = s.composite_advice;
+    if (!ca) return '';
+    const score = ca.score || 50;
+    const sc = scoreClass(score);
+    const breakdown = ca.score_breakdown || {};
+    const breakdownHtml = Object.entries(breakdown).map(([k, v]) => {
+        const vc = scoreClass(v);
+        return `<div class="score-breakdown-item">
+            <span style="width:60px;">${k}</span>
+            <div class="score-breakdown-bar"><div class="score-breakdown-fill ${vc}" style="width:${v}%;"></div></div>
+            <span style="width:26px;text-align:right;">${Math.round(v)}</span>
+        </div>`;
+    }).join('');
+
+    let actionHtml = '';
+    if (ca.immediate_action) {
+        actionHtml = `<div class="action-card highlight">
+            <div class="action-title">🎯 立即行动</div>
+            <div class="action-value">${ca.immediate_action}</div>
+        </div>`;
+    }
+    if (ca.next_priority) {
+        actionHtml += `<div class="action-card">
+            <div class="action-title">⚡ 下一优先级</div>
+            <div class="action-value">${ca.next_priority}</div>
+        </div>`;
+    }
+
+    let liveTipsHtml = '';
+    if (ca.gold_tip || ca.survival_tip) {
+        liveTipsHtml = `<div class="advice-grid">
+            ${ca.gold_tip ? `<div class="advice-tip-card gold"><div class="label">💰 金币建议</div>${ca.gold_tip}</div>` : ''}
+            ${ca.survival_tip ? `<div class="advice-tip-card hp"><div class="label">❤️ 生存建议</div>${ca.survival_tip}</div>` : ''}
+        </div>`;
+    }
+
+    let tfHtml = '';
+    if (ca.teamfight_readiness) {
+        const tf = ca.teamfight_readiness;
+        const adv = tf.advantage;
+        const advCls = adv > 0 ? 'plus' : adv < 0 ? 'minus' : '';
+        const advText = adv > 0 ? `优势 +${adv}` : adv < 0 ? `劣势 ${adv}` : '均势';
+        tfHtml = `<div class="teamfight-card">
+            <div class="tf-side"><div class="tf-label">我方存活</div><div class="tf-count me">${tf.my_alive}</div></div>
+            <div class="tf-vs">VS</div>
+            <div class="tf-side"><div class="tf-label">敌方存活</div><div class="tf-count enemy">${tf.enemy_alive}</div></div>
+            <div class="tf-adv ${advCls}">${advText}</div>
+        </div>`;
+    }
+
+    let buildRecHtml = '';
+    const br = ca.build_recommendation || {};
+    if (br.total_count > 0) {
+        const ownedCount = br.owned_count || 0;
+        const nextItem = br.next_item;
+        const nextCost = br.next_item_cost || 0;
+        const remaining = br.remaining || [];
+        const progressPct = Math.round((ownedCount / br.total_count) * 100);
+        const itemsHtml = remaining.map((item, i) => {
+            let cls = 'later';
+            if (i === 0 && nextItem) cls = 'next';
+            return `<span class="build-rec-item ${cls}">${item}${cls === 'next' && nextCost ? ' (' + nextCost + 'G)' : ''}</span>`;
+        }).join('');
+        const ownedHtml = (br.owned_in_build || []).map(it => `<span class="build-rec-item done">${it}</span>`).join('');
+        buildRecHtml = `<div class="build-rec-card">
+            <div class="build-rec-header">
+                <span class="build-rec-title">🛠️ 出装进度</span>
+                <span class="build-rec-progress">${ownedCount}/${br.total_count} · ${progressPct}%</span>
+            </div>
+            <div class="build-rec-items">${ownedHtml}${itemsHtml}</div>
+        </div>`;
+    }
+
+    let suggestionsHtml = '';
+    if (ca.suggestions && ca.suggestions.length) {
+        suggestionsHtml = '<ul class="suggestions-list">' +
+            ca.suggestions.map(s => `<li>${s}</li>`).join('') + '</ul>';
+    }
+
+    return `<div class="composite-panel">
+        <div class="composite-header">
+            <span class="composite-title">🧠 综合决策</span>
+            <div class="composite-score">
+                <div class="score-breakdown">${breakdownHtml}</div>
+                <div class="score-circle ${sc}">${score}</div>
+            </div>
+        </div>
+        ${actionHtml}
+        ${buildRecHtml}
+        ${liveTipsHtml}
+        ${tfHtml}
+        ${suggestionsHtml}
+    </div>`;
+}
+
+function renderCoachCard(coach, isMine) {
+    const runeDetails = (coach.primary_details || []).map(r => `<span class="rune-chip">${r}</span>`).join('');
+    const buildHtml = (coach.build || []).map((item, i, arr) => {
+        if (i === arr.length - 1) return `<span class="build-item">${item}</span>`;
+        return `<span class="build-item">${item}</span><span class="build-arrow">→</span>`;
+    }).join('');
+
+    let situationalHtml = '';
+    if (coach.situational && Object.keys(coach.situational).length > 0) {
+        situationalHtml = '<div class="section"><div class="section-title">⚠️ 应对场景</div>' +
+            Object.entries(coach.situational).map(([k, v]) =>
+                `<div class="situational-item"><strong>${k}</strong>${v}</div>`
+            ).join('') + '</div>';
+    }
+
+    const tipsHtml = (coach.tips || []).map(t => `<li>${t}</li>`).join('');
+
+    return `
+        <div class="panel">
+            <div class="champion-card">
+                <div class="champion-header ${isMine ? 'my-card' : ''}">
+                    <span class="champion-name">${coach.name}</span>
+                    <span class="champion-role">${coach.role}</span>
+                    ${coach.core_cost ? `<span style="margin-left:auto;font-size:12px;color:#78909c;">核心总价 ${coach.core_cost}G</span>` : ''}
+                </div>
+
+                <div class="section">
+                    <div class="section-title">✨ 符文</div>
+                    <div style="margin-bottom:4px;">
+                        <span class="rune-box rune-primary">主系 · ${coach.primary_branch} · ${coach.primary_rune}</span>
+                    </div>
+                    <div class="rune-details">${runeDetails}</div>
+                    <div style="margin-top:8px;">
+                        <span class="rune-box rune-secondary">副系 · ${coach.secondary_branch} · ${coach.secondary_rune}</span>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">🗡️ 出装顺序</div>
+                    <div class="build-list">${buildHtml}</div>
+                </div>
+
+                ${situationalHtml}
+
+                <div class="section">
+                    <div class="section-title">💡 大乱斗 Tips</div>
+                    <ul class="tips-list">${tipsHtml}</ul>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">🎯 技能技巧</div>
+                    <div class="special-tips">
+                        <div class="special-tip">
+                            <div class="special-tip-title">雪球使用</div>
+                            <div class="special-tip-content">${coach.snowball_tip || '根据战场形势灵活使用'}</div>
+                        </div>
+                        <div class="special-tip">
+                            <div class="special-tip-title">闪现使用</div>
+                            <div class="special-tip-content">${coach.flash_tip || '闪现留关键时候用，别乱交'}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="coach-btn-row">
+                    <button class="ai-coach-btn" onclick="openAICoach('当前局势怎么看？')">
+                        🤖 问 AI 教练
+                    </button>
+                    <button class="ai-coach-btn md-export-btn" onclick="openMdViewer()">
+                        📝 查看对局数据 MD
+                    </button>
+                </div>
+            </div>
+        </div>`;
+}
+
+function renderTeamAnalysis(myTeam, enemyTeam) {
+    function countRoles(team) {
+        const counts = { '坦克': 0, '法师': 0, '射手': 0, '刺客': 0, '战士': 0, '辅助': 0, '未知': 0 };
+        const names = [];
+        team.forEach(c => {
+            if (c.coach) {
+                counts[c.coach.role] = (counts[c.coach.role] || 0) + 1;
+                names.push(c.champion_name || c.coach.name);
+            }
+        });
+        return { counts, names };
+    }
+
+    const my = countRoles(myTeam);
+    const enemy = countRoles(enemyTeam);
+
+    function roleRow(counts, key) {
+        const c = counts[key] || 0;
+        if (c === 0) return '';
+        return `<div class="team-role"><span class="role-name">${key}</span><span class="role-count">${c}</span></div>`;
+    }
+
+    let balanceHint = '';
+    if (myTeam.length > 0 && enemyTeam.length > 0) {
+        const myRoles = Object.entries(my.counts).filter(([k,v]) => v > 0);
+        const enemyRoles = Object.entries(enemy.counts).filter(([k,v]) => v > 0);
+        const myMage = (my.counts['法师'] || 0) + (my.counts['刺客'] || 0);
+        const myTank = my.counts['坦克'] || 0;
+        const myFrontline = myTank + (my.counts['战士'] || 0);
+        const hasFrontline = myFrontline >= 1;
+        const hasAp = myMage >= 1;
+        if (!hasFrontline) {
+            balanceHint = '<span class="balance-badge balance-minus">⚠️ 缺前排</span>';
+        } else if (!hasAp) {
+            balanceHint = '<span class="balance-badge balance-plus">⚠️ 缺AP</span>';
+        } else {
+            balanceHint = '<span class="balance-badge balance-even">✅ 阵容均衡</span>';
+        }
+    }
+
+    return `
+        <div class="panel">
+            <h2>⚖️ 阵容对比 ${balanceHint}</h2>
+            <div class="team-section">
+                <div class="team-card team-ally">
+                    <div class="team-title">🟢 我方阵容</div>
+                    ${['坦克','战士','法师','射手','刺客','辅助'].map(r => roleRow(my.counts, r)).join('')}
+                    ${my.names.length ? '<div style="margin-top:10px;font-size:11px;color:#78909c;">' + my.names.join(', ') + '</div>' : ''}
+                </div>
+                <div class="team-card team-enemy">
+                    <div class="team-title">🔴 敌方阵容</div>
+                    ${['坦克','战士','法师','射手','刺客','辅助'].map(r => roleRow(enemy.counts, r)).join('')}
+                    ${enemy.names.length ? '<div style="margin-top:10px;font-size:11px;color:#78909c;">' + enemy.names.join(', ') + '</div>' : ''}
+                </div>
+            </div>
+        </div>`;
+}
+
+let aiCoachEl = null;
+let aiCoachAbort = null;
+
+const AI_QUICK_QUESTIONS = [
+    "当前局势怎么看？",
+    "下一件装备出什么？",
+    "对面有什么克制我？",
+    "雪球应该怎么用？",
+    "团战怎么站位？",
+    "我的属性合理吗？",
+];
+
+function openAICoach(initialQuestion) {
+    if (aiCoachEl) {
+        aiCoachEl.remove();
+        aiCoachEl = null;
+    }
+
+    const overlay = document.createElement("div");
+    overlay.className = "ai-modal-overlay";
+    overlay.innerHTML = `
+        <div class="ai-modal">
+            <div class="ai-modal-header">
+                <h3>🤖 乱斗导师</h3>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <button id="quickRefresh" class="quick-refresh-btn" onclick="refreshQuickCard()">🔄</button>
+                    <button class="ai-modal-close" onclick="closeAICoach()">✕</button>
+                </div>
+            </div>
+            <div class="ai-modal-body">
+                <div id="aiQuickCard" class="ai-quick-card">加载中...</div>
+                <div style="border-top:1px solid #1e2d3d;margin:12px 0;"></div>
+                <div class="ai-quick-row">
+                    ${AI_QUICK_QUESTIONS.map(q => `<div class="ai-quick-chip" onclick="askAICoach('${q.replace(/'/g, "\\'")}')">${q}</div>`).join('')}
+                </div>
+                <div id="aiAnswer" class="ai-answer" style="display:none;"></div>
+            </div>
+            <div class="ai-input-row">
+                <input id="aiInput" type="text" placeholder="深入问 LLM... 比如 这个装备为什么推荐？"
+                    onkeydown="if(event.key==='Enter') askAICoach(this.value)">
+                <button id="aiSendBtn" onclick="askAICoach(document.getElementById('aiInput').value)">LLM 分析</button>
+            </div>
+        </div>`;
+
+    document.body.appendChild(overlay);
+    aiCoachEl = overlay;
+
+    loadQuickCard();
+}
+
+async function loadQuickCard() {
+    const card = aiCoachEl.querySelector("#aiQuickCard");
+    if (!card) return;
+    try {
+        const resp = await fetch("/api/coach/quick");
+        if (resp.ok) {
+            card.innerHTML = await resp.text();
+        } else {
+            card.innerHTML = '<div style="color:#888;text-align:center;padding:20px;">❌ 加载失败</div>';
+        }
+    } catch (e) {
+        card.innerHTML = '<div style="color:#ef5350;text-align:center;padding:20px;">❌ ' + e.message + '</div>';
+    }
+}
+
+function refreshQuickCard() {
+    if (aiCoachEl) {
+        const btn = aiCoachEl.querySelector("#quickRefresh");
+        btn.style.transition = "transform 0.3s";
+        btn.style.transform = "rotate(360deg)";
+        setTimeout(() => { btn.style.transform = "none"; }, 300);
+    }
+    loadQuickCard();
+}
+
+function closeAICoach() {
+    if (aiCoachAbort) {
+        aiCoachAbort.abort();
+        aiCoachAbort = null;
+    }
+    if (aiCoachEl) {
+        aiCoachEl.remove();
+        aiCoachEl = null;
+    }
+}
+
+async function openMdViewer() {
+    const overlay = document.createElement("div");
+    overlay.className = "md-viewer-overlay";
+    overlay.innerHTML = `
+        <div class="md-viewer">
+            <div class="md-viewer-header">
+                <h3>📝 对局数据 Markdown</h3>
+                <button class="md-close" onclick="this.closest('.md-viewer-overlay').remove()">✕</button>
+            </div>
+            <div class="md-viewer-body" id="mdBody">加载中...</div>
+            <div class="md-viewer-footer">
+                <button onclick="location.reload()">🔄 刷新</button>
+                <button class="md-copy-btn" onclick="copyMd()">📋 复制全部</button>
+            </div>
+        </div>`;
+    document.body.appendChild(overlay);
+
+    try {
+        const resp = await fetch("/api/coach/md");
+        const data = await resp.json();
+        const body = overlay.querySelector("#mdBody");
+        if (data.exists && data.content) {
+            body.textContent = data.content;
+            body.dataset.raw = data.content;
+        } else {
+            body.textContent = "暂无对局数据，请先进入对局。";
+        }
+    } catch (e) {
+        overlay.querySelector("#mdBody").textContent = "❌ 加载失败: " + e.message;
+    }
+}
+
+function copyMd() {
+    const body = document.querySelector(".md-viewer-body");
+    if (!body || !body.dataset.raw) return;
+    navigator.clipboard.writeText(body.dataset.raw).then(() => {
+        const btn = document.querySelector(".md-copy-btn");
+        const old = btn.textContent;
+        btn.textContent = "✅ 已复制!";
+        setTimeout(() => btn.textContent = old, 1500);
+    });
+}
+
+async function askAICoach(question) {
+    if (!question || !question.trim()) return;
+    question = question.trim();
+
+    const answerEl = aiCoachEl.querySelector("#aiAnswer");
+    const sendBtn = aiCoachEl.querySelector("#aiSendBtn");
+    const input = aiCoachEl.querySelector("#aiInput");
+
+    if (aiCoachAbort) {
+        aiCoachAbort.abort();
+    }
+
+    answerEl.style.display = "block";
+    answerEl.textContent = "";
+    answerEl.classList.add("loading");
+    sendBtn.disabled = true;
+    input.disabled = true;
+
+    const controller = new AbortController();
+    aiCoachAbort = controller;
+
+    try {
+        const url = `/api/coach/ask?q=${encodeURIComponent(question)}`;
+        const resp = await fetch(url, { signal: controller.signal });
+
+        if (!resp.ok) {
+            answerEl.classList.remove("loading");
+            answerEl.textContent = `❌ 请求失败 (${resp.status})`;
+            return;
+        }
+
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            answerEl.textContent = buffer;
+            const body = aiCoachEl.querySelector(".ai-modal-body");
+            body.scrollTop = body.scrollHeight;
+        }
+
+        answerEl.classList.remove("loading");
+    } catch (err) {
+        if (err.name === "AbortError") {
+            answerEl.textContent += "\n\n（已中断）";
+        } else {
+            answerEl.classList.remove("loading");
+            answerEl.textContent = `❌ 出错了: ${err.message}`;
+        }
+    } finally {
+        sendBtn.disabled = false;
+        input.disabled = false;
+        input.focus();
+        aiCoachAbort = null;
+    }
+}
+
+connectWS();
+</script>
+</body>
+</html>
