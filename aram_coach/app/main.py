@@ -520,6 +520,24 @@ def extract_lcd_data(lcd_raw: Dict[str, Any], state: Dict[str, Any]) -> Dict[str
     return result
 
 
+def resolve_my_enemy_teams(team_map: Dict) -> tuple:
+    all_players = []
+    for key in ("ORDER", "CHAOS"):
+        all_players.extend(team_map.get(key, []))
+    my_team = []
+    enemy_team = []
+    for key in ("ORDER", "CHAOS"):
+        roster = team_map.get(key, [])
+        if any(p.get("is_me") for p in roster):
+            my_team = roster
+        else:
+            enemy_team = roster
+    if not my_team:
+        my_team = all_players[:5]
+        enemy_team = all_players[5:]
+    return my_team, enemy_team
+
+
 def state_to_md(state: Dict[str, Any]) -> str:
     lines: list[str] = []
 
@@ -1445,8 +1463,7 @@ def compute_composite_advice(state: Dict[str, Any]) -> Dict[str, Any]:
             advice["survival_tip"] = survival_tip
 
             team_map = lcd.get("team_map", {})
-            my_list = team_map.get("ORDER", [])
-            enemy_list = team_map.get("CHAOS", [])
+            my_list, enemy_list = resolve_my_enemy_teams(team_map)
             my_alive = sum(1 for p in my_list if not p.get("is_dead"))
             enemy_alive = sum(1 for p in enemy_list if not p.get("is_dead"))
             teamfight_ready = {
@@ -1684,11 +1701,10 @@ def _deep_analysis(state: Dict[str, Any]) -> str:
     active = lcd.get("active") or {}
     stats = active.get("champion_stats") or {}
     team_map = lcd.get("team_map") or {}
-    order = team_map.get("ORDER", [])
-    chaos = team_map.get("CHAOS", [])
+    my_team, enemy_team = resolve_my_enemy_teams(team_map)
 
     my_info = None
-    for p in list(order) + list(chaos):
+    for p in my_team + enemy_team:
         if p.get("is_me"):
             my_info = p
             break
@@ -1702,11 +1718,11 @@ def _deep_analysis(state: Dict[str, Any]) -> str:
     phase = state.get("phase", "Unknown")
     hp_pct = stats.get("hp_pct", 0)
 
-    my_team_gold = sum(int(p.get("gold", 0)) for p in order)
-    enemy_team_gold = sum(int(p.get("gold", 0)) for p in chaos)
+    my_team_gold = sum(int(p.get("gold", 0)) for p in my_team)
+    enemy_team_gold = sum(int(p.get("gold", 0)) for p in enemy_team)
     gold_diff = my_team_gold - enemy_team_gold
-    my_alive = sum(1 for p in order if not p.get("is_dead", False))
-    enemy_alive = sum(1 for p in chaos if not p.get("is_dead", False))
+    my_alive = sum(1 for p in my_team if not p.get("is_dead", False))
+    enemy_alive = sum(1 for p in enemy_team if not p.get("is_dead", False))
 
     kb = KNOWLEDGE_BASE
     tier = kb.get("tier_list", {})
@@ -1806,9 +1822,9 @@ def _deep_analysis(state: Dict[str, Any]) -> str:
 
     panel_tips = []
     if my_role in ("坦克", "战士"):
-        if stats.get('armor', 0) < 60 and any(champ in [p.get("champion","") for p in chaos] for champ in ["诺克萨斯之手","皮城执法官","祖安怒兽"]):
+        if stats.get('armor', 0) < 60 and any(champ in [p.get("champion","") for p in enemy_team] for champ in ["诺克萨斯之手","皮城执法官","祖安怒兽"]):
             panel_tips.append("护甲偏低，对面有 AD 爆发，优先补护甲装")
-        if stats.get('mr', 0) < 50 and any(champ in [p.get("champion","") for p in chaos] for champ in ["黑暗之女","虚空之眼","邪恶小法师"]):
+        if stats.get('mr', 0) < 50 and any(champ in [p.get("champion","") for p in enemy_team] for champ in ["黑暗之女","虚空之眼","邪恶小法师"]):
             panel_tips.append("魔抗偏低，对面有 AP 爆发，考虑加魔抗")
         if stats.get('ability_haste', 0) < 80:
             panel_tips.append("技能急速偏低，大乱斗节奏快，CD 很重要")
@@ -1919,7 +1935,7 @@ def _deep_analysis(state: Dict[str, Any]) -> str:
     lines.append("-" * 30)
 
     enemy_threats = []
-    for p in chaos:
+    for p in enemy_team:
         champ = p.get("champion", "?")
         k = p.get("kills", 0)
         d = p.get("deaths", 0)

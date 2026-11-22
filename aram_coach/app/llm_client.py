@@ -75,11 +75,28 @@ def _format_state_for_prompt(state: Dict[str, Any]) -> str:
             parts.append(f"【技能】{ab_info}")
 
     team_map = lcd.get("team_map") or {}
-    order = team_map.get("ORDER", [])
-    chaos = team_map.get("CHAOS", [])
 
-    my_total_gold = sum(int(p.get("gold", 0)) for p in order)
-    enemy_total_gold = sum(int(p.get("gold", 0)) for p in chaos)
+    def _resolve_teams(tm: Dict) -> tuple:
+        all_players = []
+        for key in ("ORDER", "CHAOS"):
+            all_players.extend(tm.get(key, []))
+        my_team = []
+        enemy_team = []
+        for key in ("ORDER", "CHAOS"):
+            roster = tm.get(key, [])
+            if any(p.get("is_me") for p in roster):
+                my_team = roster
+            else:
+                enemy_team = roster
+        if not my_team:
+            my_team = all_players[:5]
+            enemy_team = all_players[5:]
+        return my_team, enemy_team
+
+    my_team, enemy_team = _resolve_teams(team_map)
+
+    my_total_gold = sum(int(p.get("gold", 0)) for p in my_team)
+    enemy_total_gold = sum(int(p.get("gold", 0)) for p in enemy_team)
     parts.append(f"【团队金币差】我方={my_total_gold}G vs 敌方={enemy_total_gold}G (差={my_total_gold - enemy_total_gold:+d})")
 
     def _fmt_player(p: Dict[str, Any]) -> str:
@@ -106,13 +123,13 @@ def _format_state_for_prompt(state: Dict[str, Any]) -> str:
             extra += f" 补刀={cs}"
         return f"  - {name}{me_tag} [{champ}] Lv.{level} KDA={k}/{d}/{a} 金币={gold}{dead_tag}{item_str}{extra}"
 
-    if order:
+    if my_team:
         parts.append("【我方】")
-        for p in order:
+        for p in my_team:
             parts.append(_fmt_player(p))
-    if chaos:
+    if enemy_team:
         parts.append("【敌方】")
-        for p in chaos:
+        for p in enemy_team:
             parts.append(_fmt_player(p))
 
     if state.get("my_coach") and active:
@@ -120,7 +137,7 @@ def _format_state_for_prompt(state: Dict[str, Any]) -> str:
         build = coach.get("build", [])
         if build:
             my_items = []
-            for p in list(order) + list(chaos):
+            for p in my_team + enemy_team:
                 if p.get("is_me"):
                     my_items = [it.get("name", "") for it in p.get("items", []) if it.get("name")]
                     break
