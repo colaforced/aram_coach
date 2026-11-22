@@ -1,13 +1,18 @@
 import os
 import json
 import asyncio
+import sys
+
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
 import logging
 from pathlib import Path
 from typing import Dict, Any, Optional
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse, HTMLResponse
 import uvicorn
 
 from app.lcu_client import LCUClient
@@ -28,6 +33,15 @@ with open(BASE_DIR / "data" / "champions.json", "r", encoding="utf-8") as f:
 
 with open(BASE_DIR / "data" / "champion_map.json", "r", encoding="utf-8") as f:
     CHAMPION_MAP = json.load(f)
+
+KNOWLEDGE_BASE: Dict[str, Any] = {}
+_kb_path = BASE_DIR / "data" / "knowledge_base.json"
+if _kb_path.exists():
+    with open(_kb_path, "r", encoding="utf-8") as f:
+        KNOWLEDGE_BASE = json.load(f)
+    log.info(f"  知识库已加载: version={KNOWLEDGE_BASE.get('version','?')}")
+else:
+    log.warning("  knowledge_base.json 不存在，卡片将不包含版本专属数据")
 
 ITEM_MAP: Dict[str, Dict[str, Any]] = {}
 _item_map_path = BASE_DIR / "data" / "item_map.json"
@@ -114,6 +128,39 @@ def get_champion_coach(character_id: Any) -> Optional[Dict[str, Any]]:
     if not data:
         return None
     name = data.get("name") or resolve_champion_name(character_id) or "未知英雄"
+
+    tips = list(data.get("tips", []))
+    build = list(data.get("build", []))
+    snowball_tip = data.get("snowball_tip", "")
+
+    kb_specific = None
+    if KNOWLEDGE_BASE:
+        cn_name_map = {
+            "chogath_specific": ["虚空恐惧", "科加斯", "大虫子"],
+            "darius_specific": ["诺克萨斯之手", "诺手", "德莱厄斯"],
+        }
+        for kb_key, aliases in cn_name_map.items():
+            if name in aliases:
+                kb_specific = KNOWLEDGE_BASE.get(kb_key)
+                break
+        if not kb_specific:
+            for k, v in KNOWLEDGE_BASE.items():
+                if isinstance(v, dict) and v.get("chinese") == name:
+                    kb_specific = v
+                    break
+
+    if kb_specific:
+        if kb_specific.get("tips"):
+            for t in kb_specific["tips"]:
+                if t not in tips:
+                    tips.insert(0, t)
+        if kb_specific.get("best_core_build"):
+            build = list(kb_specific["best_core_build"]) + [b for b in build if b not in kb_specific["best_core_build"]]
+        if kb_specific.get("skill_order"):
+            tips.insert(0, f"加点: {kb_specific['skill_order']}")
+        if kb_specific.get("best_runes"):
+            tips.insert(0, f"强化符文: {' · '.join(kb_specific['best_runes'][:3])}")
+
     return {
         "character_id": character_id,
         "name": name,
@@ -124,12 +171,13 @@ def get_champion_coach(character_id: Any) -> Optional[Dict[str, Any]]:
         "primary_details": data.get("primary_details", []),
         "secondary_rune": data.get("secondary_rune", ""),
         "secondary_branch": data.get("secondary_branch", ""),
-        "build": data.get("build", []),
+        "build": build,
         "core_cost": data.get("core_cost", 0),
         "situational": data.get("situational", {}),
-        "tips": data.get("tips", []),
-        "snowball_tip": data.get("snowball_tip", ""),
+        "tips": tips,
+        "snowball_tip": snowball_tip,
         "flash_tip": data.get("flash_tip", ""),
+        "kb_enhanced": bool(kb_specific),
     }
 
 
@@ -539,8 +587,21 @@ def state_to_md(state: Dict[str, Any]) -> str:
     order = team_map.get("ORDER", [])
     chaos = team_map.get("CHAOS", [])
 
-    my_total = sum(int(p.get("gold", 0)) for p in order)
-    enemy_total = sum(int(p.get("gold", 0)) for p in chaos)
+    my_team_key = None
+    for tkey in ("ORDER", "CHAOS"):
+        for p in team_map.get(tkey, []):
+            if p.get("is_me"):
+                my_team_key = tkey
+                break
+        if my_team_key:
+            break
+    if my_team_key == "CHAOS":
+        my_team, enemy_team = chaos, order
+    else:
+        my_team, enemy_team = order, chaos
+
+    my_total = sum(int(p.get("gold", 0)) for p in my_team)
+    enemy_total = sum(int(p.get("gold", 0)) for p in enemy_team)
     diff = my_total - enemy_total
     lines.append(f"## 💰 团队金币差")
     lines.append("")
@@ -576,10 +637,10 @@ def state_to_md(state: Dict[str, Any]) -> str:
         lines.extend(rows)
         lines.append("")
 
-    if order:
-        _fmt_team(order, "🟢 我方阵容", "🟢")
-    if chaos:
-        _fmt_team(chaos, "🔴 敌方阵容", "🔴")
+    if my_team:
+        _fmt_team(my_team, "🟢 我方阵容", "🟢")
+    if enemy_team:
+        _fmt_team(enemy_team, "🔴 敌方阵容", "🔴")
 
     if state.get("my_coach"):
         coach = state["my_coach"]
@@ -672,21 +733,34 @@ def generate_quick_html(state: Dict[str, Any]) -> str:
     order = team_map.get("ORDER", [])
     chaos = team_map.get("CHAOS", [])
 
-    my_alive = sum(1 for p in order if not p.get("is_dead"))
-    enemy_alive = sum(1 for p in chaos if not p.get("is_dead"))
+    my_team_key = None
+    for tkey in ("ORDER", "CHAOS"):
+        for p in team_map.get(tkey, []):
+            if p.get("is_me"):
+                my_team_key = tkey
+                break
+        if my_team_key:
+            break
+    if my_team_key == "CHAOS":
+        my_team, enemy_team = chaos, order
+    else:
+        my_team, enemy_team = order, chaos
+
+    my_alive = sum(1 for p in my_team if not p.get("is_dead"))
+    enemy_alive = sum(1 for p in enemy_team if not p.get("is_dead"))
     alive_diff = my_alive - enemy_alive
 
-    my_total_gold = sum(int(p.get("gold", 0)) for p in order)
-    enemy_total_gold = sum(int(p.get("gold", 0)) for p in chaos)
+    my_total_gold = sum(int(p.get("gold", 0)) for p in my_team)
+    enemy_total_gold = sum(int(p.get("gold", 0)) for p in enemy_team)
     gold_diff = my_total_gold - enemy_total_gold
 
     me = None
-    for p in order:
+    for p in my_team:
         if p.get("is_me"):
             me = p
             break
-    if not me and order:
-        me = order[0]
+    if not me and my_team:
+        me = my_team[0]
 
     my_kda = f"{me.get('kills',0)}/{me.get('deaths',0)}/{me.get('assists',0)}" if me else "?"
 
@@ -700,72 +774,363 @@ def generate_quick_html(state: Dict[str, Any]) -> str:
             next_item = b
             break
 
-    tips = []
+    build_tips = []
+    situational = coach.get("situational") or {}
+    enemy_mages = [p for p in enemy_team if p.get("is_mage")]
+    enemy_ads = [p for p in enemy_team if p.get("is_ad")]
+    enemy_healers = [p for p in enemy_team if p.get("is_healer")]
+    enemy_tanks = [p for p in enemy_team if p.get("is_tank")]
+
+    if enemy_healers and "against_heal" in situational:
+        build_tips.append(f"敌有治疗！{situational['against_heal']}")
+    if enemy_tanks and "against_tank" in situational:
+        build_tips.append(f"敌有肉！{situational['against_tank']}")
+
+    hp_pct = stats.get("hp", 0) / stats.get("max_hp", 1) * 100 if stats.get("max_hp", 0) > 0 else 100
+    if hp_pct < 30 and "need_survive" in situational:
+        build_tips.append(f"你残血！{situational['need_survive']}")
+
+    owned_brief = [b for b in build if b in owned_items]
+    need_brief = [b for b in build if b not in owned_items]
+
+    situation_tips = []
     composite = state.get("composite_advice") or {}
-    if composite.get("tips"):
-        tips.extend(composite["tips"][:3])
     matchup = state.get("matchup_analysis") or {}
     if matchup.get("tips"):
-        tips.extend(matchup["tips"][:2])
+        situation_tips.extend(matchup["tips"][:2])
+    if alive_diff < 0:
+        situation_tips.append(f"人少！等队友复活再团")
+    if gold_diff > 500:
+        situation_tips.append(f"装备大优势(+{gold_diff}G) 主动开！")
+    elif gold_diff < -500:
+        situation_tips.append(f"装备落后({gold_diff}G) poke为主")
+    if hp_pct < 25 and not (me or {}).get("is_dead"):
+        situation_tips.append(f"你只有 {hp_pct:.0f}% 血！先回家！")
+
+    my_role = coach.get("role", "")
+    my_champion_name = me.get("champion") if me else ""
+    kb = KNOWLEDGE_BASE
+    my_kb_specific = None
+    if kb:
+        for key, val in kb.items():
+            if isinstance(val, dict) and val.get("chinese") == my_champion_name:
+                my_kb_specific = val
+                break
+        if my_champion_name == "虚空恐惧":
+            my_kb_specific = kb.get("chogath_specific") or my_kb_specific
+        elif my_champion_name == "诺克萨斯之手":
+            my_kb_specific = kb.get("darius_specific") or my_kb_specific
+
+    action_tips = []
+    if coach.get("tips"):
+        action_tips.extend(coach["tips"][:2])
+    if my_kb_specific and my_kb_specific.get("tips"):
+        for t in my_kb_specific["tips"][:2]:
+            if t not in action_tips and len(action_tips) < 4:
+                action_tips.append(t)
+    if coach.get("snowball_tip"):
+        action_tips.append(f"雪球: {coach['snowball_tip']}")
+    if coach.get("flash_tip"):
+        action_tips.append(f"闪现: {coach['flash_tip']}")
+    if composite.get("tips"):
+        for t in composite["tips"]:
+            if t not in action_tips and len(action_tips) < 4:
+                action_tips.append(t)
+
+    t0_set = set()
+    t1_set = set()
+    if kb:
+        for t in kb.get("tier_list", {}).get("t0", []):
+            t0_set.add(t.get("chinese") or t.get("name"))
+        for t in kb.get("tier_list", {}).get("t1", []):
+            t1_set.add(t.get("chinese") or t.get("name"))
 
     threats = []
-    for p in chaos:
-        if not p.get("is_dead"):
-            kd = p.get("kills",0) - p.get("deaths",0)
-            if kd >= 2 or p.get("is_carry"):
-                threats.append(p)
-    threats = sorted(threats, key=lambda x: x.get("kills",0), reverse=True)[:3]
+    for p in enemy_team:
+        if p.get("is_dead"):
+            continue
+        cn = p.get("champion", "")
+        kd = p.get("kills", 0) - p.get("deaths", 0)
+        threat_score = 0
+        is_tier_threat = False
+        if cn in t0_set:
+            threat_score += 100
+            is_tier_threat = True
+        elif cn in t1_set:
+            threat_score += 50
+            is_tier_threat = True
+        threat_score += max(kd * 10, p.get("kills", 0) * 5)
+        if kd >= 2 or p.get("is_carry") or is_tier_threat:
+            _enriched = dict(p)
+            _enriched["threat_score"] = threat_score
+            _enriched["is_tier_threat"] = is_tier_threat
+            _enriched["is_t0"] = cn in t0_set
+            threats.append(_enriched)
+    threats = sorted(threats, key=lambda x: x.get("threat_score", 0), reverse=True)[:3]
+
+    kb_t0_enemy = []
+    kb_t1_enemy = []
+    enemy_names_kb = set(p.get("champion","") for p in enemy_team)
+    if kb:
+        for t0 in kb.get("tier_list", {}).get("t0", []):
+            if t0.get("chinese","") in enemy_names_kb or t0.get("name","") in enemy_names_kb:
+                kb_t0_enemy.append(t0)
+        for t1 in kb.get("tier_list", {}).get("t1", []):
+            if t1.get("chinese","") in enemy_names_kb or t1.get("name","") in enemy_names_kb:
+                kb_t1_enemy.append(t1)
+
+    role_build_formula = ""
+    if kb:
+        formulas = kb.get("core_build_recipes", {})
+        if my_role == "战士":
+            role_build_formula = formulas.get("战士通用公式", {})
+        elif my_role == "坦克":
+            role_build_formula = formulas.get("坦克通用公式", {})
+        elif my_role == "法师":
+            if enemy_mages and len(enemy_mages) >= 2:
+                role_build_formula = formulas.get("法师持续伤害公式", {})
+            else:
+                role_build_formula = formulas.get("法师爆发公式", {})
+        elif my_role in ("射手", "ADC"):
+            if enemy_tanks and len(enemy_tanks) >= 2:
+                role_build_formula = formulas.get("射手暴击公式", {})
+            else:
+                role_build_formula = formulas.get("射手暴击公式", {})
+        elif my_role == "刺客":
+            role_build_formula = formulas.get("刺客通用公式", {})
+
+    kb_build_tips = []
+    if role_build_formula and role_build_formula.get("note"):
+        kb_build_tips.append(role_build_formula["note"])
+
+    if role_build_formula and not my_kb_specific:
+        _kb_first = role_build_formula.get("first", [])
+        _kb_second = role_build_formula.get("second", [])
+        _kb_third = role_build_formula.get("third", [])
+        _kb_all = _kb_first + _kb_second + _kb_third
+        if _kb_all:
+            _existing_set = set(build)
+            _kb_prefixed = [x for x in _kb_all if x not in _existing_set]
+            build = _kb_first + _kb_second + _kb_third + [b for b in build if b not in _kb_all]
+            build = list(dict.fromkeys(build))
+            if _kb_prefixed:
+                kb_build_tips.insert(0, f"版本推荐首出: {' / '.join(_kb_first[:2])}")
+
+    next_item = None
+    for b in build:
+        if b not in owned_items:
+            next_item = b
+            break
+
+    kb_snowball_tip = ""
+    if kb.get("snowball_tips"):
+        import random as _r
+        kb_snowball_tip = _r.choice(kb["snowball_tips"][:4])
+
+    def _role_action(situation):
+        _META = "大乱斗一直打架"
+        role_map = {
+            "坦克": {
+                "big_win": "5v3！雪球拉最前面的开团！心之钢叠起来就是爸爸！",
+                "small_win": "人多一个！雪球开塔前的！顶上去放心之钢层！",
+                "even_rich": "装备碾压！雪球开脆皮！顶塔推别怕死！",
+                "even_poor": "装备差！先poke耗血，雪球等队友到齐，心之钢先叠几层",
+                "even": "技能齐了！雪球拉脸控住！一波推！心之钢别断！",
+                "small_lose": "少一人！躲草丛等雪球好，心之钢别死，叠层掉光亏大了",
+                "big_lose": "崩了！草丛蹲好，雪球逃跑用，撑住不死心之钢还能叠",
+            },
+            "战士": {
+                "big_win": "人多！雪球拉后排carry！直接切！黑切破甲巨快！",
+                "small_win": "压上去！雪球开塔前脆皮！焚天续航顶住！",
+                "even_rich": "装备好！星蚀滚雪球！雪球拉脸R开！一波推！",
+                "even_poor": "装备贫！poke耗血，雪球等残血再开，星蚀先出最便宜",
+                "even": "技能齐！雪球拉脸接R！秒一个！",
+                "small_lose": "少人！草丛蹲好，雪球留逃跑，别硬接",
+                "big_lose": "崩了！雪球用来逃跑，别出塔！死亡之舞保你不暴毙",
+            },
+            "法师": {
+                "big_win": "人多！站后排QW甩！珠光护手暴击秒人！雪球留补伤害！",
+                "small_win": "压上去poke！炼狱导管叠灼烧刷CD！雪球拉残血收！",
+                "even_rich": "装备好！峡谷制造者/大面具poke穿！雪球拉脸R秒脆皮！",
+                "even_poor": "装备贫！远距离poke！雪球用来拉开距离！别被贴脸",
+                "even": "poke到血线！珠光护手暴击一发入魂！雪球接R秒！",
+                "small_lose": "躲后排poke！雪球拉开别被贴脸！",
+                "big_lose": "站最远清兵！雪球一被粘就用！",
+            },
+            "射手": {
+                "big_win": "人多！站桩狂射！不朽盾弓保你活！雪球逃跑用！",
+                "small_win": "压上去点塔！雪球拉开躲突脸！",
+                "even_rich": "装备神装！无尽+飓风射爆！站前排后面！",
+                "even_poor": "装备差！猥琐poke发育等大件！巨蛇之牙破肉！",
+                "even": "走位输出！盾弓触发就反打！雪球被贴脸就用！",
+                "small_lose": "躲后排射！雪球拉开距离！",
+                "big_lose": "塔下清兵！雪球一被碰就跑！",
+            },
+            "刺客": {
+                "big_win": "人多！雪球拉后排！巨蛇之牙破石像鬼！秒了就撤！",
+                "small_win": "蹲草丛！雪球拉塔前脆皮！巨蛇之牙必备！",
+                "even_rich": "装备好！暮刃+赛瑞尔达！雪球拉谁谁死！",
+                "even_poor": "装备差！蹲草丛捡残血！雪球留逃跑！巨蛇之牙优先",
+                "even": "蹲好！残血一露雪球拉脸秒！",
+                "small_lose": "少人！草丛蹲好别动，等对面落单",
+                "big_lose": "崩了！雪球逃跑用，别出塔！",
+            },
+        }
+        return role_map.get(my_role, role_map["战士"]).get(situation, role_map["战士"][situation])
 
     if alive_diff >= 2:
         situation_color = "#43cea2"
         situation_label = "🟢 大优势"
-        action = "主动开团推塔！"
+        action = _role_action("big_win")
     elif alive_diff == 1:
         situation_color = "#43cea2"
         situation_label = "🟢 小优"
-        action = "稳扎稳打继续压"
+        action = _role_action("small_win")
     elif alive_diff == 0:
         situation_color = "#f5b041"
         situation_label = "🟡 均势"
-        action = "等技能CD再打"
+        if gold_diff > 300:
+            action = _role_action("even_rich")
+        elif gold_diff < -300:
+            action = _role_action("even_poor")
+        else:
+            action = _role_action("even")
     elif alive_diff == -1:
         situation_color = "#ef5350"
         situation_label = "🔴 小劣"
-        action = "避战等队友复活！"
+        action = _role_action("small_lose")
     else:
         situation_color = "#ef5350"
         situation_label = "🔴 大劣"
-        action = "别团！苟住！"
+        action = _role_action("big_lose")
 
     if gold_diff > 500:
         situation_label += " 💰"
     elif gold_diff < -500:
         situation_label += " 💸"
 
-    next_item_line = ""
+    build_section = ""
+    build_rows = []
     if next_item:
-        next_item_line = f"""
-        <div style="background:linear-gradient(135deg,#667eea,#764ba2);border-radius:10px;padding:12px 16px;margin-top:10px;color:white;">
-            <div style="font-size:11px;opacity:0.8;">🛒 下一件建议</div>
-            <div style="font-size:22px;font-weight:700;margin-top:2px;">{next_item}</div>
-            <div style="font-size:12px;opacity:0.9;margin-top:4px;">你有 <b>{gold}G</b> · 还差 <b style="color:#ffd54f">?</b></div>
-        </div>"""
+        build_rows.append(
+            f'<div style="font-size:18px;font-weight:700;color:#ffd54f;">{next_item}</div>'
+            f'<div style="font-size:12px;opacity:0.85;margin-top:2px;">你有 {gold}G</div>'
+        )
+    if owned_brief:
+        build_rows.append(f'<div style="font-size:11px;opacity:0.7;">✅ 已买: {" · ".join(owned_brief)}</div>')
+    if need_brief and len(need_brief) > 1:
+        rest = " → ".join(need_brief[1:4])
+        build_rows.append(f'<div style="font-size:11px;opacity:0.65;">🔜 后续: {rest}</div>')
+    if build_tips:
+        build_rows.append("".join(f'<div style="font-size:11px;color:#ffab91;margin-top:2px;">💡 {t}</div>' for t in build_tips))
+    if kb_build_tips:
+        build_rows.append("".join(f'<div style="font-size:11px;color:#a78bfa;margin-top:2px;">📐 {t}</div>' for t in kb_build_tips))
+    if build_rows:
+        build_section = f'''
+        <div style="background:linear-gradient(135deg,#667eea33,#764ba233);border:1px solid #667eea;border-radius:10px;padding:12px 14px;margin-top:10px;">
+            <div style="font-size:12px;color:#a78bfa;font-weight:600;margin-bottom:6px;">🛒 出装建议</div>
+            {''.join(f'<div style="margin:2px 0;">{r}</div>' for r in build_rows)}
+        </div>'''
 
-    threat_html = ""
+    threat_section = ""
     if threats:
         threat_cards = []
         for t in threats:
             dead_tag = f' <span style="color:#888">💀复活{t.get("respawn_timer",0):.0f}s</span>' if t.get("is_dead") else ""
+            tier_tag = ""
+            if t.get("is_t0"):
+                tier_tag = f' <span style="background:#ffd54f;color:#000;border-radius:4px;padding:1px 5px;font-size:10px;font-weight:700;">🔥T0</span>'
+            elif t.get("is_tier_threat"):
+                tier_tag = f' <span style="background:#f5b041;color:#000;border-radius:4px;padding:1px 5px;font-size:10px;font-weight:700;">⚡T1</span>'
             threat_cards.append(
                 f'<span style="background:rgba(239,83,80,0.15);border:1px solid rgba(239,83,80,0.5);border-radius:6px;padding:4px 10px;font-size:12px;color:#ff8a80;">'
-                f'{t.get("champion","?")} K{t.get("kills",0)}</span>{dead_tag}'
+                f'{t.get("champion","?")} K{t.get("kills",0)}{tier_tag}</span>{dead_tag}'
             )
-        threat_html = f'<div style="margin-top:10px;"><div style="font-size:11px;color:#888;margin-bottom:4px;">⚠️ 敌方威胁</div>{" ".join(threat_cards)}</div>'
+        threat_section = f'''
+        <div style="margin-top:8px;border:1px solid #ef5350;border-radius:10px;padding:10px 14px;background:rgba(239,83,80,0.06);">
+            <div style="font-size:12px;color:#ef5350;font-weight:600;margin-bottom:6px;">⚠️ 敌方威胁</div>
+            <div>{" ".join(threat_cards)}</div>
+        </div>'''
 
-    tips_html = ""
-    if tips:
-        tip_items = "".join(f'<div style="font-size:12px;color:#c8d6e5;padding:2px 0;">💡 {t}</div>' for t in tips[:4])
-        tips_html = f'<div style="background:rgba(67,206,162,0.08);border-radius:8px;padding:10px 12px;margin-top:10px;">{tip_items}</div>'
+    situation_section = ""
+    sit_rows = []
+    if situation_tips:
+        sit_rows.extend(
+            f'<div style="font-size:12px;color:#c8d6e5;">⚡ {t}</div>' for t in situation_tips[:3]
+        )
+    if sit_rows:
+        situation_section = f'''
+        <div style="background:rgba(245,176,65,0.1);border:1px solid #f5b041;border-radius:10px;padding:10px 14px;margin-top:8px;">
+            <div style="font-size:12px;color:#f5b041;font-weight:600;margin-bottom:4px;">⚔️ 局势判断</div>
+            {''.join(f'<div style="margin:2px 0;">{r}</div>' for r in sit_rows)}
+        </div>'''
+
+    action_section = ""
+    act_rows = []
+    if action_tips:
+        act_rows.extend(
+            f'<div style="font-size:12px;color:#c8d6e5;">🎯 {t}</div>' for t in action_tips[:4]
+        )
+    if act_rows:
+        action_section = f'''
+        <div style="background:rgba(67,206,162,0.1);border:1px solid #43cea2;border-radius:10px;padding:10px 14px;margin-top:8px;">
+            <div style="font-size:12px;color:#43cea2;font-weight:600;margin-bottom:4px;">🎮 操作要点</div>
+            {''.join(f'<div style="margin:2px 0;">{r}</div>' for r in act_rows)}
+        </div>'''
+
+    kb_section = ""
+    if kb:
+        kb_parts = []
+
+        if kb_t0_enemy:
+            t0_names = [t.get("chinese") or t.get("name") for t in kb_t0_enemy]
+            kb_parts.append(
+                f'<div style="background:rgba(239,83,80,0.12);border:1px solid #ef5350;border-radius:8px;padding:8px 12px;margin-bottom:6px;">'
+                f'<div style="font-size:11px;color:#ef5350;font-weight:600;">🔥 版本T0警告</div>'
+                f'<div style="font-size:13px;color:#ff8a80;font-weight:700;margin-top:2px;">敌方有 {" · ".join(t0_names)}</div>'
+                f'<div style="font-size:10px;color:#ffab91;margin-top:2px;">别硬接！找单抓！</div>'
+                f'</div>'
+            )
+
+        if role_build_formula:
+            first_items = role_build_formula.get("first", [])
+            if first_items and not next_item:
+                kb_parts.append(
+                    f'<div style="background:rgba(102,126,234,0.12);border:1px solid #667eea;border-radius:8px;padding:8px 12px;margin-bottom:6px;">'
+                    f'<div style="font-size:11px;color:#a78bfa;font-weight:600;">📐 版本出装公式</div>'
+                    f'<div style="font-size:13px;color:#c8d6e5;margin-top:2px;">首出: {" / ".join(first_items[:2])}</div>'
+                    f'</div>'
+                )
+
+        if my_kb_specific and my_kb_specific.get("best_runes"):
+            runes_short = " · ".join(my_kb_specific["best_runes"][:3])
+            kb_parts.append(
+                f'<div style="background:rgba(255,213,79,0.12);border:1px solid #ffd54f;border-radius:8px;padding:8px 12px;margin-bottom:6px;">'
+                f'<div style="font-size:11px;color:#ffd54f;font-weight:600;">✨ 专属强化符文</div>'
+                f'<div style="font-size:12px;color:#c8d6e5;margin-top:2px;">{runes_short}</div>'
+                f'</div>'
+            )
+
+        if kb_snowball_tip:
+            kb_parts.append(
+                f'<div style="background:rgba(67,206,162,0.1);border:1px solid #43cea2;border-radius:8px;padding:8px 12px;margin-bottom:6px;">'
+                f'<div style="font-size:11px;color:#43cea2;font-weight:600;">❄️ 雪球技巧</div>'
+                f'<div style="font-size:12px;color:#c8d6e5;margin-top:2px;">{kb_snowball_tip}</div>'
+                f'</div>'
+            )
+
+        meta_summary = kb.get("meta_summary", "")
+        kb_version = kb.get("version", "")
+        if meta_summary:
+            kb_parts.append(
+                f'<div style="font-size:9px;color:#556;margin-top:4px;text-align:center;">{kb_version} · {meta_summary[:30]}</div>'
+            )
+
+        if kb_parts:
+            kb_section = f'''
+            <div style="margin-top:10px;">
+                {''.join(kb_parts)}
+            </div>'''
 
     mm = int(game_time // 60)
     ss = int(game_time % 60)
@@ -783,9 +1148,11 @@ def generate_quick_html(state: Dict[str, Any]) -> str:
         <div style="font-size:12px;opacity:0.9;">🟢 {my_alive} vs 🔴 {enemy_alive} · KDA {my_kda}</div>
     </div>
 
-    {next_item_line}
-    {threat_html}
-    {tips_html}
+    {build_section}
+    {threat_section}
+    {situation_section}
+    {action_section}
+    {kb_section}
 
     <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
         <div style="background:#1e2d3d;border-radius:8px;padding:8px;text-align:center;">
@@ -1243,6 +1610,45 @@ async def api_coach_status():
     }
 
 
+@app.get("/api/kb/status")
+async def api_kb_status():
+    kb = KNOWLEDGE_BASE
+    if not kb:
+        return {"loaded": False, "error": "knowledge_base.json 未找到或为空"}
+
+    tier = kb.get("tier_list", {})
+    runes = kb.get("hextech_augments", {})
+    formulas = kb.get("core_build_recipes", {})
+
+    t0_list = []
+    for t in tier.get("t0", []):
+        t0_list.append(t.get("chinese") or t.get("name"))
+
+    t1_list = []
+    for t in tier.get("t1", []):
+        t1_list.append(t.get("chinese") or t.get("name"))
+
+    return {
+        "loaded": True,
+        "version": kb.get("version"),
+        "mode": kb.get("mode"),
+        "meta_summary": kb.get("meta_summary"),
+        "t0_count": len(t0_list),
+        "t0_heroes": t0_list,
+        "t1_count": len(t1_list),
+        "t1_heroes": t1_list,
+        "snowball_tips_count": len(kb.get("snowball_tips", [])),
+        "grass_tips_count": len(kb.get("grass_tips", [])),
+        "build_formulas_count": len(formulas),
+        "build_formulas": list(formulas.keys()),
+        "rune_prismatic_count": len(runes.get("prismatic_s_tier", [])),
+        "rune_gold_count": len(runes.get("gold_key", [])),
+        "rune_situational_count": len(runes.get("situational", [])),
+        "has_chogath": "chogath_specific" in kb,
+        "has_darius": "darius_specific" in kb,
+    }
+
+
 @app.get("/api/coach/md")
 async def api_coach_md():
     if GAME_STATE_FILE.exists():
@@ -1262,7 +1668,6 @@ async def api_coach_quick():
     try:
         state = await collect_game_state()
         html = generate_quick_html(state)
-        from fastapi.responses import HTMLResponse
         return HTMLResponse(content=html)
     except Exception as e:
         return HTMLResponse(content=f"<div style='color:#ef5350;padding:20px;'>❌ 生成失败: {e}</div>")
