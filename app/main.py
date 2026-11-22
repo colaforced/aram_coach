@@ -2069,7 +2069,6 @@ async def api_coach_deep():
 async def api_lcu_status():
     return {
         "connected": lcu.connected,
-        "lockfile": lcu.lockfile_path,
         "port": lcu.info["port"] if lcu.info else None,
     }
 
@@ -2085,11 +2084,15 @@ async def api_champion(character_id: int):
 @app.get("/api/champions/search")
 async def api_champions_search(q: str = ""):
     results = []
+    kw = q.strip().lower()
     for cid, data in CHAMPIONS_DB.items():
-        if not q or q.lower() in data.get("name", "").lower():
+        name = data.get("name", "")
+        title = data.get("title", "")
+        if not kw or kw in name.lower() or kw in title.lower():
             results.append({
                 "character_id": int(cid),
-                "name": data.get("name"),
+                "name": name,
+                "title": title,
                 "role": data.get("role"),
             })
     return results

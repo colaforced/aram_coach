@@ -9,7 +9,8 @@ env/
 game_state.md
 .env
 *.log
-.DS_Store
+backend_log.txt
+DS_Store
 Thumbs.db
 
 *.tmp
