@@ -1,0 +1,23 @@
+app/main.py
+  s_71ca9d00bfdd1c::t_25cead31150c43 840-843
+  s_71ca9d00bfdd1c::t_ec1e32ce7a5998 457-458,460-461
+  s_71ca9d00bfdd1c::t_61b854449e5f98 839
+  s_71ca9d00bfdd1c::t_b189540ee23d64 1559-1563
+  s_71ca9d00bfdd1c::t_2f92a674357871 1231-1282
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "20901d171191102ac34609cdbb7a2442df5aea80",
+  "prompts": {},
+  "sessions": {
+    "s_71ca9d00bfdd1c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e8dbbbc7-1596-44aa-a98a-482619dd431f",
+        "model": "unknown"
+      },
+      "human_author": "pengyong <pengyong@trip.com>"
+    }
+  }
+}
