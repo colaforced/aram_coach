@@ -454,13 +454,11 @@ async def collect_game_state() -> Dict[str, Any]:
                 team_one = game_data.get("teamOne", [])
                 team_two = game_data.get("teamTwo", [])
 
+                # playerChampionSelections 只有 championId/puuid，没有队伍信息；
+                # 看自己的 puuid 在哪一队
                 my_team_idx = 0
-                if my_puuid:
-                    for sel in selections:
-                        if sel.get("puuid") == my_puuid:
-                            ptid = sel.get("teamParticipantId", 0)
-                            my_team_idx = 0 if ptid <= 5 else 1
-                            break
+                if my_puuid and any(p.get("puuid") == my_puuid for p in team_two):
+                    my_team_idx = 1
 
                 my_team_raw = team_one if my_team_idx == 0 else team_two
                 enemy_team_raw = team_two if my_team_idx == 0 else team_one
@@ -838,17 +836,12 @@ def generate_quick_html(state: Dict[str, Any]) -> str:
             next_item = b
             break
 
-    build_tips = []
+    # LCD 的玩家条目没有英雄 ID，敌方英雄特征用 LCU 对局会话里的 enemy_team
+    lcu_enemies = state.get("enemy_team") or []
+    enemy_mages = [e for e in lcu_enemies if (e.get("coach") or {}).get("role") == "法师"]
+    enemy_tanks = [e for e in lcu_enemies if (e.get("coach") or {}).get("role") == "坦克"]
+    build_tips = enemy_counter_tips(lcu_enemies, coach, owned_items)
     situational = coach.get("situational") or {}
-    enemy_mages = [p for p in enemy_team if p.get("is_mage")]
-    enemy_ads = [p for p in enemy_team if p.get("is_ad")]
-    enemy_healers = [p for p in enemy_team if p.get("is_healer")]
-    enemy_tanks = [p for p in enemy_team if p.get("is_tank")]
-
-    if enemy_healers and "against_heal" in situational:
-        build_tips.append(f"敌有治疗！{situational['against_heal']}")
-    if enemy_tanks and "against_tank" in situational:
-        build_tips.append(f"敌有肉！{situational['against_tank']}")
 
     hp_pct = stats.get("hp", 0) / stats.get("max_hp", 1) * 100 if stats.get("max_hp", 0) > 0 else 100
     if hp_pct < 30 and "need_survive" in situational:
@@ -1235,6 +1228,58 @@ def generate_quick_html(state: Dict[str, Any]) -> str:
 </div>"""
 
 
+# 回复能力强、值得出重伤的英雄（按英雄 ID，名称见 champion_map.json）
+HEALER_CHAMPION_IDS = {
+    16, 267, 37, 350, 902, 147, 44, 40, 235,   # 治疗型辅助：索拉卡/娜美/娑娜/悠米/米利欧/萨勒芬妮/塔里克/迦娜/赛娜
+    8, 50, 19, 36, 266, 517, 233, 23, 9, 20,   # 高额自我回复：吸血鬼/乌鸦/狼人/蒙多/剑魔/塞拉斯/贝蕾亚/蛮王/稻草人/努努
+}
+# 英雄自己的 situational 没写时，按定位给通用的重伤/破甲装（多个选项按 AD / AP 排列）
+ANTI_HEAL_ITEMS = {
+    "射手": ["凡性的提醒"],
+    "法师": ["莫雷洛秘典"],
+    "坦克": ["荆棘之甲"],
+    "战士": ["炼金朋克链锯剑", "莫雷洛秘典"],
+    "刺客": ["炼金朋克链锯剑", "莫雷洛秘典"],
+    "辅助": ["莫雷洛秘典", "荆棘之甲"],
+}
+ANTI_TANK_ITEMS = {
+    "射手": ["多米尼克领主的致意"],
+    "法师": ["虚空之杖"],
+    "战士": ["黑色切割者"],
+    "刺客": ["赛瑞尔达的怨恨", "虚空之杖"],
+}
+
+
+def enemy_counter_tips(enemy_team: list, my_coach: Optional[Dict[str, Any]],
+                       owned_items: list) -> list:
+    """敌方有回复型英雄 / 坦克 ≥2 时的针对性出装提示。已经有对应装备就不再提示。"""
+    my_coach = my_coach or {}
+    situational = my_coach.get("situational") or {}
+    role = my_coach.get("role", "")
+    owned = set(owned_items or [])
+    tips = []
+
+    def _tip(names, emoji, label, own_keys, items_by_role, generic_label):
+        own = next((situational[k] for k in own_keys if situational.get(k)), None)
+        items = items_by_role.get(role, [])
+        head = f"{emoji} {label}（{'、'.join(names)}）："
+        if own:
+            tips.append(head + own)
+        elif items and not owned & set(items):
+            tips.append(head + f"{generic_label} {' / '.join(items)}")
+
+    healers = [m.get("champion_name") or "?" for m in enemy_team
+               if m.get("champion_id") in HEALER_CHAMPION_IDS]
+    if healers:
+        _tip(healers, "🩸", "敌方回复强", ("against_heal", "enemy_heal"), ANTI_HEAL_ITEMS, "考虑重伤装")
+
+    tanks = [m.get("champion_name") or "?" for m in enemy_team
+             if (m.get("coach") or {}).get("role") == "坦克"]
+    if len(tanks) >= 2:
+        _tip(tanks, "🛡️", "敌方坦克多", ("against_tank", "all_tank"), ANTI_TANK_ITEMS, "考虑穿透装")
+    return tips
+
+
 def compute_matchup_analysis(my_team: list, enemy_team: list,
                               my_coach: Optional[Dict[str, Any]]) -> Dict[str, Any]:
     analysis = {
@@ -1510,6 +1555,11 @@ def compute_composite_advice(state: Dict[str, Any]) -> Dict[str, Any]:
                     else:
                         advice["next_priority"] = f"📦 规划：{next_item}（约 {next_cost}G）"
                     suggestions.append(advice["next_priority"])
+
+            owned_names = [ITEM_MAP.get(str(i), {}).get("name") for i in owned_ids]
+            counter_tips = enemy_counter_tips(state.get("enemy_team") or [], my_coach, owned_names)
+            advice["counter_items"] = counter_tips
+            suggestions.extend(counter_tips)
 
             matchup = state.get("matchup_analysis", {})
             if matchup:
