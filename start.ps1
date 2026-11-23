@@ -56,7 +56,7 @@ Write-Host "[3/4] Starting ARAM Coach..." -ForegroundColor White
 Write-Host "  Web UI: http://127.0.0.1:$port/" -ForegroundColor Cyan
 Write-Host ""
 
-Start-Process -FilePath $pyCmd -ArgumentList "-m", "app.main" -WorkingDirectory $projectDir -NoNewWindow
+$proc = Start-Process -FilePath $pyCmd -ArgumentList "run.py" -WorkingDirectory $projectDir -NoNewWindow -PassThru
 Start-Sleep -Seconds 2
 
 Write-Host "[4/4] Opening browser..." -ForegroundColor White
@@ -74,5 +74,5 @@ try {
     while ($true) { Start-Sleep -Seconds 1 }
 } finally {
     Write-Host "Stopping ARAM Coach..." -ForegroundColor Yellow
-    Get-Process -Name python -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -match "app.main" } | Stop-Process -Force
+    if ($proc -and -not $proc.HasExited) { Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue }
 }

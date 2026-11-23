@@ -159,7 +159,7 @@ python run.py
 │   ├── __init__.py
 │   ├── main.py          # FastAPI 应用主体：路由、状态采集、规则引擎、卡片渲染
 │   ├── lcu_client.py    # LCU 连接器：定位 lockfile / 解析日志取认证信息
-│   ├── lcd_client.py    # LCD 客户端：读取局内实时数据（https://127.0.0.1:2999）
+│   ├── lcd_client.py    # LCD 客户端：读取局内实时数据（https://127.0.0.1:2999）、划分我方/敌方
 │   └── llm_client.py    # LLM 客户端：OpenAI 兼容接口调用、流式输出、429 重试
 ├── data/
 │   ├── champions.json       # 170 名英雄的乱斗数据
@@ -172,9 +172,9 @@ python run.py
 │   └── deep.html        # 深度分析报告
 ├── config.json          # 路径、端口、LLM 配置
 ├── requirements.txt
-├── run.py               # 启动入口（含 Windows 异步 IO 兼容处理）
+├── run.py               # 唯一启动入口（含 Windows 异步 IO 兼容处理，读取 web_port）
 ├── start.bat            # Windows 一键启动
-├── start.ps1            # 启动脚本主体（依赖检查 + 拉起 + 开浏览器）
+├── start.ps1            # 启动脚本主体（依赖检查 + 调用 run.py + 开浏览器）
 ├── check_id.py          # 英雄 ID 与名称映射校验脚本
 └── rebuild_db.py        # 依据 champion_map 重建 champions.json 的数据脚本
 ```
@@ -185,7 +185,7 @@ python run.py
 
 | 文件 | 内容 |
 | --- | --- |
-| `data/champions.json` | 每名英雄包含 `name` / `title` / `role` / `aram_strength` / `build` / `core_cost` / `runes` / `runes_alt` / `primary_details` / `secondary` / `tips` / `snowball_tip` / `flash_tip` / `situational` 等字段 |
+| `data/champions.json` | 每名英雄包含 `name` / `title` / `role` / `aram_strength` / `build` / `core_cost` / `primary_branch` / `primary_rune` / `primary_details`（主系四个符文）/ `secondary_branch` / `secondary_rune` / `tips` / `snowball_tip` / `flash_tip` / `situational` 等字段。`role` 取 坦克/战士/刺客/法师/射手/辅助 之一；`build` 里的装备名需与 `item_map.json` 一致，否则无法识别是否已购买；带 `auto_generated: true` 的条目是按定位套用的模板数据，有待逐个英雄细化 |
 | `data/champion_map.json` | `championId → 英雄名`，用于把客户端返回的 ID 还原成名字 |
 | `data/item_map.json` | `itemId → {name, gold_total, gold_base, sell}`，用于把局内装备 ID 还原成装备并计算总价 |
 | `data/knowledge_base.json` | 版本级知识：`tier_list`（梯度）、`snowball_tips`、`grass_tips`、`item_myths`、`core_build_recipes`、`hextech_augments`（强化符文梯度）以及个别英雄专属数据 |
@@ -268,7 +268,7 @@ python rebuild_db.py
 A：确认客户端已登录；确认 `config.json` 的 `lol_install_paths` 覆盖了实际安装目录；`/api/lcu/status` 可查看连接细节。
 
 **Q：启动报 `_overlapped` 相关错误？**
-A：`run.py` 已内置 Windows 异步 IO 兼容垫片，请通过 `run.py` 或 `start.bat` 启动，不要直接 `uvicorn app.main:app`。
+A：`run.py` 已内置 Windows 异步 IO 兼容垫片，请通过 `run.py` 或 `start.bat`（内部也是调用 `run.py`）启动，不要直接 `uvicorn app.main:app`。
 
 **Q：端口 8765 被占用？**
 A：修改 `config.json` 的 `web_port` 后重启。

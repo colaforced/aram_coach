@@ -4,6 +4,8 @@ import logging
 import httpx
 from typing import AsyncGenerator, Optional, Dict, Any, List
 
+from app.lcd_client import resolve_my_enemy_teams
+
 log = logging.getLogger("aram_coach.llm")
 
 
@@ -76,24 +78,7 @@ def _format_state_for_prompt(state: Dict[str, Any]) -> str:
 
     team_map = lcd.get("team_map") or {}
 
-    def _resolve_teams(tm: Dict) -> tuple:
-        all_players = []
-        for key in ("ORDER", "CHAOS"):
-            all_players.extend(tm.get(key, []))
-        my_team = []
-        enemy_team = []
-        for key in ("ORDER", "CHAOS"):
-            roster = tm.get(key, [])
-            if any(p.get("is_me") for p in roster):
-                my_team = roster
-            else:
-                enemy_team = roster
-        if not my_team:
-            my_team = all_players[:5]
-            enemy_team = all_players[5:]
-        return my_team, enemy_team
-
-    my_team, enemy_team = _resolve_teams(team_map)
+    my_team, enemy_team = resolve_my_enemy_teams(team_map)
 
     my_total_gold = sum(int(p.get("gold", 0)) for p in my_team)
     enemy_total_gold = sum(int(p.get("gold", 0)) for p in enemy_team)
@@ -144,8 +129,11 @@ def _format_state_for_prompt(state: Dict[str, Any]) -> str:
             parts.append(f"【推荐出装】{' → '.join(build)}")
             if my_items:
                 parts.append(f"【已购买】{','.join(my_items)}")
-        if coach.get("runes"):
-            parts.append(f"【推荐符文】{coach.get('runes')}")
+        if coach.get("primary_rune"):
+            rune_line = f"{coach.get('primary_branch')}·{' / '.join(coach.get('primary_details') or [coach['primary_rune']])}"
+            if coach.get("secondary_branch"):
+                rune_line += f"；副系 {coach['secondary_branch']}·{coach.get('secondary_rune', '')}"
+            parts.append(f"【推荐符文】{rune_line}")
 
     composite = state.get("composite_advice") or {}
     if composite:

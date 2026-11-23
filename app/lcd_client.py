@@ -36,3 +36,25 @@ def fetch_allgamedata() -> Optional[Dict[str, Any]]:
 def is_available() -> bool:
     data = fetch("/liveclientdata/activeplayer", timeout=2.0)
     return data is not None
+
+
+def resolve_my_enemy_teams(team_map: Dict[str, Any]) -> tuple:
+    """从 LCD 的 team_map（ORDER/CHAOS）里按 is_me 找出我方和敌方。
+
+    找不到自己时退化为前 5 人算我方。
+    """
+    all_players = []
+    for key in ("ORDER", "CHAOS"):
+        all_players.extend(team_map.get(key, []))
+    my_team = []
+    enemy_team = []
+    for key in ("ORDER", "CHAOS"):
+        roster = team_map.get(key, [])
+        if any(p.get("is_me") for p in roster):
+            my_team = roster
+        else:
+            enemy_team = roster
+    if not my_team:
+        my_team = all_players[:5]
+        enemy_team = all_players[5:]
+    return my_team, enemy_team

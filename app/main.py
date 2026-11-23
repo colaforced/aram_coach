@@ -13,10 +13,10 @@ from typing import Dict, Any, Optional
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse, HTMLResponse
-import uvicorn
 
 from app.lcu_client import LCUClient
 from app import lcd_client
+from app.lcd_client import resolve_my_enemy_teams
 from app.llm_client import LLMClient
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -64,10 +64,21 @@ ARAM_BUILD_REPLACEMENTS: Dict[str, str] = {
     "钢铁烈阳之匣": "救赎",
 }
 
-_champion_roles = {}
+ROLE_MAP = {
+    "坦克": "tank", "战士": "fighter", "刺客": "assassin",
+    "法师": "mage", "射手": "marksman", "辅助": "support",
+}
+ROLE_ALIASES = {"ADC": "射手"}
+
+
+def normalize_role(role: str) -> str:
+    """把数据里的定位归一成 ROLE_MAP 中的六种之一：ADC→射手，复合定位（刺客/辅助）取第一个。"""
+    role = (role or "").split("/")[0].strip()
+    return ROLE_ALIASES.get(role, role)
+
+
 for _cid, _cdata in CHAMPIONS_DB.items():
-    _role = _cdata.get("role", "")
-    _champion_roles[_cid] = _role
+    _cdata["role"] = normalize_role(_cdata.get("role", ""))
     _build = _cdata.get("build", [])
     _new_build = []
     for _item in _build:
@@ -181,14 +192,60 @@ def get_champion_coach(character_id: Any) -> Optional[Dict[str, Any]]:
     }
 
 
-ROLE_MAP = {
-    "坦克": "tank", "战士": "fighter", "刺客": "assassin",
-    "法师": "mage", "射手": "marksman", "辅助": "support",
-}
+_TEAM_GAPS = [
+    # (缺口, 判断“已有”的条件, 缺口扣分, 缺口提示, 补缺提示)
+    ("tank", lambda c: c["tank"] > 0 or c["fighter"] >= 2, 15,
+     "阵容缺前排（坦克/重装战士），注意抱团别分散", "你补上了前排缺口，完美契合"),
+    ("mage", lambda c: c["mage"] > 0 or c["assassin"] > 0, 10,
+     "阵容缺AP输出，后期可能打不动肉", "你补上了AP缺口，完美契合"),
+    ("adc", lambda c: c["marksman"] > 0 or c["fighter"] > 0, 5,
+     "阵容缺持续输出射手", "你补上了持续输出缺口"),
+]
+_FILL_BONUS = 10
+
+
+def evaluate_team_fit(my_team: list, my_coach: Optional[Dict[str, Any]],
+                      my_champion_id: Any) -> tuple:
+    """阵容契合度（0-100）和说明。
+
+    my_team 里通常包含玩家自己：先按 champion_id 排除自己统计队友，
+    再把自己的定位加回来，这样才能分辨"缺口是你补上的"还是"队友本来就有"。
+    返回 (fitness, notes)，notes 为 [(kind, text)]，kind ∈ gap / fill / dup。
+    """
+    mates = {k: 0 for k in ROLE_MAP.values()}
+    for m in my_team:
+        if my_champion_id and m.get("champion_id") == my_champion_id:
+            continue
+        key = ROLE_MAP.get((m.get("coach") or {}).get("role", ""))
+        if key:
+            mates[key] += 1
+
+    my_key = ROLE_MAP.get(my_coach.get("role", "")) if my_coach else None
+    full = dict(mates)
+    if my_key:
+        full[my_key] += 1
+
+    fitness = 50
+    notes = []
+    filled = False
+    for _gap, has, penalty, gap_text, fill_text in _TEAM_GAPS:
+        if not has(full):
+            fitness -= penalty
+            notes.append(("gap", gap_text))
+        elif not has(mates):
+            fitness += _FILL_BONUS
+            notes.append(("fill", fill_text))
+            filled = True
+
+    if my_key and not filled and mates[my_key] >= 2:
+        fitness -= 15
+        notes.append(("dup", f"队友里已有{mates[my_key]}个{my_coach.get('role')}，再加你略显重复"))
+
+    return max(0, min(100, fitness)), notes
 
 
 def compute_reroll_advice(my_team: list, my_coach: Optional[Dict[str, Any]],
-                          remaining_dice: int) -> Dict[str, Any]:
+                          remaining_dice: int, my_champion_id: Any = None) -> Dict[str, Any]:
     advice = {
         "remaining_dice": remaining_dice,
         "decision": "keep",
@@ -205,47 +262,8 @@ def compute_reroll_advice(my_team: list, my_coach: Optional[Dict[str, Any]],
     else:
         strength = 50
 
-    role_counts = {"tank": 0, "mage": 0, "marksman": 0, "assassin": 0, "fighter": 0, "support": 0}
-    for m in my_team:
-        coach = m.get("coach")
-        if not coach:
-            continue
-        role = ROLE_MAP.get(coach.get("role", ""), "")
-        if role in role_counts:
-            role_counts[role] += 1
-
-    has_tank = role_counts["tank"] > 0 or role_counts["fighter"] >= 2
-    has_mage = role_counts["mage"] > 0 or role_counts["assassin"] > 0
-    has_adc = role_counts["marksman"] > 0 or role_counts["fighter"] > 0
-
-    fitness = 50
-    reasons = []
-    if not has_tank:
-        fitness -= 15
-        reasons.append("阵容缺前排（坦克/重装战士）")
-    if not has_mage:
-        fitness -= 10
-        reasons.append("阵容缺AP输出")
-    if not has_adc:
-        fitness -= 5
-        reasons.append("阵容缺持续输出射手")
-
-    if my_coach:
-        my_role = ROLE_MAP.get(my_coach.get("role", ""), "")
-        if my_role == "tank" and not has_tank:
-            fitness += 25
-            reasons.append("你来补前排缺口，完美契合")
-        elif my_role in ("mage", "assassin") and not has_mage:
-            fitness += 20
-            reasons.append("你来补AP缺口，完美契合")
-        elif my_role == "marksman" and not has_adc:
-            fitness += 15
-            reasons.append("你来补持续输出，挺好")
-        elif role_counts[my_role] >= 2:
-            fitness -= 15
-            reasons.append("这个位置阵容里已经有2个了，过于重复")
-
-    fitness = max(0, min(100, fitness))
+    fitness, notes = evaluate_team_fit(my_team, my_coach, my_champion_id)
+    reasons = [text for _kind, text in notes]
     advice["fitness"] = fitness
     advice["score"] = int(strength * 0.6 + fitness * 0.4)
 
@@ -337,7 +355,8 @@ async def collect_game_state() -> Dict[str, Any]:
 
             remaining_dice = state.get("reroll_remaining", 2)
             state["reroll_advice"] = compute_reroll_advice(
-                state["my_team"], state.get("my_coach"), remaining_dice
+                state["my_team"], state.get("my_coach"), remaining_dice,
+                state.get("my_champion_id"),
             )
 
     elif phase_data in ("GameStart", "InProgress", "Reconnect"):
@@ -397,7 +416,8 @@ async def collect_game_state() -> Dict[str, Any]:
                     state["my_team"], state["enemy_team"], state.get("my_coach")
                 )
 
-        lcd_raw = lcd_client.fetch_allgamedata()
+        # urllib 是同步阻塞的（超时 5 秒），放到线程里跑，避免卡住事件循环
+        lcd_raw = await asyncio.to_thread(lcd_client.fetch_allgamedata)
         if lcd_raw:
             state["lcd"] = extract_lcd_data(lcd_raw, state)
 
@@ -518,24 +538,6 @@ def extract_lcd_data(lcd_raw: Dict[str, Any], state: Dict[str, Any]) -> Dict[str
     result["events"] = events_raw[-20:] if events_raw else []
 
     return result
-
-
-def resolve_my_enemy_teams(team_map: Dict) -> tuple:
-    all_players = []
-    for key in ("ORDER", "CHAOS"):
-        all_players.extend(team_map.get(key, []))
-    my_team = []
-    enemy_team = []
-    for key in ("ORDER", "CHAOS"):
-        roster = team_map.get(key, [])
-        if any(p.get("is_me") for p in roster):
-            my_team = roster
-        else:
-            enemy_team = roster
-    if not my_team:
-        my_team = all_players[:5]
-        enemy_team = all_players[5:]
-    return my_team, enemy_team
 
 
 def state_to_md(state: Dict[str, Any]) -> str:
@@ -1358,44 +1360,9 @@ def compute_composite_advice(state: Dict[str, Any]) -> Dict[str, Any]:
         base_strength = 50
     score_breakdown["英雄强度"] = base_strength
 
-    role_counts = {"tank": 0, "mage": 0, "marksman": 0, "assassin": 0, "fighter": 0, "support": 0}
-    for m in my_team:
-        coach = m.get("coach")
-        if coach:
-            role = ROLE_MAP.get(coach.get("role", ""), "")
-            if role in role_counts:
-                role_counts[role] += 1
-
-    my_role = ROLE_MAP.get(my_coach.get("role", ""), "") if my_coach else ""
-    has_tank = role_counts["tank"] > 0 or role_counts["fighter"] >= 2
-    has_mage = role_counts["mage"] > 0 or role_counts["assassin"] > 0
-    has_adc = role_counts["marksman"] > 0 or role_counts["fighter"] > 0
-
-    team_fit = 50
-    if not has_tank:
-        team_fit -= 15
-        suggestions.append("阵容缺前排（坦克/重装战士），注意抱团别分散")
-    if not has_mage:
-        team_fit -= 10
-        suggestions.append("阵容缺AP输出，后期可能打不动肉")
-    if not has_adc:
-        team_fit -= 5
-        suggestions.append("阵容缺持续输出射手")
-
-    if my_coach:
-        if my_role == "tank" and not has_tank:
-            team_fit += 25
-            suggestions.append("✅ 你补了前排缺口，完美契合阵容")
-        elif my_role in ("mage", "assassin") and not has_mage:
-            team_fit += 20
-            suggestions.append("✅ 你补了AP缺口，完美契合阵容")
-        elif my_role == "marksman" and not has_adc:
-            team_fit += 15
-            suggestions.append("✅ 你补了持续输出缺口")
-        elif role_counts[my_role] >= 2:
-            team_fit -= 15
-            suggestions.append("⚠️ 同位置已有2人，略显重复")
-    team_fit = max(0, min(100, team_fit))
+    team_fit, fit_notes = evaluate_team_fit(my_team, my_coach, state.get("my_champion_id"))
+    fit_prefix = {"gap": "", "fill": "✅ ", "dup": "⚠️ "}
+    suggestions.extend(fit_prefix[kind] + text for kind, text in fit_notes)
     score_breakdown["阵容适配"] = team_fit
 
     counter_score = 50
@@ -2116,9 +2083,3 @@ async def ws_endpoint(ws: WebSocket):
     finally:
         if ws in ws_clients:
             ws_clients.remove(ws)
-
-
-if __name__ == "__main__":
-    port = CONFIG.get("web_port", 8765)
-    log.info(f"Web UI: http://127.0.0.1:{port}/")
-    uvicorn.run(app, host="127.0.0.1", port=port, log_level="info")

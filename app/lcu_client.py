@@ -130,7 +130,8 @@ class LCUClient:
         deadline = time.time() + timeout
         last_info = None
         while time.time() < deadline:
-            info = discover_connection(self.search_paths)
+            # 会 glob 目录、整份读取客户端日志，放到线程里避免阻塞事件循环
+            info = await asyncio.to_thread(discover_connection, self.search_paths)
             if info:
                 port_changed = last_info is None or info["port"] != last_info.get("port")
                 last_info = info
