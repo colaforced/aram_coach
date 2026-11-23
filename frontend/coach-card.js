@@ -47,13 +47,15 @@ const STYLE = `
 #cc-aug-launch { position: fixed; right: 20px; bottom: 20px; z-index: 9000; background: linear-gradient(135deg,#7e57c2,#ec407a);
   color: #fff; border: none; border-radius: 24px; padding: 10px 18px; font-size: 14px; font-weight: 700; cursor: pointer;
   box-shadow: 0 6px 20px rgba(0,0,0,0.4); display: none; }
-#cc-aug { position: fixed; right: 20px; bottom: 70px; width: 340px; max-width: calc(100vw - 40px); z-index: 9001;
+#cc-aug { position: fixed; right: 20px; top: 96px; width: 340px; max-width: calc(100vw - 40px); z-index: 9001;
+  max-height: calc(100vh - 120px); overflow-y: auto;
   background: #121c2a; border: 1px solid #7e57c2; border-radius: 14px; padding: 14px 16px; box-shadow: 0 10px 36px rgba(0,0,0,0.55); }
 #cc-aug h3 { font-size: 15px; color: #ce93d8; margin: 0 0 10px; display: flex; justify-content: space-between; }
 #cc-aug h3 span { cursor: pointer; color: #78909c; }
 #cc-aug input { width: 100%; box-sizing: border-box; background: #0a121c; border: 1px solid #2d4a5a; color: #eceff1;
   border-radius: 8px; padding: 8px 10px; font-size: 14px; margin-bottom: 6px; }
-#cc-aug .cc-res { margin-top: 10px; font-size: 13px; color: #cfd8dc; white-space: pre-wrap; }
+#cc-aug .cc-res { margin-top: 10px; font-size: 13px; color: #cfd8dc; }
+#cc-aug .cc-ai { white-space: pre-wrap; line-height: 1.6; }
 .cc-rank { padding: 6px 0; border-top: 1px solid #1e2d3d; }
 .cc-rank.top .cc-rname { color: #ffd54f; font-weight: 800; font-size: 16px; }
 .cc-rname { font-weight: 600; }
@@ -153,9 +155,10 @@ function momentCard(s) {
         ? `现有 ${Number(p.gold)}G · 花 ${Number(p.spend)}G · 剩 ${Number(p.left)}G${focus ? ' · ' + focus : ''}`
         : `现有 ${Number(p.gold)}G，暂时买不起下一件的零件${focus ? '。' + focus : ''}`;
     const adj = (m.adjustments || []).map(a => `<div class="cc-adj">${a.kind === 'heal' ? '🩸' : '🛡️'} ${esc(a.tip)}</div>`).join('');
-    const next = (m.targets || [])[0];
-    const chips = (m.build_status || []).map(b =>
-        `<span class="cc-chip ${b.owned ? 'done' : (b.name === next ? 'next' : '')}">${esc(b.name)}</span>`).join('');
+    const chips = (m.build_status || []).filter(b => b.owned)
+        .map(b => `<span class="cc-chip done">${esc(b.name)}</span>`)
+        .concat((m.targets || []).map((n, i) => `<span class="cc-chip ${i === 0 ? 'next' : ''}">${esc(n)}</span>`))
+        .join('');
     return `<div class="cc-card ${m.kind === 'next' ? '' : 'cc-shop'}">
         <div class="cc-head" style="font-size:${m.kind === 'next' ? 18 : 22}px">${title}</div>
         ${buys ? `<div class="cc-buys">${buys}</div>` : ''}
@@ -173,7 +176,7 @@ window.CoachCard = { verdictCard, momentCard, toast };
 window.CoachActions = {
     async swap(cid) {
         const r = await post(`/api/champ-select/swap/${cid}`);
-        toast(r.ok ? '已交换，符文页按新英雄来' : `交换失败：${r.reason || ''}`, r.ok);
+        toast(r.ok ? '已交换英雄' : `交换失败：${r.reason || ''}`, r.ok);
     },
     async reroll() {
         const r = await post('/api/champ-select/reroll');
@@ -202,7 +205,8 @@ const AugmentPicker = {
         }
     },
     showLauncher(visible) {
-        let btn = document.getElementById('cc-aug-launch');
+        // 页面里放了 [data-aug-launch] 按钮（比如顶栏）就用它，否则右下角悬浮一个
+        let btn = document.querySelector('[data-aug-launch]') || document.getElementById('cc-aug-launch');
         if (!btn) {
             btn = document.createElement('button');
             btn.id = 'cc-aug-launch';
@@ -264,9 +268,9 @@ const AugmentPicker = {
         const opts = this.options();
         const res = document.querySelector('#cc-aug .cc-res');
         if (!res || !opts.length) return;
-        res.textContent = '🤖 思考中…';
+        res.innerHTML = '<div class="cc-ai">🤖 思考中…</div>';
         const r = await post('/api/augments/ai', { options: opts });
-        res.textContent = r.text || r.reason || '没有返回内容';
+        res.firstChild.textContent = (r.text || r.reason || '没有返回内容').replace(/\*\*/g, '');
     },
 };
 window.AugmentPicker = AugmentPicker;

@@ -35,6 +35,10 @@ with open(BASE_DIR / "data" / "champions.json", "r", encoding="utf-8") as f:
 with open(BASE_DIR / "data" / "champion_map.json", "r", encoding="utf-8") as f:
     CHAMPION_MAP = json.load(f)
 
+# championId → 英雄本名（亚索 / 金克丝…）：CHAMPION_MAP 存的是称号（疾风剑豪），知识库里常写本名
+with open(BASE_DIR / "data" / "champion_alias.json", "r", encoding="utf-8") as f:
+    CHAMPION_ALIAS: Dict[str, str] = json.load(f)
+
 KNOWLEDGE_BASE: Dict[str, Any] = {}
 _kb_path = BASE_DIR / "data" / "knowledge_base.json"
 if _kb_path.exists():
@@ -293,6 +297,7 @@ def get_champion_coach(character_id: Any) -> Optional[Dict[str, Any]]:
     return {
         "character_id": character_id,
         "name": name,
+        "alias": CHAMPION_ALIAS.get(key, ""),
         "role": data.get("role", "未知"),
         "aram_strength": aram_strength,
         **runes,
@@ -928,6 +933,7 @@ async def apply_rune_page(character_id: Any) -> Dict[str, Any]:
 async def poll_lcu():
     last_phase = None
     last_champ_id = None
+    last_rolls = None
     last_level = None
     runes_applied_for = None
     _debug_count = 0
@@ -940,6 +946,7 @@ async def poll_lcu():
                 log.info(f"Phase changed: {last_phase} -> {state['phase']}")
                 last_phase = state["phase"]
                 last_champ_id = None
+                last_rolls = None
                 last_level = None
                 runes_applied_for = None
                 _debug_count = 0
@@ -954,7 +961,9 @@ async def poll_lcu():
                     log.info(f"[DEBUG ChampSelect #{_debug_count}] my_champion_id={cur_champ}, reroll_remaining={cur_rolls}, last_champ={last_champ_id}, my_team_count={len(state.get('my_team') or [])}")
 
                 if last_champ_id is not None and cur_champ is not None and cur_champ != last_champ_id:
-                    log.info(f"🎲 英雄骰子重随! {last_champ_id} -> {cur_champ} (剩余骰子={cur_rolls})")
+                    # 骰子数变少才是重随，否则是和备选席/队友交换
+                    via = "reroll" if last_rolls is not None and cur_rolls is not None and cur_rolls < last_rolls else "swap"
+                    log.info(f"🎲 英雄变更({via}) {last_champ_id} -> {cur_champ} (剩余骰子={cur_rolls})")
                     await broadcast({
                         "type": "dice_rolled",
                         "data": {
@@ -962,10 +971,12 @@ async def poll_lcu():
                             "new_champion_id": cur_champ,
                             "new_champion_name": state.get("my_champion_name"),
                             "remaining_dice": cur_rolls,
+                            "via": via,
                             "verdict": state.get("verdict"),
                             "composite": state.get("composite_advice"),
                         }
                     })
+                last_rolls = cur_rolls
                 if cur_champ and cur_champ != 0:
                     last_champ_id = cur_champ
                     if RUNES_CFG.get("auto_apply") and cur_champ != runes_applied_for:

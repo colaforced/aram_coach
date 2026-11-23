@@ -147,7 +147,7 @@ def in_game_moment(coach: Optional[Dict[str, Any]], me: Optional[Dict[str, Any]]
         "kind": kind,
         "respawn": round(me.get("respawn_timer") or 0),
         "plan": plan,
-        "targets": [db.name(i) for i in targets[:4]],
+        "targets": [db.name(i) for i in targets[:6]],
         "adjustments": adjustments,
         "dmg": dmg,
         "build_status": [{"name": n, "owned": n in owned_set} for n in coach.get("build") or []],

@@ -50,6 +50,7 @@ def rank(options: List[str], coach: Optional[Dict[str, Any]], kb_specific: Optio
     best_runes = list((kb_specific or {}).get("best_runes") or [])
     role = coach.get("role", "")
     champ = coach.get("name", "")
+    names = [n for n in (champ, coach.get("alias", "")) if n]  # 称号 + 本名，知识库两种写法都有
 
     ranked = []
     for name in options:
@@ -64,12 +65,18 @@ def rank(options: List[str], coach: Optional[Dict[str, Any]], kb_specific: Optio
             score += info["base"]
             reasons.append(f"知识库{info['group']}")
             best_for = info["best_for"]
-            if champ and champ in best_for:
+            named_roles = [r for r, words in ROLE_WORDS.items() if any(w in best_for for w in words)]
+            hit = next((n for n in names if n in best_for), None)
+            if hit:
                 score += 20
-                reasons.append(f"适合{champ}")
-            elif any(w in best_for for w in ROLE_WORDS.get(role, ())):
+                reasons.append(f"适合{hit}")
+            elif role in named_roles:
                 score += 15
                 reasons.append(f"适合{role}")
+            elif named_roles:
+                # 写明了适合哪些定位、但不包括你（比如"任何AP英雄"给了射手）
+                score -= 15
+                reasons.append(f"偏{'/'.join(named_roles)}，不太适合{role or '你'}")
             elif any(w in best_for for w in UNIVERSAL_WORDS):
                 score += 5
             if info["effect"]:

@@ -206,7 +206,12 @@ class LLMClient:
                     log.error("LLM API error %s: %s", resp.status_code, resp.text[:300])
                     return False, f"❌ API 错误 {resp.status_code}: {resp.text[:200]}"
                 data = resp.json()
-                return True, data.get("choices", [{}])[0].get("message", {}).get("content", "")
+                choice = (data.get("choices") or [{}])[0]
+                content = (choice.get("message") or {}).get("content") or ""
+                if not content and choice.get("finish_reason") == "length":
+                    # 推理模型（如 kimi-k3）的思考过程也算在 max_tokens 里，可能还没写结论就到上限了
+                    return False, "⚠️ 模型思考用完了长度上限，没来得及给结论，请重试"
+                return True, content
             except httpx.TimeoutException:
                 log.error("LLM request timeout")
                 return False, "⏱️ 请求超时了，网络可能有问题"
@@ -262,7 +267,8 @@ class LLMClient:
             {"role": "system", "content": "你是英雄联盟海克斯大乱斗（ARAM: Mayhem）强化符文专家，回答简短直接。"},
             {"role": "user", "content": prompt},
         ]
-        _ok, content = await self._chat(messages, max_tokens=400)
+        # 只要三行结论，但推理模型的思考过程也占 max_tokens，要留足余量
+        _ok, content = await self._chat(messages, max_tokens=2000)
         return content or "（没有返回内容）"
 
     async def close(self):

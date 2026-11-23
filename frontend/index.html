@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>ARAM Coach - 大乱斗实时指导</title>
+<link rel="icon" href="data:,">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
@@ -13,9 +14,43 @@ body {
     padding: 20px;
 }
 .container {
-    max-width: 960px;
+    max-width: 1880px;
     margin: 0 auto;
 }
+/* 一页仪表盘：宽屏三列（决策 / 战况 / 指导），中屏两列，窄屏一列 */
+.dash {
+    display: grid;
+    gap: 16px;
+    align-items: start;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "main" "team" "guide";
+}
+.dash[hidden] { display: none; }
+.dash-main { grid-area: main; }
+.dash-team { grid-area: team; }
+.dash-guide { grid-area: guide; }
+@media (min-width: 1100px) {
+    .dash { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "main guide" "team guide"; }
+}
+@media (min-width: 1600px) {
+    .dash { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "main team guide"; }
+}
+/* 右列：英雄指导 / 深度分析 / 问 AI 三个页签。页签内容不随 2 秒推送重绘，报告和输入框不会被清掉 */
+.guide-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+.guide-tabs button {
+    flex: 1; background: #141c28; color: #90a4ae; border: 1px solid #2a3142; border-radius: 8px;
+    padding: 8px 10px; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.guide-tabs button.on { background: #1e2a3a; color: #4fc3f7; border-color: #4fc3f7; }
+.guide-pane[hidden] { display: none; }
+.guide-pane .ai-answer { max-height: 70vh; overflow-y: auto; }
+.guide-pane .ai-input-row { padding: 12px 0 0; background: none; border-top: none; }
+.deep-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 12px; color: #78909c; }
+.deep-head button {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; border: none; border-radius: 8px;
+    padding: 7px 14px; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.deep-head button:disabled { opacity: 0.5; cursor: not-allowed; }
 .header {
     display: flex;
     align-items: center;
@@ -26,6 +61,14 @@ body {
     border-radius: 12px;
     margin-bottom: 20px;
 }
+.header { flex-wrap: wrap; gap: 12px; }
+.header-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.header-nav { display: flex; gap: 8px; }
+.header-nav button {
+    background: #1e2a3a; color: #cfd8dc; border: 1px solid #2d3f55; border-radius: 8px;
+    padding: 6px 12px; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.header-nav button:hover { border-color: #4fc3f7; color: #4fc3f7; }
 .header h1 {
     font-size: 20px;
     font-weight: 600;
@@ -306,48 +349,6 @@ body {
 .balance-minus { background: rgba(244,67,54,0.15); color: #ef5350; }
 .balance-plus { background: rgba(255,193,7,0.15); color: #ffb74d; }
 
-.quick-coach-bar {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: linear-gradient(135deg, #1a1f2e, #0f1420);
-    border-top: 2px solid #4fc3f7;
-    padding: 14px 20px;
-    z-index: 100;
-    transform: translateY(100%);
-    transition: transform 0.3s ease;
-}
-.quick-coach-bar.visible { transform: translateY(0); }
-.quick-coach-inner {
-    max-width: 960px;
-    margin: 0 auto;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-}
-.quick-coach-name {
-    font-size: 18px;
-    font-weight: 700;
-    color: #66bb6a;
-    min-width: 80px;
-}
-.quick-coach-text {
-    flex: 1;
-    font-size: 13px;
-    color: #cfd8dc;
-    line-height: 1.5;
-}
-.quick-coach-close {
-    background: none;
-    border: 1px solid #3a4558;
-    color: #78909c;
-    padding: 4px 10px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 12px;
-}
-.quick-coach-close:hover { border-color: #4fc3f7; color: #4fc3f7; }
 
 .role-bar {
     display: flex;
@@ -583,20 +584,28 @@ body {
 .attrs-toggle:hover { color: #90caf9; }
 .attrs-toggle .arrow { transition: transform 0.2s; }
 .attrs-toggle.open .arrow { transform: rotate(90deg); }
+/* 外层：四组属性并排（窄屏自动换行）；每组内：一行一个属性 */
+.attrs-groups {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px 16px;
+    margin-top: 10px;
+}
+.attrs-groups.hidden { display: none; }
 .attrs-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 6px 12px;
-    margin-top: 10px;
+    grid-template-columns: 1fr;
+    gap: 4px;
     font-size: 12px;
 }
-.attrs-grid.hidden { display: none; }
 .attr-row {
     display: flex;
     justify-content: space-between;
-    padding: 2px 6px;
+    gap: 8px;
+    padding: 3px 8px;
     background: #0f1923;
     border-radius: 4px;
+    white-space: nowrap;
 }
 .attr-row .attr-label { color: #78909c; }
 .attr-row .attr-val { color: #e0e0e0; font-weight: 600; }
@@ -757,53 +766,6 @@ body {
 .md-viewer-footer button:hover { background: #2d4a5a; }
 .md-viewer-footer .md-copy-btn { background: linear-gradient(135deg, #43cea2, #185a9d); border: none; }
 
-.ai-modal-overlay {
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.6);
-    z-index: 1000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.ai-modal {
-    background: #1a2332;
-    border-radius: 14px;
-    width: 560px;
-    max-height: 80vh;
-    display: flex;
-    flex-direction: column;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-    border: 1px solid #37474f;
-    overflow: hidden;
-}
-.ai-modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 14px 18px;
-    border-bottom: 1px solid #2a3545;
-    background: linear-gradient(135deg, #667eea22, #764ba222);
-}
-.ai-modal-header h3 { margin: 0; color: #e0e0e0; font-size: 15px; }
-.ai-modal-close {
-    background: none; border: none; color: #78909c;
-    font-size: 20px; cursor: pointer; line-height: 1;
-}
-.ai-modal-close:hover { color: #e0e0e0; }
-.quick-refresh-btn {
-    background: linear-gradient(135deg, #43cea2, #185a9d);
-    border: none; color: white; font-size: 15px;
-    width: 30px; height: 30px; border-radius: 50%;
-    cursor: pointer; display: flex; align-items: center; justify-content: center;
-}
-.quick-refresh-btn:hover { filter: brightness(1.2); }
-
-.ai-modal-body {
-    flex: 1;
-    overflow-y: auto;
-    padding: 14px 18px;
-}
 .ai-answer {
     background: #0f1923;
     border-radius: 10px;
@@ -1192,7 +1154,13 @@ body {
 <div class="container">
     <div class="header">
         <h1>🎯 ARAM Coach</h1>
-        <div style="display: flex; align-items: center; gap: 12px;">
+        <div class="header-right">
+            <nav class="header-nav">
+                <button onclick="scrollToCoach()" title="符文、出装顺序、应对场景、Tips">🧭 英雄指导</button>
+                <button onclick="openDeepAnalysis()" title="整局分析报告：有 Key 走 LLM，否则走本地规则">📊 深度分析</button>
+                <button onclick="openAICoach()" title="向 LLM 追问">🤖 问 AI</button>
+                <button data-aug-launch style="display:none" onclick="AugmentPicker.toggle()" title="升到强化符文等级时会自动弹出">🎲 强化符文</button>
+            </nav>
             <span class="phase-badge" id="phase-badge">等待中</span>
             <span class="status-pill" id="lcu-status">
                 <span class="dot"></span>
@@ -1201,6 +1169,7 @@ body {
         </div>
     </div>
 
+    <div id="status-row"></div>
     <div id="main-content">
         <div class="panel">
             <div class="empty-state">
@@ -1213,15 +1182,36 @@ body {
             </div>
         </div>
     </div>
-</div>
-
-<div class="quick-coach-bar" id="quick-bar">
-    <div class="quick-coach-inner">
-        <div class="quick-coach-name" id="quick-name">--</div>
-        <div class="quick-coach-text" id="quick-tip">--</div>
-        <button class="quick-coach-close" onclick="hideQuick()">忽略</button>
+    <div id="dash" class="dash" hidden>
+        <div class="dash-main" id="col-main"></div>
+        <div class="dash-team" id="col-team"></div>
+        <div class="dash-guide panel">
+            <div class="guide-tabs">
+                <button data-tab="coach" onclick="showGuideTab('coach')">🧭 英雄指导</button>
+                <button data-tab="deep" onclick="showGuideTab('deep')">📊 深度分析</button>
+                <button data-tab="ai" onclick="showGuideTab('ai')">🤖 问 AI</button>
+            </div>
+            <div class="guide-pane" data-pane="coach" id="col-guide"></div>
+            <div class="guide-pane" data-pane="deep" hidden>
+                <div class="deep-head">
+                    <button id="deepBtn" onclick="runDeepAnalysis()">生成整局分析</button>
+                    <span id="deepMeta">结合当前对局数据和知识库生成报告</span>
+                </div>
+                <div id="deepReport" class="ai-answer" style="display:none;"></div>
+            </div>
+            <div class="guide-pane" data-pane="ai" hidden>
+                <div class="ai-quick-row" id="aiQuick"></div>
+                <div id="aiAnswer" class="ai-answer" style="display:none;"></div>
+                <div class="ai-input-row">
+                    <input id="aiInput" type="text" placeholder="问 LLM… 比如 这个装备为什么推荐？"
+                        onkeydown="if(event.key==='Enter') askAICoach(this.value)">
+                    <button id="aiSendBtn" onclick="askAICoach(document.getElementById('aiInput').value)">发送</button>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
+
 
 <script src="/static/coach-card.js"></script>
 <script>
@@ -1241,7 +1231,6 @@ function connectWS() {
         } else if (msg.type === 'phase_change') {
             currentState = msg.data;
             render();
-            flashPhase();
         } else if (msg.type === 'dice_rolled') {
             const d = msg.data;
             showDiceToast(d);
@@ -1253,22 +1242,6 @@ function connectWS() {
     ws.onclose = () => {
         setTimeout(connectWS, 2000);
     };
-}
-
-function flashPhase() {
-    const bar = document.getElementById('quick-bar');
-    const name = document.getElementById('quick-name');
-    const tip = document.getElementById('quick-tip');
-    if (currentState && currentState.my_coach) {
-        name.textContent = currentState.my_champion_name || currentState.my_coach.name;
-        tip.textContent = currentState.my_coach.tips[0] || '进入大乱斗，加油！';
-        bar.classList.add('visible');
-        setTimeout(hideQuick, 8000);
-    }
-}
-
-function hideQuick() {
-    document.getElementById('quick-bar').classList.remove('visible');
 }
 
 function showDiceToast(d) {
@@ -1288,8 +1261,8 @@ function showDiceToast(d) {
     const newName = d.new_champion_name || '???';
     toast.innerHTML = `
         <div class="dt-header">
-            <span class="dt-icon">🎲</span>
-            <span class="dt-title">骰子重随！</span>
+            <span class="dt-icon">${d.via === 'reroll' ? '🎲' : '🔁'}</span>
+            <span class="dt-title">${d.via === 'reroll' ? '骰子重随！' : '换了英雄'}</span>
             <span class="dt-close">✕</span>
         </div>
         <div class="dt-body">
@@ -1337,17 +1310,28 @@ function render() {
     };
     document.getElementById('phase-badge').textContent = phaseLabel[s.phase] || s.phase;
 
+    const inGame = ['GameStart', 'InProgress', 'Reconnect'].includes(s.phase);
+    let view = null;
+    if (s.lcu_connected && s.phase === 'ChampSelect') view = renderChampSelect(s);
+    else if (s.lcu_connected && inGame) view = renderInGame(s);
+
     const main = document.getElementById('main-content');
-    if (!s.lcu_connected) {
-        main.innerHTML = emptyPanel();
-    } else if (s.phase === 'ChampSelect') {
-        main.innerHTML = renderChampSelect(s);
-    } else if (['GameStart', 'InProgress', 'Reconnect'].includes(s.phase)) {
-        main.innerHTML = renderInGame(s);
+    const dash = document.getElementById('dash');
+    if (view) {
+        main.innerHTML = '';
+        dash.hidden = false;
+        document.getElementById('status-row').innerHTML = view.status || '';
+        document.getElementById('col-main').innerHTML = view.main;
+        document.getElementById('col-team').innerHTML = view.team;
+        document.getElementById('col-guide').innerHTML = view.guide;
     } else {
-        main.innerHTML = emptyPanel('等待进入大乱斗对局...', '请点击 Play → ARAM 开始匹配');
+        dash.hidden = true;
+        document.getElementById('status-row').innerHTML = '';
+        main.innerHTML = s.lcu_connected
+            ? emptyPanel('等待进入大乱斗对局...', '请点击 Play → ARAM 开始匹配')
+            : emptyPanel();
     }
-    AugmentPicker.showLauncher(s.lcu_connected && ['GameStart', 'InProgress', 'Reconnect'].includes(s.phase));
+    AugmentPicker.showLauncher(s.lcu_connected && inGame);
 }
 
 function emptyPanel(title, subtitle) {
@@ -1364,7 +1348,7 @@ function renderChampSelect(s) {
     if (s.my_coach) {
         myHtml = renderCoachCard(s.my_coach, true);
     } else {
-        myHtml = `<div class="panel"><div class="empty-state"><div class="icon">🎲</div><p>等待随机英雄...</p></div></div>`;
+        myHtml = `<div class="empty-state"><div class="icon">🎲</div><p>等待随机英雄...</p></div>`;
     }
 
     const verdictHtml = CoachCard.verdictCard(s);
@@ -1374,14 +1358,11 @@ function renderChampSelect(s) {
         teamAnalysis = renderTeamAnalysis(s.my_team || [], s.enemy_team || []);
     }
 
-    return verdictHtml + myHtml + teamAnalysis;
+    return { main: verdictHtml, team: teamAnalysis, guide: myHtml };
 }
 
 function renderInGame(s) {
-    let liveHtml = '';
-    if (s.lcd && s.lcd.available) {
-        liveHtml = renderLiveStatus(s.lcd);
-    }
+    const live = s.lcd && s.lcd.available;
     const momentHtml = CoachCard.momentCard(s);
     let teamHtml = '';
     if (s.lcd && s.lcd.available) {
@@ -1395,12 +1376,29 @@ function renderInGame(s) {
     if (s.my_coach) {
         coachHtml = renderCoachCard(s.my_coach, true);
     } else {
-        coachHtml = `<div class="panel"><div class="empty-state"><div class="icon">⚔️</div><p>对局中...<br>英雄数据加载中</p></div></div>`;
+        coachHtml = `<div class="empty-state"><div class="icon">⚔️</div><p>对局中...<br>英雄数据加载中</p></div>`;
     }
-    return liveHtml + momentHtml + teamHtml + eventHtml + coachHtml;
+    return {
+        status: live ? renderStatusBar(s.lcd) : '',
+        main: momentHtml + (live ? renderAttrsPanel(s.lcd) : ''),
+        team: teamHtml + eventHtml,
+        guide: coachHtml,
+    };
 }
 
-function renderLiveStatus(lcd) {
+// 页面每 2 秒整块重绘，展开状态要单独记住，否则一刷新就收回去；也存进浏览器，下次打开保持
+let attrsOpen = false;
+try { attrsOpen = localStorage.getItem('attrsOpen') === '1'; } catch (e) { /* 隐私模式等读不了就默认收起 */ }
+
+function toggleAttrs(el) {
+    attrsOpen = !attrsOpen;
+    try { localStorage.setItem('attrsOpen', attrsOpen ? '1' : '0'); } catch (e) { /* 存不了也不影响本次 */ }
+    document.getElementById('attrsBody').classList.toggle('hidden', !attrsOpen);
+    el.classList.toggle('open', attrsOpen);
+    el.lastChild.textContent = ` 📊 属性面板（点击${attrsOpen ? '收起' : '展开'}）`;
+}
+
+function renderStatusBar(lcd) {
     const a = lcd.active || {};
     const st = a.champion_stats || {};
     const gold = Math.round(a.gold || 0);
@@ -1423,6 +1421,30 @@ function renderLiveStatus(lcd) {
         return `<div class="live-ab ${cls}"><span class="sym">${abSymbols[k]}</span>${lv ? `<span class="lv">Lv${lv}</span>` : ''}</div>`;
     }).join('');
 
+    return `<div class="live-status-bar">
+        <div class="live-stat">
+            <div class="live-stat-value gold">${gold}</div>
+            <div class="live-stat-label">金币</div>
+        </div>
+        <div class="live-stat">
+            <div class="live-stat-value">Lv${level}</div>
+            <div class="live-stat-label">等级</div>
+        </div>
+        <div class="live-stat">
+            <div class="live-stat-value">${gMin}:${String(gSec).padStart(2,'0')}</div>
+            <div class="live-stat-label">游戏时间</div>
+        </div>
+        <div class="live-hp-bar">
+            <div class="live-hp-bar-inner">
+                <div class="live-hp-fill ${hpClass}" style="width:${hpPct}%;"></div>
+            </div>
+            <div class="live-hp-text">HP ${hp} / ${maxHp} (${Math.round(hpPct)}%)</div>
+        </div>
+        <div class="live-abilities">${abHtml}</div>
+    </div>`;
+}
+
+function attrGroupsHtml(st, hp, maxHp) {
     const attrGroups = [
         {
             title: '🗡️ 输出',
@@ -1476,39 +1498,25 @@ function renderLiveStatus(lcd) {
         },
     ];
 
-    const attrsHtml = attrGroups.map(g => {
+    return attrGroups.map(g => {
         const rows = g.items.map(([label, val]) =>
             `<div class="attr-row"><span class="attr-label">${label}</span><span class="attr-val">${val}</span></div>`
         ).join('');
-        return `<div style="margin-bottom:10px;"><div style="font-size:11px;color:#64b5f6;font-weight:600;margin-bottom:4px;">${g.title}</div><div class="attrs-grid">${rows}</div></div>`;
+        return `<div><div style="font-size:11px;color:#64b5f6;font-weight:600;margin-bottom:6px;">${g.title}</div><div class="attrs-grid">${rows}</div></div>`;
     }).join('');
 
-    return `<div class="live-status-bar">
-        <div class="live-stat">
-            <div class="live-stat-value gold">${gold}</div>
-            <div class="live-stat-label">金币</div>
+}
+
+function renderAttrsPanel(lcd) {
+    const st = (lcd.active || {}).champion_stats || {};
+    const hp = Math.round(st.hp || 0);
+    const maxHp = Math.round(st.max_hp || 1);
+    const attrsHtml = attrGroupsHtml(st, hp, maxHp);
+    return `<div class="attrs-panel">
+        <div class="attrs-toggle ${attrsOpen ? 'open' : ''}" onclick="toggleAttrs(this)">
+            <span class="arrow">▶</span> 📊 属性面板（点击${attrsOpen ? '收起' : '展开'}）
         </div>
-        <div class="live-stat">
-            <div class="live-stat-value">Lv${level}</div>
-            <div class="live-stat-label">等级</div>
-        </div>
-        <div class="live-stat">
-            <div class="live-stat-value">${gMin}:${String(gSec).padStart(2,'0')}</div>
-            <div class="live-stat-label">游戏时间</div>
-        </div>
-        <div class="live-hp-bar">
-            <div class="live-hp-bar-inner">
-                <div class="live-hp-fill ${hpClass}" style="width:${hpPct}%;"></div>
-            </div>
-            <div class="live-hp-text">HP ${hp} / ${maxHp} (${Math.round(hpPct)}%)</div>
-        </div>
-        <div class="live-abilities">${abHtml}</div>
-    </div>
-    <div class="attrs-panel">
-        <div class="attrs-toggle" onclick="document.getElementById('attrsBody').classList.toggle('hidden'); this.classList.toggle('open');">
-            <span class="arrow">▶</span> 📊 属性面板（点击展开）
-        </div>
-        <div id="attrsBody" class="attrs-grid hidden">${attrsHtml}</div>
+        <div id="attrsBody" class="attrs-groups ${attrsOpen ? '' : 'hidden'}">${attrsHtml}</div>
     </div>`;
 }
 
@@ -1661,6 +1669,14 @@ function scoreClass(score) {
     return 'low';
 }
 
+// champions.json 里 situational 的字段名 → 显示用的标签
+const SITUATION_LABELS = {
+    need_ad: '对面 AD 多', need_ap: 'AP', heavy_ap: '对面 AP 多', against_ap: '对面 AP 多',
+    need_survive: '保命', against_tank: '打坦克', all_tank: '对面全是肉', need_tank: '补肉',
+    against_heal: '对面回复多', enemy_heal: '对面回复多', against_assassin: '防刺客',
+    need_armor_pen: '破甲', need_range: '射程', need_ap_dmg: 'AP 伤害',
+};
+
 function renderCoachCard(coach, isMine) {
     const runeDetails = (coach.primary_details || []).map(r => `<span class="rune-chip">${esc(r)}</span>`).join('');
     const buildHtml = (coach.build || []).map((item, i, arr) => {
@@ -1672,7 +1688,7 @@ function renderCoachCard(coach, isMine) {
     if (coach.situational && Object.keys(coach.situational).length > 0) {
         situationalHtml = '<div class="section"><div class="section-title">⚠️ 应对场景</div>' +
             Object.entries(coach.situational).map(([k, v]) =>
-                `<div class="situational-item"><strong>${esc(k)}</strong>${esc(v)}</div>`
+                `<div class="situational-item">${SITUATION_LABELS[k] ? `<strong>${SITUATION_LABELS[k]}</strong>` : ''}${esc(v)}</div>`
             ).join('') + '</div>';
     }
 
@@ -1698,7 +1714,7 @@ function renderCoachCard(coach, isMine) {
     ].filter(Boolean).map(t => `<div style="margin-top:6px;font-size:12px;color:#90a4ae;">${t}</div>`).join('');
 
     return `
-        <div class="panel">
+        <div id="coach-card">
             <div class="champion-card">
                 <div class="champion-header ${isMine ? 'my-card' : ''}">
                     <span class="champion-name">${esc(coach.name)}</span>
@@ -1810,15 +1826,17 @@ function renderTeamAnalysis(myTeam, enemyTeam) {
                 </div>
                 <div class="team-card team-enemy">
                     <div class="team-title">🔴 敌方阵容</div>
-                    ${['坦克','战士','法师','射手','刺客','辅助'].map(r => roleRow(enemy.counts, r)).join('')}
+                    ${enemyTeam.length ? ['坦克','战士','法师','射手','刺客','辅助'].map(r => roleRow(enemy.counts, r)).join('')
+                        : '<div style="font-size:12px;color:#607d8b;padding:8px 0;">大乱斗选人阶段看不到敌方，进对局后显示</div>'}
                     ${enemy.names.length ? '<div style="margin-top:10px;font-size:11px;color:#78909c;">' + esc(enemy.names.join(', ')) + '</div>' : ''}
                 </div>
             </div>
         </div>`;
 }
 
-let aiCoachEl = null;
-let aiCoachAbort = null;
+let aiAbort = null;
+let guideTab = 'coach';
+try { guideTab = localStorage.getItem('guideTab') || 'coach'; } catch (e) { /* 读不了就用默认页签 */ }
 
 const AI_QUICK_QUESTIONS = [
     "当前局势怎么看？",
@@ -1829,66 +1847,65 @@ const AI_QUICK_QUESTIONS = [
     "我的属性合理吗？",
 ];
 
-function openAICoach(initialQuestion) {
-    if (aiCoachEl) {
-        aiCoachEl.remove();
-        aiCoachEl = null;
-    }
-
-    const overlay = document.createElement("div");
-    overlay.className = "ai-modal-overlay";
-    overlay.innerHTML = `
-        <div class="ai-modal">
-            <div class="ai-modal-header">
-                <h3>🤖 乱斗导师</h3>
-                <div style="display:flex;gap:8px;align-items:center;">
-                    <button class="ai-modal-close" onclick="closeAICoach()">✕</button>
-                </div>
-            </div>
-            <div class="ai-modal-body">
-                <div class="ai-quick-row">
-                    <div class="ai-quick-chip" onclick="runDeepAnalysis()">📊 完整分析</div>
-                    ${AI_QUICK_QUESTIONS.map(q => `<div class="ai-quick-chip" onclick="askAICoach('${q.replace(/'/g, "\\'")}')">${q}</div>`).join('')}
-                </div>
-                <div id="aiAnswer" class="ai-answer" style="display:none;"></div>
-            </div>
-            <div class="ai-input-row">
-                <input id="aiInput" type="text" placeholder="深入问 LLM... 比如 这个装备为什么推荐？"
-                    onkeydown="if(event.key==='Enter') askAICoach(this.value)">
-                <button id="aiSendBtn" onclick="askAICoach(document.getElementById('aiInput').value)">LLM 分析</button>
-            </div>
-        </div>`;
-
-    document.body.appendChild(overlay);
-    aiCoachEl = overlay;
+function showGuideTab(name) {
+    guideTab = name;
+    try { localStorage.setItem('guideTab', name); } catch (e) { /* 存不了也不影响本次 */ }
+    document.querySelectorAll('.guide-tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === name));
+    document.querySelectorAll('.guide-pane').forEach(p => { p.hidden = p.dataset.pane !== name; });
 }
 
-// 完整对局分析：配置了 LLM Key 走 LLM，否则走本地规则引擎
+// 顶栏按钮：切到右列对应页签，并把右列滚进视野（窄屏时右列在最下面）
+function focusGuide(name) {
+    if (document.getElementById('dash').hidden) {
+        CoachCard.toast('进入选人或对局后才能用', false);
+        return false;
+    }
+    showGuideTab(name);
+    document.querySelector('.dash-guide').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    return true;
+}
+
+function scrollToCoach() { focusGuide('coach'); }
+function openDeepAnalysis() { if (focusGuide('deep')) runDeepAnalysis(); }
+function openAICoach() { if (focusGuide('ai')) document.getElementById('aiInput').focus(); }
+
+// 深度分析（整局报告）：配置了 LLM Key 走 LLM，否则走本地规则引擎
 async function runDeepAnalysis() {
-    const answerEl = aiCoachEl.querySelector("#aiAnswer");
-    answerEl.style.display = "block";
-    answerEl.classList.add("loading");
-    answerEl.textContent = "正在结合知识库分析对局数据...";
+    const out = document.getElementById('deepReport');
+    const btn = document.getElementById('deepBtn');
+    const meta = document.getElementById('deepMeta');
+    out.style.display = 'block';
+    out.classList.add('loading');
+    out.textContent = '正在结合知识库分析对局数据...';
+    btn.disabled = true;
     try {
-        const data = await (await fetch("/api/coach/deep")).json();
-        const tag = data.mode === "llm" ? `🤖 LLM ${data.model || ""}` : "⚡ 本地规则引擎";
-        answerEl.textContent = `【${tag}】\n\n${data.analysis || "（无分析内容）"}`;
+        const data = await (await fetch('/api/coach/deep')).json();
+        const mode = data.mode === 'llm' ? `🤖 LLM ${data.model || ''}` : '⚡ 本地规则引擎（未配置 LLM Key）';
+        meta.textContent = `${mode} · ${new Date().toLocaleTimeString()}`;
+        out.innerHTML = renderLite(data.analysis || '（无分析内容）');
     } catch (e) {
-        answerEl.textContent = `❌ 出错了: ${e.message}`;
+        out.textContent = `❌ 出错了: ${e.message}`;
     } finally {
-        answerEl.classList.remove("loading");
+        out.classList.remove('loading');
+        btn.disabled = false;
+        btn.textContent = '重新生成';
     }
 }
 
-function closeAICoach() {
-    if (aiCoachAbort) {
-        aiCoachAbort.abort();
-        aiCoachAbort = null;
-    }
-    if (aiCoachEl) {
-        aiCoachEl.remove();
-        aiCoachEl = null;
-    }
+function renderLite(text) {
+    return esc(text).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+}
+
+function initGuide() {
+    const quick = document.getElementById('aiQuick');
+    AI_QUICK_QUESTIONS.forEach(q => {
+        const chip = document.createElement('div');
+        chip.className = 'ai-quick-chip';
+        chip.textContent = q;
+        chip.onclick = () => askAICoach(q);
+        quick.appendChild(chip);
+    });
+    showGuideTab(guideTab);
 }
 
 async function openMdViewer() {
@@ -1938,12 +1955,12 @@ async function askAICoach(question) {
     if (!question || !question.trim()) return;
     question = question.trim();
 
-    const answerEl = aiCoachEl.querySelector("#aiAnswer");
-    const sendBtn = aiCoachEl.querySelector("#aiSendBtn");
-    const input = aiCoachEl.querySelector("#aiInput");
+    const answerEl = document.getElementById("aiAnswer");
+    const sendBtn = document.getElementById("aiSendBtn");
+    const input = document.getElementById("aiInput");
 
-    if (aiCoachAbort) {
-        aiCoachAbort.abort();
+    if (aiAbort) {
+        aiAbort.abort();
     }
 
     answerEl.style.display = "block";
@@ -1953,7 +1970,7 @@ async function askAICoach(question) {
     input.disabled = true;
 
     const controller = new AbortController();
-    aiCoachAbort = controller;
+    aiAbort = controller;
 
     try {
         const url = `/api/coach/ask?q=${encodeURIComponent(question)}`;
@@ -1973,9 +1990,8 @@ async function askAICoach(question) {
             const { done, value } = await reader.read();
             if (done) break;
             buffer += decoder.decode(value, { stream: true });
-            answerEl.textContent = buffer;
-            const body = aiCoachEl.querySelector(".ai-modal-body");
-            body.scrollTop = body.scrollHeight;
+            answerEl.innerHTML = renderLite(buffer);
+            answerEl.scrollTop = answerEl.scrollHeight;
         }
 
         answerEl.classList.remove("loading");
@@ -1990,10 +2006,11 @@ async function askAICoach(question) {
         sendBtn.disabled = false;
         input.disabled = false;
         input.focus();
-        aiCoachAbort = null;
+        aiAbort = null;
     }
 }
 
+initGuide();
 connectWS();
 </script>
 </body>
