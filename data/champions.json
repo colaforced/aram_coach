@@ -154,11 +154,16 @@
   "5": {
     "name": "德邦总管",
     "role": "战士",
-    "primary_rune": "",
-    "primary_branch": "",
-    "primary_details": [],
-    "secondary_rune": "",
-    "secondary_branch": "",
+    "primary_rune": "征服者",
+    "primary_branch": "精密",
+    "primary_details": [
+      "征服者",
+      "凯旋",
+      "传说：急速",
+      "恩赐解脱"
+    ],
+    "secondary_rune": "骸骨镀层 + 坚定",
+    "secondary_branch": "坚决",
     "build": [
       "三相之力",
       "斯特拉克的挑战护手",
@@ -168,7 +173,11 @@
       "水银之靴"
     ],
     "core_cost": 3000,
-    "situational": {},
+    "situational": {
+      "need_ad": "对面AD多，优先补护甲和血量",
+      "need_ap": "对面AP多，优先补魔抗和护盾",
+      "need_survive": "优先出斯特拉克的挑战护手或死亡之舞"
+    },
     "tips": [
       "大乱斗德邦总管核心是雪球接技能",
       "注意走位躲关键控制",
@@ -272,8 +281,8 @@
     "primary_details": [
       "征服者",
       "凯旋",
-      "传说：韧性",
-      "致命一击"
+      "传说：急速",
+      "恩赐解脱"
     ],
     "secondary_branch": "坚决",
     "secondary_rune": "骸骨镀层 + 坚定",
@@ -331,14 +340,14 @@
   },
   "10": {
     "name": "正义天使",
-    "role": "战士",
+    "role": "射手",
     "primary_rune": "征服者",
     "primary_branch": "精密",
     "primary_details": [
       "征服者",
       "凯旋",
-      "传说：韧性",
-      "致命一击"
+      "传说：急速",
+      "恩赐解脱"
     ],
     "secondary_rune": "神奇之鞋 + 时间扭曲补药",
     "secondary_branch": "启迪",
@@ -375,7 +384,7 @@
       "致命节奏",
       "凯旋",
       "传说：血统",
-      "致命一击"
+      "恩赐解脱"
     ],
     "secondary_rune": "神奇之鞋 + 时间扭曲补药",
     "secondary_branch": "启迪",
@@ -405,30 +414,39 @@
   },
   "12": {
     "name": "牛头酋长",
-    "role": "战士",
-    "primary_rune": "",
-    "primary_branch": "",
-    "primary_details": [],
-    "secondary_rune": "",
-    "secondary_branch": "",
-    "build": [
-      "三相之力",
-      "斯特拉克的挑战护手",
-      "死亡之舞",
-      "守护天使",
-      "适应性头盔",
-      "水银之靴"
+    "role": "坦克",
+    "primary_rune": "余震",
+    "primary_branch": "坚决",
+    "primary_details": [
+      "余震",
+      "护盾猛击",
+      "骸骨镀层",
+      "过度生长"
     ],
-    "core_cost": 3000,
-    "situational": {},
+    "secondary_rune": "神奇之鞋 + 饼干配送",
+    "secondary_branch": "启迪",
+    "build": [
+      "日炎圣盾",
+      "荆棘之甲",
+      "兰顿之兆",
+      "狂徒铠甲",
+      "自然之力",
+      "石像鬼石板甲"
+    ],
+    "core_cost": 2900,
+    "situational": {
+      "need_ad": "对面AD多，优先补护甲和血量",
+      "need_ap": "对面AP多，优先补魔抗和护盾",
+      "need_survive": "优先出狂徒铠甲或振奋盔甲"
+    },
     "tips": [
       "大乱斗牛头酋长核心是雪球接技能",
       "注意走位躲关键控制",
       "残血别贪线先回家"
     ],
-    "snowball_tip": "雪球拉脸接主要技能",
-    "flash_tip": "闪现用来躲技能或追击残血",
-    "aram_strength": 55
+    "snowball_tip": "雪球命中后立即接技能，不要等落地",
+    "flash_tip": "闪现用来调整站位或逃跑，别省",
+    "aram_strength": 79
   },
   "13": {
     "name": "符文法师",
@@ -508,30 +526,39 @@
   },
   "15": {
     "name": "战争女神",
-    "role": "战士",
-    "primary_rune": "",
-    "primary_branch": "",
-    "primary_details": [],
-    "secondary_rune": "",
-    "secondary_branch": "",
-    "build": [
-      "三相之力",
-      "斯特拉克的挑战护手",
-      "死亡之舞",
-      "守护天使",
-      "适应性头盔",
-      "水银之靴"
+    "role": "射手",
+    "primary_rune": "致命节奏",
+    "primary_branch": "精密",
+    "primary_details": [
+      "致命节奏",
+      "凯旋",
+      "传说：血统",
+      "恩赐解脱"
     ],
-    "core_cost": 3000,
-    "situational": {},
+    "secondary_rune": "神奇之鞋 + 饼干配送",
+    "secondary_branch": "启迪",
+    "build": [
+      "海妖杀手",
+      "无尽之刃",
+      "破败王者之刃",
+      "狂战士胫甲",
+      "幻影之舞",
+      "守护天使"
+    ],
+    "core_cost": 3100,
+    "situational": {
+      "need_ad": "对面AD多，优先补护甲和血量",
+      "need_ap": "对面AP多，优先补魔抗和护盾",
+      "need_survive": "优先出饮血剑或水银弯刀"
+    },
     "tips": [
       "大乱斗战争女神核心是雪球接技能",
       "注意走位躲关键控制",
       "残血别贪线先回家"
     ],
-    "snowball_tip": "雪球拉脸接主要技能",
-    "flash_tip": "闪现用来躲技能或追击残血",
-    "aram_strength": 55
+    "snowball_tip": "雪球命中后立即接技能，不要等落地",
+    "flash_tip": "闪现用来调整站位或逃跑，别省",
+    "aram_strength": 71
   },
   "16": {
     "name": "众星之子",
@@ -580,7 +607,7 @@
       "致命节奏",
       "凯旋",
       "传说：血统",
-      "致命一击"
+      "恩赐解脱"
     ],
     "secondary_rune": "神奇之鞋 + 饼干配送",
     "secondary_branch": "启迪",
@@ -627,7 +654,7 @@
       "致命节奏",
       "凯旋",
       "传说：血统",
-      "致命一击"
+      "恩赐解脱"
     ],
     "secondary_branch": "启迪",
     "secondary_rune": "神奇之鞋 + 饼干配送",
@@ -815,8 +842,8 @@
     "primary_details": [
       "征服者",
       "凯旋",
-      "传说：韧性",
-      "致命一击"
+      "传说：急速",
+      "恩赐解脱"
     ],
     "secondary_branch": "坚决",
     "secondary_rune": "骸骨镀层 + 坚定",
@@ -853,8 +880,8 @@
     "primary_details": [
       "征服者",
       "凯旋",
-      "传说：韧性",
-      "致命一击"
+      "传说：急速",
+      "恩赐解脱"
     ],
     "secondary_branch": "坚决",
     "secondary_rune": "骸骨镀层 + 坚定",
@@ -874,30 +901,39 @@
   },
   "25": {
     "name": "堕落天使",
-    "role": "战士",
-    "primary_rune": "",
-    "primary_branch": "",
-    "primary_details": [],
-    "secondary_rune": "",
-    "secondary_branch": "",
-    "build": [
-      "三相之力",
-      "斯特拉克的挑战护手",
-      "死亡之舞",
-      "守护天使",
-      "适应性头盔",
-      "水银之靴"
+    "role": "法师",
+    "primary_rune": "奥术彗星",
+    "primary_branch": "巫术",
+    "primary_details": [
+      "奥术彗星",
+      "法力流系带",
+      "超然",
+      "焦灼"
     ],
-    "core_cost": 3000,
-    "situational": {},
+    "secondary_rune": "恶意中伤 + 无情猎手",
+    "secondary_branch": "主宰",
+    "build": [
+      "卢登的配枪",
+      "中娅沙漏",
+      "灭世者的死亡之帽",
+      "虚空之杖",
+      "莫雷洛秘典",
+      "法师之靴"
+    ],
+    "core_cost": 3200,
+    "situational": {
+      "need_ad": "对面AD多，优先补护甲和血量",
+      "need_ap": "对面AP多，优先补魔抗和护盾",
+      "need_survive": "优先出中娅沙漏或女妖面纱"
+    },
     "tips": [
       "大乱斗堕落天使核心是雪球接技能",
       "注意走位躲关键控制",
       "残血别贪线先回家"
     ],
-    "snowball_tip": "雪球拉脸接主要技能",
-    "flash_tip": "闪现用来躲技能或追击残血",
-    "aram_strength": 55
+    "snowball_tip": "雪球命中后立即接技能，不要等落地",
+    "flash_tip": "闪现用来调整站位或逃跑，别省",
+    "aram_strength": 71
   },
   "26": {
     "name": "时光守护者",
@@ -1033,7 +1069,7 @@
       "致命节奏",
       "凯旋",
       "传说：血统",
-      "致命一击"
+      "恩赐解脱"
     ],
     "secondary_branch": "启迪",
     "secondary_rune": "神奇之鞋 + 饼干配送",
@@ -1091,30 +1127,39 @@
   },
   "31": {
     "name": "虚空恐惧",
-    "role": "战士",
-    "primary_rune": "",
-    "primary_branch": "",
-    "primary_details": [],
-    "secondary_rune": "",
-    "secondary_branch": "",
-    "build": [
-      "三相之力",
-      "斯特拉克的挑战护手",
-      "死亡之舞",
-      "守护天使",
-      "适应性头盔",
-      "水银之靴"
+    "role": "坦克",
+    "primary_rune": "余震",
+    "primary_branch": "坚决",
+    "primary_details": [
+      "余震",
+      "护盾猛击",
+      "骸骨镀层",
+      "过度生长"
     ],
-    "core_cost": 3000,
-    "situational": {},
+    "secondary_rune": "神奇之鞋 + 饼干配送",
+    "secondary_branch": "启迪",
+    "build": [
+      "日炎圣盾",
+      "荆棘之甲",
+      "兰顿之兆",
+      "狂徒铠甲",
+      "自然之力",
+      "石像鬼石板甲"
+    ],
+    "core_cost": 2900,
+    "situational": {
+      "need_ad": "对面AD多，优先补护甲和血量",
+      "need_ap": "对面AP多，优先补魔抗和护盾",
+      "need_survive": "优先出狂徒铠甲或振奋盔甲"
+    },
     "tips": [
       "大乱斗虚空恐惧核心是雪球接技能",
       "注意走位躲关键控制",
       "残血别贪线先回家"
     ],
-    "snowball_tip": "雪球拉脸接主要技能",
-    "flash_tip": "闪现用来躲技能或追击残血",
-    "aram_strength": 55
+    "snowball_tip": "雪球命中后立即接技能，不要等落地",
+    "flash_tip": "闪现用来调整站位或逃跑，别省",
+    "aram_strength": 79
   },
   "32": {
     "name": "殇之木乃伊",
@@ -1271,11 +1316,16 @@
   "36": {
     "name": "祖安狂人",
     "role": "战士",
-    "primary_rune": "",
-    "primary_branch": "",
-    "primary_details": [],
-    "secondary_rune": "",
-    "secondary_branch": "",
+    "primary_rune": "征服者",
+    "primary_branch": "精密",
+    "primary_details": [
+      "征服者",
+      "凯旋",
+      "传说：急速",
+      "恩赐解脱"
+    ],
+    "secondary_rune": "骸骨镀层 + 坚定",
+    "secondary_branch": "坚决",
     "build": [
       "三相之力",
       "斯特拉克的挑战护手",
@@ -1285,7 +1335,11 @@
       "水银之靴"
     ],
     "core_cost": 3000,
-    "situational": {},
+    "situational": {
+      "need_ad": "对面AD多，优先补护甲和血量",
+      "need_ap": "对面AP多，优先补魔抗和护盾",
+      "need_survive": "优先出斯特拉克的挑战护手或死亡之舞"
+    },
     "tips": [
       "大乱斗祖安狂人核心是雪球接技能",
       "注意走位躲关键控制",
@@ -1389,8 +1443,8 @@
     "primary_details": [
       "征服者",
       "凯旋",
-      "传说：韧性",
-      "致命一击"
+      "传说：急速",
+      "恩赐解脱"
     ],
     "secondary_branch": "坚决",
     "secondary_rune": "骸骨镀层 + 坚定",
@@ -1411,7 +1465,7 @@
   "40": {
     "name": "风暴之怒",
     "role": "辅助",
-    "primary_rune": "彗星风女",
+    "primary_rune": "奥术彗星",
     "primary_branch": "巫术",
     "primary_details": [
       "奥术彗星",
@@ -1463,8 +1517,8 @@
     "primary_details": [
       "征服者",
       "凯旋",
-      "传说：韧性",
-      "致命一击"
+      "传说：急速",
+      "恩赐解脱"
     ],
     "secondary_branch": "坚决",
     "secondary_rune": "骸骨镀层 + 坚定",
@@ -1718,8 +1772,8 @@
     "primary_details": [
       "征服者",
       "凯旋",
-      "传说：韧性",
-      "致命一击"
+      "传说：急速",
+      "恩赐解脱"
     ],
     "secondary_rune": "血之滋味 + 无情猎手",
     "secondary_branch": "主宰",
@@ -1876,8 +1930,8 @@
     "primary_details": [
       "征服者",
       "凯旋",
-      "传说：韧性",
-      "致命一击"
+      "传说：急速",
+      "恩赐解脱"
     ],
     "secondary_branch": "坚决",
     "secondary_rune": "骸骨镀层 + 坚定",
@@ -1936,11 +1990,16 @@
   "58": {
     "name": "荒漠屠夫",
     "role": "战士",
-    "primary_rune": "",
-    "primary_branch": "",
-    "primary_details": [],
-    "secondary_rune": "",
-    "secondary_branch": "",
+    "primary_rune": "征服者",
+    "primary_branch": "精密",
+    "primary_details": [
+      "征服者",
+      "凯旋",
+      "传说：急速",
+      "恩赐解脱"
+    ],
+    "secondary_rune": "骸骨镀层 + 坚定",
+    "secondary_branch": "坚决",
     "build": [
       "三相之力",
       "斯特拉克的挑战护手",
@@ -1950,7 +2009,11 @@
       "水银之靴"
     ],
     "core_cost": 3000,
-    "situational": {},
+    "situational": {
+      "need_ad": "对面AD多，优先补护甲和血量",
+      "need_ap": "对面AP多，优先补魔抗和护盾",
+      "need_survive": "优先出斯特拉克的挑战护手或死亡之舞"
+    },
     "tips": [
       "大乱斗荒漠屠夫核心是雪球接技能",
       "注意走位躲关键控制",
@@ -2038,30 +2101,39 @@
   },
   "61": {
     "name": "发条魔灵",
-    "role": "战士",
-    "primary_rune": "",
-    "primary_branch": "",
-    "primary_details": [],
-    "secondary_rune": "",
-    "secondary_branch": "",
-    "build": [
-      "三相之力",
-      "斯特拉克的挑战护手",
-      "死亡之舞",
-      "守护天使",
-      "适应性头盔",
-      "水银之靴"
+    "role": "法师",
+    "primary_rune": "奥术彗星",
+    "primary_branch": "巫术",
+    "primary_details": [
+      "奥术彗星",
+      "法力流系带",
+      "超然",
+      "焦灼"
     ],
-    "core_cost": 3000,
-    "situational": {},
+    "secondary_rune": "恶意中伤 + 无情猎手",
+    "secondary_branch": "主宰",
+    "build": [
+      "卢登的配枪",
+      "中娅沙漏",
+      "灭世者的死亡之帽",
+      "虚空之杖",
+      "莫雷洛秘典",
+      "法师之靴"
+    ],
+    "core_cost": 3200,
+    "situational": {
+      "need_ad": "对面AD多，优先补护甲和血量",
+      "need_ap": "对面AP多，优先补魔抗和护盾",
+      "need_survive": "优先出中娅沙漏或女妖面纱"
+    },
     "tips": [
       "大乱斗发条魔灵核心是雪球接技能",
       "注意走位躲关键控制",
       "残血别贪线先回家"
     ],
-    "snowball_tip": "雪球拉脸接主要技能",
-    "flash_tip": "闪现用来躲技能或追击残血",
-    "aram_strength": 55
+    "snowball_tip": "雪球命中后立即接技能，不要等落地",
+    "flash_tip": "闪现用来调整站位或逃跑，别省",
+    "aram_strength": 71
   },
   "62": {
     "name": "齐天大圣",
@@ -2141,11 +2213,16 @@
   "64": {
     "name": "盲僧",
     "role": "战士",
-    "primary_rune": "",
-    "primary_branch": "",
-    "primary_details": [],
-    "secondary_rune": "",
-    "secondary_branch": "",
+    "primary_rune": "征服者",
+    "primary_branch": "精密",
+    "primary_details": [
+      "征服者",
+      "凯旋",
+      "传说：急速",
+      "恩赐解脱"
+    ],
+    "secondary_rune": "骸骨镀层 + 坚定",
+    "secondary_branch": "坚决",
     "build": [
       "三相之力",
       "斯特拉克的挑战护手",
@@ -2155,7 +2232,11 @@
       "水银之靴"
     ],
     "core_cost": 3000,
-    "situational": {},
+    "situational": {
+      "need_ad": "对面AD多，优先补护甲和血量",
+      "need_ap": "对面AP多，优先补魔抗和护盾",
+      "need_survive": "优先出斯特拉克的挑战护手或死亡之舞"
+    },
     "tips": [
       "大乱斗盲僧核心是雪球接技能",
       "注意走位躲关键控制",
@@ -2174,7 +2255,7 @@
       "征服者",
       "凯旋",
       "传说：欢欣",
-      "致命一击"
+      "恩赐解脱"
     ],
     "secondary_rune": "血之滋味 + 无情猎手",
     "secondary_branch": "主宰",
@@ -2430,11 +2511,16 @@
   "77": {
     "name": "兽灵行者",
     "role": "战士",
-    "primary_rune": "",
-    "primary_branch": "",
-    "primary_details": [],
-    "secondary_rune": "",
-    "secondary_branch": "",
+    "primary_rune": "征服者",
+    "primary_branch": "精密",
+    "primary_details": [
+      "征服者",
+      "凯旋",
+      "传说：急速",
+      "恩赐解脱"
+    ],
+    "secondary_rune": "骸骨镀层 + 坚定",
+    "secondary_branch": "坚决",
     "build": [
       "三相之力",
       "斯特拉克的挑战护手",
@@ -2444,7 +2530,11 @@
       "水银之靴"
     ],
     "core_cost": 3000,
-    "situational": {},
+    "situational": {
+      "need_ad": "对面AD多，优先补护甲和血量",
+      "need_ap": "对面AP多，优先补魔抗和护盾",
+      "need_survive": "优先出斯特拉克的挑战护手或死亡之舞"
+    },
     "tips": [
       "大乱斗兽灵行者核心是雪球接技能",
       "注意走位躲关键控制",
@@ -2511,8 +2601,8 @@
     "primary_details": [
       "征服者",
       "凯旋",
-      "传说：韧性",
-      "致命一击"
+      "传说：急速",
+      "恩赐解脱"
     ],
     "secondary_branch": "坚决",
     "secondary_rune": "骸骨镀层 + 坚定",
@@ -2549,8 +2639,8 @@
     "primary_details": [
       "征服者",
       "凯旋",
-      "传说：韧性",
-      "致命一击"
+      "传说：急速",
+      "恩赐解脱"
     ],
     "secondary_branch": "坚决",
     "secondary_rune": "骸骨镀层 + 坚定",
@@ -2577,7 +2667,7 @@
       "迅捷步法",
       "凯旋",
       "传说：血统",
-      "致命一击"
+      "恩赐解脱"
     ],
     "secondary_rune": "神奇之鞋 + 饼干配送",
     "secondary_branch": "启迪",
@@ -2624,8 +2714,8 @@
     "primary_details": [
       "征服者",
       "凯旋",
-      "传说：韧性",
-      "致命一击"
+      "传说：急速",
+      "恩赐解脱"
     ],
     "secondary_branch": "坚决",
     "secondary_rune": "骸骨镀层 + 坚定",
@@ -2721,30 +2811,39 @@
   },
   "85": {
     "name": "狂暴之心",
-    "role": "战士",
-    "primary_rune": "",
-    "primary_branch": "",
-    "primary_details": [],
-    "secondary_rune": "",
-    "secondary_branch": "",
-    "build": [
-      "三相之力",
-      "斯特拉克的挑战护手",
-      "死亡之舞",
-      "守护天使",
-      "适应性头盔",
-      "水银之靴"
+    "role": "法师",
+    "primary_rune": "奥术彗星",
+    "primary_branch": "巫术",
+    "primary_details": [
+      "奥术彗星",
+      "法力流系带",
+      "超然",
+      "焦灼"
     ],
-    "core_cost": 3000,
-    "situational": {},
+    "secondary_rune": "恶意中伤 + 无情猎手",
+    "secondary_branch": "主宰",
+    "build": [
+      "卢登的配枪",
+      "中娅沙漏",
+      "灭世者的死亡之帽",
+      "虚空之杖",
+      "莫雷洛秘典",
+      "法师之靴"
+    ],
+    "core_cost": 3200,
+    "situational": {
+      "need_ad": "对面AD多，优先补护甲和血量",
+      "need_ap": "对面AP多，优先补魔抗和护盾",
+      "need_survive": "优先出中娅沙漏或女妖面纱"
+    },
     "tips": [
       "大乱斗狂暴之心核心是雪球接技能",
       "注意走位躲关键控制",
       "残血别贪线先回家"
     ],
-    "snowball_tip": "雪球拉脸接主要技能",
-    "flash_tip": "闪现用来躲技能或追击残血",
-    "aram_strength": 55
+    "snowball_tip": "雪球命中后立即接技能，不要等落地",
+    "flash_tip": "闪现用来调整站位或逃跑，别省",
+    "aram_strength": 71
   },
   "86": {
     "name": "德玛西亚之力",
@@ -2917,8 +3016,8 @@
     "primary_details": [
       "征服者",
       "凯旋",
-      "传说：韧性",
-      "致命一击"
+      "传说：急速",
+      "恩赐解脱"
     ],
     "secondary_branch": "坚决",
     "secondary_rune": "骸骨镀层 + 坚定",
@@ -2938,30 +3037,39 @@
   },
   "96": {
     "name": "深渊巨口",
-    "role": "战士",
-    "primary_rune": "",
-    "primary_branch": "",
-    "primary_details": [],
-    "secondary_rune": "",
-    "secondary_branch": "",
-    "build": [
-      "三相之力",
-      "斯特拉克的挑战护手",
-      "死亡之舞",
-      "守护天使",
-      "适应性头盔",
-      "水银之靴"
+    "role": "射手",
+    "primary_rune": "致命节奏",
+    "primary_branch": "精密",
+    "primary_details": [
+      "致命节奏",
+      "凯旋",
+      "传说：血统",
+      "恩赐解脱"
     ],
-    "core_cost": 3000,
-    "situational": {},
+    "secondary_rune": "神奇之鞋 + 饼干配送",
+    "secondary_branch": "启迪",
+    "build": [
+      "海妖杀手",
+      "无尽之刃",
+      "破败王者之刃",
+      "狂战士胫甲",
+      "幻影之舞",
+      "守护天使"
+    ],
+    "core_cost": 3100,
+    "situational": {
+      "need_ad": "对面AD多，优先补护甲和血量",
+      "need_ap": "对面AP多，优先补魔抗和护盾",
+      "need_survive": "优先出饮血剑或水银弯刀"
+    },
     "tips": [
       "大乱斗深渊巨口核心是雪球接技能",
       "注意走位躲关键控制",
       "残血别贪线先回家"
     ],
-    "snowball_tip": "雪球拉脸接主要技能",
-    "flash_tip": "闪现用来躲技能或追击残血",
-    "aram_strength": 55
+    "snowball_tip": "雪球命中后立即接技能，不要等落地",
+    "flash_tip": "闪现用来调整站位或逃跑，别省",
+    "aram_strength": 71
   },
   "98": {
     "name": "暮光之眼",
@@ -3003,30 +3111,39 @@
   },
   "99": {
     "name": "光辉女郎",
-    "role": "战士",
-    "primary_rune": "",
-    "primary_branch": "",
-    "primary_details": [],
-    "secondary_rune": "",
-    "secondary_branch": "",
-    "build": [
-      "三相之力",
-      "斯特拉克的挑战护手",
-      "死亡之舞",
-      "守护天使",
-      "适应性头盔",
-      "水银之靴"
+    "role": "法师",
+    "primary_rune": "奥术彗星",
+    "primary_branch": "巫术",
+    "primary_details": [
+      "奥术彗星",
+      "法力流系带",
+      "超然",
+      "焦灼"
     ],
-    "core_cost": 3000,
-    "situational": {},
+    "secondary_rune": "恶意中伤 + 无情猎手",
+    "secondary_branch": "主宰",
+    "build": [
+      "卢登的配枪",
+      "中娅沙漏",
+      "灭世者的死亡之帽",
+      "虚空之杖",
+      "莫雷洛秘典",
+      "法师之靴"
+    ],
+    "core_cost": 3200,
+    "situational": {
+      "need_ad": "对面AD多，优先补护甲和血量",
+      "need_ap": "对面AP多，优先补魔抗和护盾",
+      "need_survive": "优先出中娅沙漏或女妖面纱"
+    },
     "tips": [
       "大乱斗光辉女郎核心是雪球接技能",
       "注意走位躲关键控制",
       "残血别贪线先回家"
     ],
-    "snowball_tip": "雪球拉脸接主要技能",
-    "flash_tip": "闪现用来躲技能或追击残血",
-    "aram_strength": 55
+    "snowball_tip": "雪球命中后立即接技能，不要等落地",
+    "flash_tip": "闪现用来调整站位或逃跑，别省",
+    "aram_strength": 71
   },
   "101": {
     "name": "远古巫灵",
@@ -3085,8 +3202,8 @@
     "primary_details": [
       "征服者",
       "凯旋",
-      "传说：韧性",
-      "致命一击"
+      "传说：急速",
+      "恩赐解脱"
     ],
     "secondary_branch": "坚决",
     "secondary_rune": "骸骨镀层 + 坚定",
@@ -3106,30 +3223,39 @@
   },
   "103": {
     "name": "九尾妖狐",
-    "role": "战士",
-    "primary_rune": "",
-    "primary_branch": "",
-    "primary_details": [],
-    "secondary_rune": "",
-    "secondary_branch": "",
-    "build": [
-      "三相之力",
-      "斯特拉克的挑战护手",
-      "死亡之舞",
-      "守护天使",
-      "适应性头盔",
-      "水银之靴"
+    "role": "法师",
+    "primary_rune": "奥术彗星",
+    "primary_branch": "巫术",
+    "primary_details": [
+      "奥术彗星",
+      "法力流系带",
+      "超然",
+      "焦灼"
     ],
-    "core_cost": 3000,
-    "situational": {},
+    "secondary_rune": "恶意中伤 + 无情猎手",
+    "secondary_branch": "主宰",
+    "build": [
+      "卢登的配枪",
+      "中娅沙漏",
+      "灭世者的死亡之帽",
+      "虚空之杖",
+      "莫雷洛秘典",
+      "法师之靴"
+    ],
+    "core_cost": 3200,
+    "situational": {
+      "need_ad": "对面AD多，优先补护甲和血量",
+      "need_ap": "对面AP多，优先补魔抗和护盾",
+      "need_survive": "优先出中娅沙漏或女妖面纱"
+    },
     "tips": [
       "大乱斗九尾妖狐核心是雪球接技能",
       "注意走位躲关键控制",
       "残血别贪线先回家"
     ],
-    "snowball_tip": "雪球拉脸接主要技能",
-    "flash_tip": "闪现用来躲技能或追击残血",
-    "aram_strength": 55
+    "snowball_tip": "雪球命中后立即接技能，不要等落地",
+    "flash_tip": "闪现用来调整站位或逃跑，别省",
+    "aram_strength": 71
   },
   "104": {
     "name": "法外狂徒",
@@ -3151,7 +3277,7 @@
       "致命节奏",
       "凯旋",
       "传说：血统",
-      "致命一击"
+      "恩赐解脱"
     ],
     "secondary_branch": "启迪",
     "secondary_rune": "神奇之鞋 + 饼干配送",
@@ -3188,8 +3314,8 @@
     "primary_details": [
       "征服者",
       "凯旋",
-      "传说：韧性",
-      "致命一击"
+      "传说：急速",
+      "恩赐解脱"
     ],
     "secondary_branch": "坚决",
     "secondary_rune": "骸骨镀层 + 坚定",
@@ -3264,8 +3390,8 @@
     "primary_details": [
       "征服者",
       "凯旋",
-      "传说：韧性",
-      "致命一击"
+      "传说：急速",
+      "恩赐解脱"
     ],
     "secondary_branch": "坚决",
     "secondary_rune": "骸骨镀层 + 坚定",
@@ -3286,7 +3412,7 @@
   "110": {
     "name": "惩戒之箭",
     "role": "射手",
-    "primary_rune": "彗星韦鲁斯",
+    "primary_rune": "奥术彗星",
     "primary_branch": "巫术",
     "primary_details": [
       "奥术彗星",
@@ -3452,8 +3578,8 @@
     "primary_details": [
       "征服者",
       "凯旋",
-      "传说：韧性",
-      "致命一击"
+      "传说：急速",
+      "恩赐解脱"
     ],
     "secondary_branch": "坚决",
     "secondary_rune": "骸骨镀层 + 坚定",
@@ -3548,30 +3674,39 @@
   },
   "119": {
     "name": "荣耀行刑官",
-    "role": "战士",
-    "primary_rune": "",
-    "primary_branch": "",
-    "primary_details": [],
-    "secondary_rune": "",
-    "secondary_branch": "",
-    "build": [
-      "三相之力",
-      "斯特拉克的挑战护手",
-      "死亡之舞",
-      "守护天使",
-      "适应性头盔",
-      "水银之靴"
+    "role": "射手",
+    "primary_rune": "致命节奏",
+    "primary_branch": "精密",
+    "primary_details": [
+      "致命节奏",
+      "凯旋",
+      "传说：血统",
+      "恩赐解脱"
     ],
-    "core_cost": 3000,
-    "situational": {},
+    "secondary_rune": "神奇之鞋 + 饼干配送",
+    "secondary_branch": "启迪",
+    "build": [
+      "海妖杀手",
+      "无尽之刃",
+      "破败王者之刃",
+      "狂战士胫甲",
+      "幻影之舞",
+      "守护天使"
+    ],
+    "core_cost": 3100,
+    "situational": {
+      "need_ad": "对面AD多，优先补护甲和血量",
+      "need_ap": "对面AP多，优先补魔抗和护盾",
+      "need_survive": "优先出饮血剑或水银弯刀"
+    },
     "tips": [
       "大乱斗荣耀行刑官核心是雪球接技能",
       "注意走位躲关键控制",
       "残血别贪线先回家"
     ],
-    "snowball_tip": "雪球拉脸接主要技能",
-    "flash_tip": "闪现用来躲技能或追击残血",
-    "aram_strength": 55
+    "snowball_tip": "雪球命中后立即接技能，不要等落地",
+    "flash_tip": "闪现用来调整站位或逃跑，别省",
+    "aram_strength": 71
   },
   "120": {
     "name": "战争之影",
@@ -3657,8 +3792,8 @@
     "primary_details": [
       "征服者",
       "凯旋",
-      "传说：韧性",
-      "致命一击"
+      "传说：急速",
+      "恩赐解脱"
     ],
     "secondary_rune": "骸骨镀层 + 坚定",
     "secondary_branch": "坚决",
@@ -3704,8 +3839,8 @@
     "primary_details": [
       "征服者",
       "凯旋",
-      "传说：韧性",
-      "致命一击"
+      "传说：急速",
+      "恩赐解脱"
     ],
     "secondary_branch": "坚决",
     "secondary_rune": "骸骨镀层 + 坚定",
@@ -3780,8 +3915,8 @@
     "primary_details": [
       "征服者",
       "凯旋",
-      "传说：韧性",
-      "致命一击"
+      "传说：急速",
+      "恩赐解脱"
     ],
     "secondary_branch": "坚决",
     "secondary_rune": "骸骨镀层 + 坚定",
@@ -3819,7 +3954,7 @@
       "致命节奏",
       "凯旋",
       "传说：血统",
-      "致命一击"
+      "恩赐解脱"
     ],
     "secondary_branch": "启迪",
     "secondary_rune": "神奇之鞋 + 饼干配送",
@@ -3932,8 +4067,8 @@
     "primary_details": [
       "征服者",
       "凯旋",
-      "传说：韧性",
-      "致命一击"
+      "传说：急速",
+      "恩赐解脱"
     ],
     "secondary_branch": "坚决",
     "secondary_rune": "骸骨镀层 + 坚定",
@@ -4036,7 +4171,7 @@
       "丛刃",
       "凯旋",
       "传说：血统",
-      "致命一击"
+      "恩赐解脱"
     ],
     "secondary_rune": "神奇之鞋 + 饼干配送",
     "secondary_branch": "启迪",
@@ -4186,8 +4321,8 @@
     "primary_details": [
       "致命节奏",
       "凯旋",
-      "传说：韧性",
-      "致命一击"
+      "传说：急速",
+      "恩赐解脱"
     ],
     "secondary_rune": "神奇之鞋 + 时间扭曲补药",
     "secondary_branch": "启迪",
@@ -4310,8 +4445,8 @@
     "primary_details": [
       "征服者",
       "凯旋",
-      "传说：韧性",
-      "致命一击"
+      "传说：急速",
+      "恩赐解脱"
     ],
     "secondary_branch": "坚决",
     "secondary_rune": "骸骨镀层 + 坚定",
@@ -4349,7 +4484,7 @@
       "致命节奏",
       "凯旋",
       "传说：血统",
-      "致命一击"
+      "恩赐解脱"
     ],
     "secondary_branch": "启迪",
     "secondary_rune": "神奇之鞋 + 饼干配送",
@@ -4386,8 +4521,8 @@
     "primary_details": [
       "征服者",
       "凯旋",
-      "传说：韧性",
-      "致命一击"
+      "传说：急速",
+      "恩赐解脱"
     ],
     "secondary_branch": "坚决",
     "secondary_rune": "骸骨镀层 + 坚定",
@@ -4501,7 +4636,7 @@
       "致命节奏",
       "凯旋",
       "传说：血统",
-      "致命一击"
+      "恩赐解脱"
     ],
     "secondary_branch": "启迪",
     "secondary_rune": "神奇之鞋 + 饼干配送",
@@ -4539,7 +4674,7 @@
       "致命节奏",
       "凯旋",
       "传说：血统",
-      "致命一击"
+      "恩赐解脱"
     ],
     "secondary_branch": "启迪",
     "secondary_rune": "神奇之鞋 + 饼干配送",
@@ -4559,30 +4694,39 @@
   },
   "222": {
     "name": "暴走萝莉",
-    "role": "战士",
-    "primary_rune": "",
-    "primary_branch": "",
-    "primary_details": [],
-    "secondary_rune": "",
-    "secondary_branch": "",
-    "build": [
-      "三相之力",
-      "斯特拉克的挑战护手",
-      "死亡之舞",
-      "守护天使",
-      "适应性头盔",
-      "水银之靴"
+    "role": "射手",
+    "primary_rune": "致命节奏",
+    "primary_branch": "精密",
+    "primary_details": [
+      "致命节奏",
+      "凯旋",
+      "传说：血统",
+      "恩赐解脱"
     ],
-    "core_cost": 3000,
-    "situational": {},
+    "secondary_rune": "神奇之鞋 + 饼干配送",
+    "secondary_branch": "启迪",
+    "build": [
+      "海妖杀手",
+      "无尽之刃",
+      "破败王者之刃",
+      "狂战士胫甲",
+      "幻影之舞",
+      "守护天使"
+    ],
+    "core_cost": 3100,
+    "situational": {
+      "need_ad": "对面AD多，优先补护甲和血量",
+      "need_ap": "对面AP多，优先补魔抗和护盾",
+      "need_survive": "优先出饮血剑或水银弯刀"
+    },
     "tips": [
       "大乱斗暴走萝莉核心是雪球接技能",
       "注意走位躲关键控制",
       "残血别贪线先回家"
     ],
-    "snowball_tip": "雪球拉脸接主要技能",
-    "flash_tip": "闪现用来躲技能或追击残血",
-    "aram_strength": 55
+    "snowball_tip": "雪球命中后立即接技能，不要等落地",
+    "flash_tip": "闪现用来调整站位或逃跑，别省",
+    "aram_strength": 71
   },
   "223": {
     "name": "河流之王",
@@ -4641,8 +4785,8 @@
     "primary_details": [
       "征服者",
       "凯旋",
-      "传说：韧性",
-      "致命一击"
+      "传说：急速",
+      "恩赐解脱"
     ],
     "secondary_branch": "坚决",
     "secondary_rune": "骸骨镀层 + 坚定",
@@ -4679,8 +4823,8 @@
     "primary_details": [
       "征服者",
       "凯旋",
-      "传说：韧性",
-      "致命一击"
+      "传说：急速",
+      "恩赐解脱"
     ],
     "secondary_branch": "坚决",
     "secondary_rune": "骸骨镀层 + 坚定",
@@ -4700,30 +4844,39 @@
   },
   "235": {
     "name": "涤魂圣枪",
-    "role": "战士",
-    "primary_rune": "",
-    "primary_branch": "",
-    "primary_details": [],
-    "secondary_rune": "",
-    "secondary_branch": "",
-    "build": [
-      "三相之力",
-      "斯特拉克的挑战护手",
-      "死亡之舞",
-      "守护天使",
-      "适应性头盔",
-      "水银之靴"
+    "role": "射手",
+    "primary_rune": "致命节奏",
+    "primary_branch": "精密",
+    "primary_details": [
+      "致命节奏",
+      "凯旋",
+      "传说：血统",
+      "恩赐解脱"
     ],
-    "core_cost": 3000,
-    "situational": {},
+    "secondary_rune": "神奇之鞋 + 饼干配送",
+    "secondary_branch": "启迪",
+    "build": [
+      "海妖杀手",
+      "无尽之刃",
+      "破败王者之刃",
+      "狂战士胫甲",
+      "幻影之舞",
+      "守护天使"
+    ],
+    "core_cost": 3100,
+    "situational": {
+      "need_ad": "对面AD多，优先补护甲和血量",
+      "need_ap": "对面AP多，优先补魔抗和护盾",
+      "need_survive": "优先出饮血剑或水银弯刀"
+    },
     "tips": [
       "大乱斗涤魂圣枪核心是雪球接技能",
       "注意走位躲关键控制",
       "残血别贪线先回家"
     ],
-    "snowball_tip": "雪球拉脸接主要技能",
-    "flash_tip": "闪现用来躲技能或追击残血",
-    "aram_strength": 55
+    "snowball_tip": "雪球命中后立即接技能，不要等落地",
+    "flash_tip": "闪现用来调整站位或逃跑，别省",
+    "aram_strength": 71
   },
   "236": {
     "name": "圣枪游侠",
@@ -4734,7 +4887,7 @@
       "强攻",
       "凯旋",
       "传说：血统",
-      "致命一击"
+      "恩赐解脱"
     ],
     "secondary_rune": "神奇之鞋 + 饼干配送",
     "secondary_branch": "启迪",
@@ -4764,30 +4917,39 @@
   },
   "238": {
     "name": "影流之主",
-    "role": "战士",
-    "primary_rune": "",
-    "primary_branch": "",
-    "primary_details": [],
-    "secondary_rune": "",
-    "secondary_branch": "",
+    "role": "刺客",
+    "primary_rune": "电刑",
+    "primary_branch": "主宰",
+    "primary_details": [
+      "电刑",
+      "血之滋味",
+      "眼球收集器",
+      "无情猎手"
+    ],
+    "secondary_rune": "神奇之鞋 + 时间扭曲补药",
+    "secondary_branch": "启迪",
     "build": [
-      "三相之力",
-      "斯特拉克的挑战护手",
+      "幽梦之灵",
+      "黑色切割者",
       "死亡之舞",
       "守护天使",
-      "适应性头盔",
+      "斯特拉克的挑战护手",
       "水银之靴"
     ],
     "core_cost": 3000,
-    "situational": {},
+    "situational": {
+      "need_ad": "对面AD多，优先补护甲和血量",
+      "need_ap": "对面AP多，优先补魔抗和护盾",
+      "need_survive": "优先出死亡之舞或水银弯刀"
+    },
     "tips": [
       "大乱斗影流之主核心是雪球接技能",
       "注意走位躲关键控制",
       "残血别贪线先回家"
     ],
-    "snowball_tip": "雪球拉脸接主要技能",
-    "flash_tip": "闪现用来躲技能或追击残血",
-    "aram_strength": 55
+    "snowball_tip": "雪球命中后立即接技能，不要等落地",
+    "flash_tip": "闪现用来调整站位或逃跑，别省",
+    "aram_strength": 66
   },
   "240": {
     "name": "暴怒骑士",
@@ -4808,8 +4970,8 @@
     "primary_details": [
       "征服者",
       "凯旋",
-      "传说：韧性",
-      "致命一击"
+      "传说：急速",
+      "恩赐解脱"
     ],
     "secondary_branch": "坚决",
     "secondary_rune": "骸骨镀层 + 坚定",
@@ -4922,8 +5084,8 @@
     "primary_details": [
       "征服者",
       "凯旋",
-      "传说：韧性",
-      "致命一击"
+      "传说：急速",
+      "恩赐解脱"
     ],
     "secondary_branch": "坚决",
     "secondary_rune": "骸骨镀层 + 坚定",
@@ -4960,8 +5122,8 @@
     "primary_details": [
       "征服者",
       "凯旋",
-      "传说：韧性",
-      "致命一击"
+      "传说：急速",
+      "恩赐解脱"
     ],
     "secondary_branch": "坚决",
     "secondary_rune": "骸骨镀层 + 坚定",
@@ -5113,7 +5275,7 @@
       "致命节奏",
       "凯旋",
       "传说：血统",
-      "致命一击"
+      "恩赐解脱"
     ],
     "secondary_branch": "启迪",
     "secondary_rune": "神奇之鞋 + 饼干配送",
@@ -5303,7 +5465,7 @@
       "致命节奏",
       "凯旋",
       "传说：血统",
-      "致命一击"
+      "恩赐解脱"
     ],
     "secondary_branch": "启迪",
     "secondary_rune": "神奇之鞋 + 饼干配送",
@@ -5417,7 +5579,7 @@
       "致命节奏",
       "凯旋",
       "传说：血统",
-      "致命一击"
+      "恩赐解脱"
     ],
     "secondary_branch": "启迪",
     "secondary_rune": "神奇之鞋 + 饼干配送",
@@ -5569,7 +5731,7 @@
       "致命节奏",
       "凯旋",
       "传说：血统",
-      "致命一击"
+      "恩赐解脱"
     ],
     "secondary_branch": "启迪",
     "secondary_rune": "神奇之鞋 + 饼干配送",
@@ -5636,7 +5798,7 @@
       "眼球收集器",
       "无情猎手"
     ],
-    "secondary_rune": "完美时机 + 饼干配送",
+    "secondary_rune": "神奇之鞋 + 饼干配送",
     "secondary_branch": "启迪",
     "build": [
       "星蚀",
@@ -5719,8 +5881,8 @@
     "primary_details": [
       "征服者",
       "凯旋",
-      "传说：韧性",
-      "致命一击"
+      "传说：急速",
+      "恩赐解脱"
     ],
     "secondary_branch": "坚决",
     "secondary_rune": "骸骨镀层 + 坚定",
@@ -5757,8 +5919,8 @@
     "primary_details": [
       "征服者",
       "凯旋",
-      "传说：韧性",
-      "致命一击"
+      "传说：急速",
+      "恩赐解脱"
     ],
     "secondary_branch": "坚决",
     "secondary_rune": "骸骨镀层 + 坚定",
@@ -5785,7 +5947,7 @@
       "致命节奏",
       "凯旋",
       "传说：血统",
-      "致命一击"
+      "恩赐解脱"
     ],
     "secondary_rune": "神奇之鞋 + 饼干配送",
     "secondary_branch": "启迪",
@@ -5821,8 +5983,8 @@
     "primary_details": [
       "征服者",
       "凯旋",
-      "传说：韧性",
-      "致命一击"
+      "传说：急速",
+      "恩赐解脱"
     ],
     "secondary_rune": "爆破 + 复苏之风",
     "secondary_branch": "坚决",
@@ -5869,8 +6031,8 @@
     "primary_details": [
       "征服者",
       "凯旋",
-      "传说：韧性",
-      "致命一击"
+      "传说：急速",
+      "恩赐解脱"
     ],
     "secondary_branch": "坚决",
     "secondary_rune": "骸骨镀层 + 坚定",
@@ -5907,8 +6069,8 @@
     "primary_details": [
       "征服者",
       "凯旋",
-      "传说：韧性",
-      "致命一击"
+      "传说：急速",
+      "恩赐解脱"
     ],
     "secondary_branch": "坚决",
     "secondary_rune": "骸骨镀层 + 坚定",
@@ -6021,8 +6183,8 @@
     "primary_details": [
       "征服者",
       "凯旋",
-      "传说：韧性",
-      "致命一击"
+      "传说：急速",
+      "恩赐解脱"
     ],
     "secondary_branch": "坚决",
     "secondary_rune": "骸骨镀层 + 坚定",
@@ -6211,8 +6373,8 @@
     "primary_details": [
       "征服者",
       "凯旋",
-      "传说：韧性",
-      "致命一击"
+      "传说：急速",
+      "恩赐解脱"
     ],
     "secondary_branch": "坚决",
     "secondary_rune": "骸骨镀层 + 坚定",

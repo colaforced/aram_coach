@@ -88,18 +88,19 @@ def normalize_role(role: str) -> str:
     return ROLE_ALIASES.get(role, role)
 
 
+_replaced = _deduped = 0
 for _cid, _cdata in CHAMPIONS_DB.items():
     _cdata["role"] = normalize_role(_cdata.get("role", ""))
-    _build = _cdata.get("build", [])
     _new_build = []
-    for _item in _build:
-        if _item in ARAM_BUILD_REPLACEMENTS:
-            _repl = ARAM_BUILD_REPLACEMENTS[_item]
-            log.info(f"  [{_cdata.get('name',_cid)}] 替换禁用装备: {_item} -> {_repl}")
-            _new_build.append(_repl)
-        else:
-            _new_build.append(_item)
+    for _item in _cdata.get("build", []):
+        _repl = ARAM_BUILD_REPLACEMENTS.get(_item, _item)
+        _replaced += _repl != _item
+        if _repl in _new_build:  # 替换后与已有装备重复（如 守护天使→死亡之舞），直接去掉
+            _deduped += 1
+            continue
+        _new_build.append(_repl)
     _cdata["build"] = _new_build
+log.info(f"  出装中禁用装备替换 {_replaced} 处，替换后重复去掉 {_deduped} 件")
 
 from contextlib import asynccontextmanager
 
