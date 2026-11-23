@@ -53,30 +53,21 @@ def find_me_index(players: List[Dict[str, Any]], active_player: Dict[str, Any],
                 if p.get(key) == target:
                     return i
     if lcu_game_name:
-        for i, p in enumerate(players):
-            sn = p.get("summonerName") or ""
-            if lcu_game_name in (p.get("riotIdGameName"), sn, sn.split("#")[0]):
-                return i
+        # 只凭名字（不带 #TAG）可能撞名：不止一个匹配时宁可认不出，也不要认错成敌人
+        hits = [i for i, p in enumerate(players)
+                if lcu_game_name in (p.get("riotIdGameName"), p.get("summonerName") or "",
+                                     (p.get("summonerName") or "").split("#")[0])]
+        if len(hits) == 1:
+            return hits[0]
     return None
 
 
 def resolve_my_enemy_teams(team_map: Dict[str, Any]) -> tuple:
     """从 LCD 的 team_map（ORDER/CHAOS）里按 is_me 找出我方和敌方。
 
-    找不到自己时退化为前 5 人算我方。
+    找不到自己时把 ORDER 当我方（与前端 renderLiveTeamPanel 一致）。
     """
-    all_players = []
-    for key in ("ORDER", "CHAOS"):
-        all_players.extend(team_map.get(key, []))
-    my_team = []
-    enemy_team = []
-    for key in ("ORDER", "CHAOS"):
-        roster = team_map.get(key, [])
-        if any(p.get("is_me") for p in roster):
-            my_team = roster
-        else:
-            enemy_team = roster
-    if not my_team:
-        my_team = all_players[:5]
-        enemy_team = all_players[5:]
-    return my_team, enemy_team
+    order, chaos = team_map.get("ORDER", []), team_map.get("CHAOS", [])
+    if any(p.get("is_me") for p in chaos):
+        return chaos, order
+    return order, chaos

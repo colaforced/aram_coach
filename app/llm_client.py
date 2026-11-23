@@ -4,6 +4,7 @@ import logging
 import httpx
 from typing import AsyncGenerator, Optional, Dict, Any, List
 
+from app.advice import moment_text
 from app.lcd_client import resolve_my_enemy_teams
 
 log = logging.getLogger("aram_coach.llm")
@@ -13,6 +14,7 @@ SYSTEM_PROMPT = """你是英雄联盟大乱斗（ARAM）专家教练，名叫"�
 你精通：
 - 170+ 英雄的乱斗适配性、符文、出装、连招
 - 大乱斗特殊机制：雪球、治疗宝珠、草丛、窄团战
+- 大乱斗不能回城：只有开局在泉水、或阵亡后才能买装备，别建议"回城"
 - 装备克制、对线期策略、团战站位
 - 强化符文（Augments）三选一抉择
 
@@ -137,14 +139,12 @@ def _format_state_for_prompt(state: Dict[str, Any]) -> str:
         if coach.get("aram_balance_text"):
             parts.append(f"【大乱斗平衡修正】{coach['aram_balance_text']}")
 
-    composite = state.get("composite_advice") or {}
-    if composite:
-        score = composite.get("score")
-        tips = composite.get("tips") or []
-        if score:
-            parts.append(f"【教练评分】综合={score} 分")
-        if tips:
-            parts.append(f"【教练提示】{'; '.join(tips[:5])}")
+    moment = moment_text(state.get("moment"))
+    if moment:
+        parts.append(f"【本地规则算出的购物计划】{moment}")
+    verdict = state.get("verdict") or {}
+    if verdict.get("headline"):
+        parts.append(f"【选人建议】{verdict['headline']}：{verdict.get('reason', '')}")
 
     question = state.get("coach_question", "")
     if question:
@@ -179,13 +179,49 @@ class LLMClient:
             self._client = httpx.AsyncClient(timeout=self.timeout)
         return self._client
 
+    async def _chat(self, messages: List[Dict[str, str]], max_tokens: int) -> tuple:
+        """调一次 chat/completions，返回 (ok, 内容或错误提示)。429 时最多重试 3 次。"""
+        url = self.base_url.rstrip("/") + "/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "model": self.model,
+            "messages": messages,
+            "stream": False,
+            "temperature": self.temperature,
+            "max_tokens": max_tokens,
+            "reasoning_effort": "low",
+        }
+        client = await self._get_client()
+        for attempt in range(3):
+            try:
+                resp = await client.post(url, json=payload, headers=headers)
+                if resp.status_code == 429:
+                    log.warning("LLM 429 rate limited, retry %d/3 in 2s", attempt + 1)
+                    await asyncio.sleep(2)
+                    continue
+                if resp.status_code != 200:
+                    log.error("LLM API error %s: %s", resp.status_code, resp.text[:300])
+                    return False, f"❌ API 错误 {resp.status_code}: {resp.text[:200]}"
+                data = resp.json()
+                return True, data.get("choices", [{}])[0].get("message", {}).get("content", "")
+            except httpx.TimeoutException:
+                log.error("LLM request timeout")
+                return False, "⏱️ 请求超时了，网络可能有问题"
+            except Exception as e:
+                log.error("LLM error: %s", e)
+                return False, f"❌ 出错了: {str(e)[:200]}"
+        return False, "⏳ LLM 接口繁忙，请稍后再试（月之暗面账户并发限制）"
+
     async def analyze(
         self,
         state: Dict[str, Any],
         question: str = "",
         kb: Optional[Dict[str, Any]] = None,
     ) -> AsyncGenerator[str, None]:
-        """流式生成对局分析"""
+        """生成对局分析（一次性返回，保留生成器接口给流式端点用）"""
         if not self.enabled:
             yield "⚠️ 未配置 LLM API Key。请在 config.json 的 llm.api_key 填入你的 API Key。"
             return
@@ -202,50 +238,32 @@ class LLMClient:
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": prompt},
         ]
+        _ok, content = await self._chat(messages, max_tokens=16000)
+        if content:
+            yield content
 
-        url = self.base_url.rstrip("/") + "/chat/completions"
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json",
-        }
-        payload = {
-            "model": self.model,
-            "messages": messages,
-            "stream": False,
-            "temperature": self.temperature,
-            "max_tokens": 16000,
-            "reasoning_effort": "low",
-        }
-
-        client = await self._get_client()
-        max_retries = 3
-        for attempt in range(max_retries):
-            try:
-                resp = await client.post(url, json=payload, headers=headers)
-                if resp.status_code == 429:
-                    log.warning("LLM 429 rate limited, retry %d/%d in 2s", attempt + 1, max_retries)
-                    await asyncio.sleep(2)
-                    continue
-                if resp.status_code != 200:
-                    log.error("LLM API error %s: %s", resp.status_code, resp.text[:300])
-                    yield f"❌ API 错误 {resp.status_code}: {resp.text[:200]}"
-                    return
-
-                data = resp.json()
-                content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
-                if content:
-                    yield content
-                return
-            except httpx.TimeoutException:
-                log.error("LLM request timeout")
-                yield "⏱️ 请求超时了，网络可能有问题"
-                return
-            except Exception as e:
-                log.error("LLM error: %s", e)
-                yield f"❌ 出错了: {str(e)[:200]}"
-                return
-
-        yield "⏳ LLM 接口繁忙，请稍后再试（月之暗面账户并发限制）"
+    async def pick_augment(self, state: Dict[str, Any], options: List[str],
+                           notes: List[Dict[str, Any]]) -> str:
+        """强化符文三选一：只要结论和一两句理由。"""
+        if not self.enabled:
+            return "⚠️ 未配置 LLM API Key"
+        coach = state.get("my_coach") or {}
+        enemies = "、".join(f"{m.get('champion_name')}({(m.get('coach') or {}).get('role', '?')})"
+                           for m in state.get("enemy_team") or [])
+        known = "\n".join(f"- {n['name']}：{'；'.join(n.get('reasons') or []) or '知识库无数据'}" for n in notes)
+        prompt = (
+            f"海克斯大乱斗，我玩 {coach.get('name', '?')}（{coach.get('role', '?')}），"
+            f"出装 {' → '.join(coach.get('build') or [])}。敌方：{enemies or '未知'}。\n"
+            f"现在三选一的强化符文：{' / '.join(options)}\n"
+            f"本地知识库的参考：\n{known}\n\n"
+            "只输出三行，每行不超过 30 字：\n1. 选哪个\n2. 为什么\n3. 拿了之后出装或打法要怎么调整"
+        )
+        messages = [
+            {"role": "system", "content": "你是英雄联盟海克斯大乱斗（ARAM: Mayhem）强化符文专家，回答简短直接。"},
+            {"role": "user", "content": prompt},
+        ]
+        _ok, content = await self._chat(messages, max_tokens=400)
+        return content or "（没有返回内容）"
 
     async def close(self):
         if self._client:

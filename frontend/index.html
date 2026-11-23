@@ -1223,6 +1223,7 @@ body {
     </div>
 </div>
 
+<script src="/static/coach-card.js"></script>
 <script>
 let ws = null;
 let currentState = null;
@@ -1282,7 +1283,8 @@ function showDiceToast(d) {
     const breakdownHtml = Object.entries(breakdown).map(([k, v]) =>
         `<div class="dt-breakdown"><span>${k}</span><div class="dt-bar"><div class="dt-fill ${scoreClass(v)}" style="width:${v}%"></div></div><span>${Math.round(v)}</span></div>`
     ).join('');
-    let actionText = ca.immediate_action || '';
+    const v = d.verdict || {};
+    const actionText = v.headline ? `${v.headline}：${v.reason || ''}` : (ca.immediate_action || '');
     const newName = d.new_champion_name || '???';
     toast.innerHTML = `
         <div class="dt-header">
@@ -1291,12 +1293,12 @@ function showDiceToast(d) {
             <span class="dt-close">✕</span>
         </div>
         <div class="dt-body">
-            <div class="dt-champ">新英雄: <strong>${newName}</strong></div>
+            <div class="dt-champ">新英雄: <strong>${esc(newName)}</strong></div>
             <div class="dt-score-wrap">
                 <div class="dt-score-circle ${sc}">${score}</div>
                 <div class="dt-breakdowns">${breakdownHtml}</div>
             </div>
-            ${actionText ? `<div class="dt-action">🎯 ${actionText}</div>` : ''}
+            ${actionText ? `<div class="dt-action">🎯 ${esc(actionText)}</div>` : ''}
             <div class="dt-tip">剩余骰子: ${d.remaining_dice}</div>
         </div>
     `;
@@ -1307,35 +1309,9 @@ function showDiceToast(d) {
 }
 
 function showLevelUpToast(d) {
-    let toast = document.getElementById('levelup-toast');
-    if (toast) toast.remove();
-    toast = document.createElement('div');
-    toast.id = 'levelup-toast';
-    const ca = d.composite || {};
-    const score = ca.score || 0;
-    const sc = scoreClass(score);
-    toast.innerHTML = `
-        <div class="dt-header" style="background: linear-gradient(90deg, rgba(255,152,0,0.2), transparent);">
-            <span class="dt-icon">⭐</span>
-            <span class="dt-title" style="color:#ffb74d">升级了！Lv.${d.old_level} → Lv.${d.new_level}</span>
-            <span class="dt-close">✕</span>
-        </div>
-        <div class="dt-body">
-            <div class="dt-champ">可能触发<strong style="color:#ffb74d">强化符文</strong>选择界面</div>
-            <div class="dt-score-wrap">
-                <div class="dt-score-circle ${sc}">${score}</div>
-                <div class="dt-breakdowns">
-                    <div class="dt-breakdown"><span>金币</span><span style="color:#ffd54f">${d.gold || 0}</span></div>
-                </div>
-            </div>
-            ${ca.immediate_action ? `<div class="dt-action">🎯 ${ca.immediate_action}</div>` : ''}
-            <div class="dt-tip">趁升级窗口，想想要不要重随符文？</div>
-        </div>
-    `;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.classList.add('show'), 10);
-    toast.querySelector('.dt-close').onclick = () => toast.remove();
-    setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 6000);
+    if (!d.augment) return;
+    CoachCard.toast(`Lv.${d.new_level}：强化符文三选一，把看到的三个选项填进右下角`);
+    AugmentPicker.open();
 }
 
 function render() {
@@ -1371,6 +1347,8 @@ function render() {
     } else {
         main.innerHTML = emptyPanel('等待进入大乱斗对局...', '请点击 Play → ARAM 开始匹配');
     }
+    AugmentPicker.showLauncher(s.lcu_connected && ['GameStart', 'InProgress', 'Reconnect'].includes(s.phase));
+    if (aiCoachEl) refreshQuickCard();
 }
 
 function emptyPanel(title, subtitle) {
@@ -1382,45 +1360,6 @@ function emptyPanel(title, subtitle) {
     </div>`;
 }
 
-function renderRerollCard(a) {
-    if (!a) return '';
-    const emojis = { reroll: '🎲', keep: '✅', consider: '🤔' };
-    const titles = { reroll: '建议骰子重随', keep: '建议保留这个英雄', consider: '看你自己喜好' };
-    const scoreClass = s => s >= 70 ? 'score-high' : s >= 50 ? 'score-mid' : 'score-low';
-    const strengthClass = scoreClass(a.strength);
-    const fitnessClass = scoreClass(a.fitness);
-    const diceHtml = [0, 1].map(i =>
-        `<div class="dice ${i < a.remaining_dice ? 'available' : ''}">⚀</div>`
-    ).join('');
-    const suggestionsHtml = (a.suggestions || []).length
-        ? `<ul class="reroll-suggestions">${a.suggestions.map(r => `<li>${r}</li>`).join('')}</ul>` : '';
-
-    return `
-        <div class="reroll-card decision-${a.decision} reroll-decision-${a.decision}">
-            <div class="reroll-header">
-                <span class="reroll-emoji">${emojis[a.decision] || '🎲'}</span>
-                <span class="reroll-title">${titles[a.decision] || '骰子建议'}</span>
-                <div class="reroll-dice">${diceHtml}</div>
-            </div>
-            <div class="reroll-scores">
-                <div class="reroll-score-item">
-                    <div class="reroll-score-value ${strengthClass}">${a.strength}</div>
-                    <div class="reroll-score-label">英雄强度</div>
-                </div>
-                <div class="reroll-score-item">
-                    <div class="reroll-score-value ${fitnessClass}">${a.fitness}</div>
-                    <div class="reroll-score-label">阵容适配</div>
-                </div>
-                <div class="reroll-score-item">
-                    <div class="reroll-score-value ${scoreClass(a.score)}">${a.score}</div>
-                    <div class="reroll-score-label">综合分</div>
-                </div>
-            </div>
-            <div class="reroll-reason">${a.reason}</div>
-            ${suggestionsHtml}
-        </div>`;
-}
-
 function renderChampSelect(s) {
     let myHtml = '';
     if (s.my_coach) {
@@ -1429,53 +1368,14 @@ function renderChampSelect(s) {
         myHtml = `<div class="panel"><div class="empty-state"><div class="icon">🎲</div><p>等待随机英雄...</p></div></div>`;
     }
 
-    const compositeHtml = renderCompositePanel(s);
-
-    let rerollHtml = '';
-    if (s.reroll_advice) {
-        rerollHtml = renderRerollCard(s.reroll_advice);
-    }
+    const verdictHtml = CoachCard.verdictCard(s);
 
     let teamAnalysis = '';
     if ((s.my_team && s.my_team.length) || (s.enemy_team && s.enemy_team.length)) {
         teamAnalysis = renderTeamAnalysis(s.my_team || [], s.enemy_team || []);
     }
 
-    return compositeHtml + rerollHtml + myHtml + teamAnalysis;
-}
-
-function renderMatchupAnalysis(m) {
-    if (!m) return '';
-    const itemAdvHtml = (m.item_advs || []).map(a => `<div class="situational-item" style="border-left:3px solid #ffb74d;"><strong>🛡️</strong>${a}</div>`).join('');
-    const tipsHtml = (m.tips || []).map(t => `<div class="situational-item" style="border-left:3px solid #ef5350;"><strong>💀</strong>${t}</div>`).join('');
-    const apRatio = m.enemy_ap_count / Math.max(1, m.enemy_ap_count + m.enemy_ad_count);
-
-    return `
-        <div class="panel" style="background:linear-gradient(135deg,#1a2a3a,#16202b);">
-            <div class="champion-header" style="border-bottom:1px solid rgba(255,255,255,0.1);">
-                <span class="champion-name">🎯 敌方阵容分析</span>
-                <span style="margin-left:auto;font-size:12px;color:#78909c;">
-                    AP ${m.enemy_ap_count} · AD ${m.enemy_ad_count} (${Math.round(apRatio*100)}% AP)
-                </span>
-            </div>
-            ${itemAdvHtml ? `<div class="section" style="margin-bottom:8px;">${itemAdvHtml}</div>` : ''}
-            ${tipsHtml ? `<div class="section">${tipsHtml}</div>` : ''}
-        </div>`;
-}
-
-function renderEnemyMiniList(enemies) {
-    if (!enemies || !enemies.length) return '';
-    return `<div class="panel" style="padding:14px 18px;">
-        <div style="font-size:13px;font-weight:600;color:#ef9a9a;margin-bottom:10px;">⚔️ 敌方英雄</div>
-        <div style="display:flex;flex-wrap:wrap;gap:6px;">
-            ${enemies.map(e => `
-                <div style="display:flex;align-items:center;gap:6px;background:rgba(239,83,80,0.12);border:1px solid rgba(239,83,80,0.3);border-radius:6px;padding:4px 10px;font-size:13px;">
-                    <span>${e.champion_name || '?'}</span>
-                    ${e.coach ? `<span style="color:#78909c;font-size:11px;">${e.coach.role}</span>` : ''}
-                </div>
-            `).join('')}
-        </div>
-    </div>`;
+    return verdictHtml + myHtml + teamAnalysis;
 }
 
 function renderInGame(s) {
@@ -1483,12 +1383,7 @@ function renderInGame(s) {
     if (s.lcd && s.lcd.available) {
         liveHtml = renderLiveStatus(s.lcd);
     }
-    const compositeHtml = renderCompositePanel(s);
-    let matchupHtml = renderMatchupAnalysis(s.matchup_analysis);
-    let buildProgHtml = '';
-    if (s.lcd && s.lcd.available && s.my_coach) {
-        buildProgHtml = renderBuildProgress(s.lcd, s.my_coach);
-    }
+    const momentHtml = CoachCard.momentCard(s);
     let teamHtml = '';
     if (s.lcd && s.lcd.available) {
         teamHtml = renderLiveTeamPanel(s.lcd);
@@ -1503,7 +1398,7 @@ function renderInGame(s) {
     } else {
         coachHtml = `<div class="panel"><div class="empty-state"><div class="icon">⚔️</div><p>对局中...<br>英雄数据加载中</p></div></div>`;
     }
-    return liveHtml + compositeHtml + buildProgHtml + matchupHtml + teamHtml + eventHtml + coachHtml;
+    return liveHtml + momentHtml + teamHtml + eventHtml + coachHtml;
 }
 
 function renderLiveStatus(lcd) {
@@ -1618,27 +1513,6 @@ function renderLiveStatus(lcd) {
     </div>`;
 }
 
-function renderBuildProgress(lcd, coach) {
-    const a = lcd.active || {};
-    const gold = Math.round(a.gold || 0);
-    const build = coach.build || [];
-    if (!build.length) return '';
-
-    const coreCost = coach.core_cost || 0;
-    const havePct = coreCost > 0 ? Math.min(100, Math.round((gold / coreCost) * 100)) : 0;
-
-    const itemsHtml = build.map((item, i, arr) => {
-        let cls = 'later';
-        if (i === 0) cls = 'next';
-        return `<span class="bp-item ${cls}">${item}</span>`;
-    }).join('<span class="bp-arrow">→</span>');
-
-    return `<div class="build-progress">
-        <div class="build-progress-title">🗡️ 出装进度 · ${gold}G / 核心约${coreCost}G (${havePct}%)</div>
-        <div class="build-progress-items">${itemsHtml}</div>
-    </div>`;
-}
-
 function renderLiveTeamPanel(lcd) {
     // 按 is_me 判断我方，找不到自己时退回 ORDER（与后端 resolve_my_enemy_teams 一致）
     const tm = lcd.team_map || {};
@@ -1663,7 +1537,7 @@ function renderLiveTeamPanel(lcd) {
         for (let i = 0; i < 6; i++) {
             const it = (p.items || [])[i];
             if (it && it.name) {
-                itemsHtml.push(`<div class="player-item-chip" title="${it.name} (${it.price || 0}G)">${it.name}</div>`);
+                itemsHtml.push(`<div class="player-item-chip" title="${esc(it.name)} (${Number(it.price) || 0}G)">${esc(it.name)}</div>`);
             } else {
                 itemsHtml.push(`<div class="player-item-chip empty" title="空">·</div>`);
             }
@@ -1677,8 +1551,8 @@ function renderLiveTeamPanel(lcd) {
         return `<div class="player-card ${dead ? 'dead' : ''} ${p.is_me ? 'me' : ''}">
             <div class="player-head">
                 <span>
-                    <span class="name ${p.is_me ? 'me' : ''}">${p.name}</span>
-                    <span class="champ">${p.champion}</span>
+                    <span class="name ${p.is_me ? 'me' : ''}">${esc(p.name)}</span>
+                    <span class="champ">${esc(p.champion)}</span>
                     <span class="lvl">Lv${p.level || 1}</span>
                 </span>
                 ${dead ? `<span class="dead-tag">💀 ${p.respawn_timer || 0}s</span>` : ''}
@@ -1751,10 +1625,10 @@ function renderEventStream(events) {
             cls = 'ekill';
             const killer = e.KillerName || '';
             const victim = e.VictimName || '';
-            text = `💀 ${killer} 击杀了 ${victim}`;
+            text = `💀 ${esc(killer)} 击杀了 ${esc(victim)}`;
         } else if (name === 'Multikill') {
             cls = 'ekill';
-            text = `🔥 ${e.KillerName} 连杀 ${e.KillStreak}`;
+            text = `🔥 ${esc(e.KillerName)} 连杀 ${Number(e.KillStreak) || ''}`;
         } else if (name === 'TurretKilled') {
             cls = 'eturret';
             text = `🏰 防御塔被摧毁`;
@@ -1763,15 +1637,15 @@ function renderEventStream(events) {
             text = `💎 水晶被摧毁`;
         } else if (name === 'DragonKill') {
             cls = 'edragon';
-            text = `🐉 ${e.KillerName} 击杀龙`;
+            text = `🐉 ${esc(e.KillerName)} 击杀龙`;
         } else if (name === 'BaronKill') {
             cls = 'ebaron';
-            text = `👑 ${e.KillerName} 击杀男爵`;
+            text = `👑 ${esc(e.KillerName)} 击杀男爵`;
         } else if (name === 'HeraldKill') {
             cls = 'edragon';
-            text = `🦅 ${e.KillerName} 击杀峡谷先锋`;
+            text = `🦅 ${esc(e.KillerName)} 击杀峡谷先锋`;
         } else {
-            text = name;
+            text = esc(name);
         }
         return `<div class="event-item ${cls}"><span style="color:#546e7a;margin-right:6px;">${t}</span>${text}</div>`;
     }).join('');
@@ -1788,144 +1662,48 @@ function scoreClass(score) {
     return 'low';
 }
 
-function renderCompositePanel(s) {
-    const ca = s.composite_advice;
-    if (!ca) return '';
-    const score = ca.score || 50;
-    const sc = scoreClass(score);
-    const breakdown = ca.score_breakdown || {};
-    const breakdownHtml = Object.entries(breakdown).map(([k, v]) => {
-        const vc = scoreClass(v);
-        return `<div class="score-breakdown-item">
-            <span style="width:60px;">${k}</span>
-            <div class="score-breakdown-bar"><div class="score-breakdown-fill ${vc}" style="width:${v}%;"></div></div>
-            <span style="width:26px;text-align:right;">${Math.round(v)}</span>
-        </div>`;
-    }).join('');
-
-    let actionHtml = '';
-    if (ca.immediate_action) {
-        actionHtml = `<div class="action-card highlight">
-            <div class="action-title">🎯 立即行动</div>
-            <div class="action-value">${ca.immediate_action}</div>
-        </div>`;
-    }
-    if (ca.next_priority) {
-        actionHtml += `<div class="action-card">
-            <div class="action-title">⚡ 下一优先级</div>
-            <div class="action-value">${ca.next_priority}</div>
-        </div>`;
-    }
-
-    let liveTipsHtml = '';
-    if (ca.gold_tip || ca.survival_tip) {
-        liveTipsHtml = `<div class="advice-grid">
-            ${ca.gold_tip ? `<div class="advice-tip-card gold"><div class="label">💰 金币建议</div>${ca.gold_tip}</div>` : ''}
-            ${ca.survival_tip ? `<div class="advice-tip-card hp"><div class="label">❤️ 生存建议</div>${ca.survival_tip}</div>` : ''}
-        </div>`;
-    }
-
-    let tfHtml = '';
-    if (ca.teamfight_readiness) {
-        const tf = ca.teamfight_readiness;
-        const adv = tf.advantage;
-        const advCls = adv > 0 ? 'plus' : adv < 0 ? 'minus' : '';
-        const advText = adv > 0 ? `优势 +${adv}` : adv < 0 ? `劣势 ${adv}` : '均势';
-        tfHtml = `<div class="teamfight-card">
-            <div class="tf-side"><div class="tf-label">我方存活</div><div class="tf-count me">${tf.my_alive}</div></div>
-            <div class="tf-vs">VS</div>
-            <div class="tf-side"><div class="tf-label">敌方存活</div><div class="tf-count enemy">${tf.enemy_alive}</div></div>
-            <div class="tf-adv ${advCls}">${advText}</div>
-        </div>`;
-    }
-
-    let buildRecHtml = '';
-    const br = ca.build_recommendation || {};
-    if (br.total_count > 0) {
-        const ownedCount = br.owned_count || 0;
-        const nextItem = br.next_item;
-        const nextCost = br.next_item_cost || 0;
-        const remaining = br.remaining || [];
-        const progressPct = Math.round((ownedCount / br.total_count) * 100);
-        const itemsHtml = remaining.map((item, i) => {
-            let cls = 'later';
-            if (i === 0 && nextItem) cls = 'next';
-            return `<span class="build-rec-item ${cls}">${item}${cls === 'next' && nextCost ? ' (' + nextCost + 'G)' : ''}</span>`;
-        }).join('');
-        const ownedHtml = (br.owned_in_build || []).map(it => `<span class="build-rec-item done">${it}</span>`).join('');
-        buildRecHtml = `<div class="build-rec-card">
-            <div class="build-rec-header">
-                <span class="build-rec-title">🛠️ 出装进度</span>
-                <span class="build-rec-progress">${ownedCount}/${br.total_count} · ${progressPct}%</span>
-            </div>
-            <div class="build-rec-items">${ownedHtml}${itemsHtml}</div>
-        </div>`;
-    }
-
-    let suggestionsHtml = '';
-    if (ca.suggestions && ca.suggestions.length) {
-        suggestionsHtml = '<ul class="suggestions-list">' +
-            ca.suggestions.map(s => `<li>${s}</li>`).join('') + '</ul>';
-    }
-
-    return `<div class="composite-panel">
-        <div class="composite-header">
-            <span class="composite-title">🧠 综合决策</span>
-            <div class="composite-score">
-                <div class="score-breakdown">${breakdownHtml}</div>
-                <div class="score-circle ${sc}">${score}</div>
-            </div>
-        </div>
-        ${actionHtml}
-        ${buildRecHtml}
-        ${liveTipsHtml}
-        ${tfHtml}
-        ${suggestionsHtml}
-    </div>`;
-}
-
 function renderCoachCard(coach, isMine) {
-    const runeDetails = (coach.primary_details || []).map(r => `<span class="rune-chip">${r}</span>`).join('');
+    const runeDetails = (coach.primary_details || []).map(r => `<span class="rune-chip">${esc(r)}</span>`).join('');
     const buildHtml = (coach.build || []).map((item, i, arr) => {
-        if (i === arr.length - 1) return `<span class="build-item">${item}</span>`;
-        return `<span class="build-item">${item}</span><span class="build-arrow">→</span>`;
+        if (i === arr.length - 1) return `<span class="build-item">${esc(item)}</span>`;
+        return `<span class="build-item">${esc(item)}</span><span class="build-arrow">→</span>`;
     }).join('');
 
     let situationalHtml = '';
     if (coach.situational && Object.keys(coach.situational).length > 0) {
         situationalHtml = '<div class="section"><div class="section-title">⚠️ 应对场景</div>' +
             Object.entries(coach.situational).map(([k, v]) =>
-                `<div class="situational-item"><strong>${k}</strong>${v}</div>`
+                `<div class="situational-item"><strong>${esc(k)}</strong>${esc(v)}</div>`
             ).join('') + '</div>';
     }
 
-    const tipsHtml = (coach.tips || []).map(t => `<li>${t}</li>`).join('');
+    const tipsHtml = (coach.tips || []).map(t => `<li>${esc(t)}</li>`).join('');
 
     const pct = v => `${((v || 0) * 100).toFixed(1)}%`;
     const opgg = coach.opgg;
     const opggHtml = opgg
-        ? `<div style="font-size:12px;color:#90a4ae;margin-top:6px;">OP.GG 大乱斗 T${opgg.tier} · 胜率 ${pct(opgg.win_rate)} · 选取率 ${pct(opgg.pick_rate)}${opgg.version ? ` · ${opgg.version}` : ''}</div>`
+        ? `<div style="font-size:12px;color:#90a4ae;margin-top:6px;">OP.GG 大乱斗 T${esc(opgg.tier)} · 胜率 ${pct(opgg.win_rate)} · 选取率 ${pct(opgg.pick_rate)}${opgg.version ? ` · ${esc(opgg.version)}` : ''}</div>`
         : '';
     const balanceHtml = coach.aram_balance_text
-        ? `<div style="font-size:12px;color:#ffb74d;margin-top:4px;">⚖️ 大乱斗平衡：${coach.aram_balance_text}</div>`
+        ? `<div style="font-size:12px;color:#ffb74d;margin-top:4px;">⚖️ 大乱斗平衡：${esc(coach.aram_balance_text)}</div>`
         : '';
     const sourceTag = coach.data_source === 'opgg'
         ? '<span style="font-size:11px;color:#66bb6a;margin-left:6px;">出装/符文来自 OP.GG 统计</span>'
         : '';
     const shardsHtml = (coach.rune_shards || []).length
-        ? `<div style="margin-top:6px;font-size:12px;color:#90a4ae;">属性碎片：${coach.rune_shards.join(' · ')}</div>`
+        ? `<div style="margin-top:6px;font-size:12px;color:#90a4ae;">属性碎片：${esc(coach.rune_shards.join(' · '))}</div>`
         : '';
     const extraBuildHtml = [
-        (coach.starter_items || []).length ? `出门装：${coach.starter_items.join(' + ')}` : '',
-        (coach.spells || []).length ? `召唤师技能：${coach.spells.join(' + ')}` : '',
+        (coach.starter_items || []).length ? `出门装：${esc(coach.starter_items.join(' + '))}` : '',
+        (coach.spells || []).length ? `召唤师技能：${esc(coach.spells.join(' + '))}` : '',
     ].filter(Boolean).map(t => `<div style="margin-top:6px;font-size:12px;color:#90a4ae;">${t}</div>`).join('');
 
     return `
         <div class="panel">
             <div class="champion-card">
                 <div class="champion-header ${isMine ? 'my-card' : ''}">
-                    <span class="champion-name">${coach.name}</span>
-                    <span class="champion-role">${coach.role}</span>
+                    <span class="champion-name">${esc(coach.name)}</span>
+                    <span class="champion-role">${esc(coach.role)}</span>
                     ${coach.core_cost ? `<span style="margin-left:auto;font-size:12px;color:#78909c;">核心总价 ${coach.core_cost}G</span>` : ''}
                 </div>
                 ${opggHtml}
@@ -1934,11 +1712,11 @@ function renderCoachCard(coach, isMine) {
                 <div class="section">
                     <div class="section-title">✨ 符文${sourceTag}</div>
                     <div style="margin-bottom:4px;">
-                        <span class="rune-box rune-primary">主系 · ${coach.primary_branch} · ${coach.primary_rune}</span>
+                        <span class="rune-box rune-primary">主系 · ${esc(coach.primary_branch)} · ${esc(coach.primary_rune)}</span>
                     </div>
                     <div class="rune-details">${runeDetails}</div>
                     <div style="margin-top:8px;">
-                        <span class="rune-box rune-secondary">副系 · ${coach.secondary_branch} · ${coach.secondary_rune}</span>
+                        <span class="rune-box rune-secondary">副系 · ${esc(coach.secondary_branch)} · ${esc(coach.secondary_rune)}</span>
                     </div>
                     ${shardsHtml}
                 </div>
@@ -1961,11 +1739,11 @@ function renderCoachCard(coach, isMine) {
                     <div class="special-tips">
                         <div class="special-tip">
                             <div class="special-tip-title">雪球使用</div>
-                            <div class="special-tip-content">${coach.snowball_tip || '根据战场形势灵活使用'}</div>
+                            <div class="special-tip-content">${esc(coach.snowball_tip || '根据战场形势灵活使用')}</div>
                         </div>
                         <div class="special-tip">
                             <div class="special-tip-title">闪现使用</div>
-                            <div class="special-tip-content">${coach.flash_tip || '闪现留关键时候用，别乱交'}</div>
+                            <div class="special-tip-content">${esc(coach.flash_tip || '闪现留关键时候用，别乱交')}</div>
                         </div>
                     </div>
                 </div>
@@ -2029,12 +1807,12 @@ function renderTeamAnalysis(myTeam, enemyTeam) {
                 <div class="team-card team-ally">
                     <div class="team-title">🟢 我方阵容</div>
                     ${['坦克','战士','法师','射手','刺客','辅助'].map(r => roleRow(my.counts, r)).join('')}
-                    ${my.names.length ? '<div style="margin-top:10px;font-size:11px;color:#78909c;">' + my.names.join(', ') + '</div>' : ''}
+                    ${my.names.length ? '<div style="margin-top:10px;font-size:11px;color:#78909c;">' + esc(my.names.join(', ')) + '</div>' : ''}
                 </div>
                 <div class="team-card team-enemy">
                     <div class="team-title">🔴 敌方阵容</div>
                     ${['坦克','战士','法师','射手','刺客','辅助'].map(r => roleRow(enemy.counts, r)).join('')}
-                    ${enemy.names.length ? '<div style="margin-top:10px;font-size:11px;color:#78909c;">' + enemy.names.join(', ') + '</div>' : ''}
+                    ${enemy.names.length ? '<div style="margin-top:10px;font-size:11px;color:#78909c;">' + esc(enemy.names.join(', ')) + '</div>' : ''}
                 </div>
             </div>
         </div>`;
@@ -2065,7 +1843,6 @@ function openAICoach(initialQuestion) {
             <div class="ai-modal-header">
                 <h3>🤖 乱斗导师</h3>
                 <div style="display:flex;gap:8px;align-items:center;">
-                    <button id="quickRefresh" class="quick-refresh-btn" onclick="refreshQuickCard()">🔄</button>
                     <button class="ai-modal-close" onclick="closeAICoach()">✕</button>
                 </div>
             </div>
@@ -2090,28 +1867,12 @@ function openAICoach(initialQuestion) {
     loadQuickCard();
 }
 
-async function loadQuickCard() {
-    const card = aiCoachEl.querySelector("#aiQuickCard");
-    if (!card) return;
-    try {
-        const resp = await fetch("/api/coach/quick");
-        if (resp.ok) {
-            card.innerHTML = await resp.text();
-        } else {
-            card.innerHTML = '<div style="color:#888;text-align:center;padding:20px;">❌ 加载失败</div>';
-        }
-    } catch (e) {
-        card.innerHTML = '<div style="color:#ef5350;text-align:center;padding:20px;">❌ ' + e.message + '</div>';
-    }
+function loadQuickCard() {
+    const card = aiCoachEl && aiCoachEl.querySelector("#aiQuickCard");
+    if (card) card.innerHTML = CoachCard.render(currentState);
 }
 
 function refreshQuickCard() {
-    if (aiCoachEl) {
-        const btn = aiCoachEl.querySelector("#quickRefresh");
-        btn.style.transition = "transform 0.3s";
-        btn.style.transform = "rotate(360deg)";
-        setTimeout(() => { btn.style.transform = "none"; }, 300);
-    }
     loadQuickCard();
 }
 

@@ -8,14 +8,15 @@ if sys.platform == "win32":
 
 import logging
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any, List, Optional
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, StreamingResponse, HTMLResponse
+from fastapi.responses import FileResponse, StreamingResponse
+from pydantic import BaseModel
 
 from app.lcu_client import LCUClient
-from app import data_sync, lcd_client
+from app import advice, augments, data_sync, items, lcd_client, runes
 from app.lcd_client import resolve_my_enemy_teams
 from app.llm_client import LLMClient
 
@@ -60,6 +61,18 @@ if ARAM_META:
 else:
     log.info("  尚无大乱斗同步数据（data/aram_meta.json），暂用 champions.json")
 
+# 装备：名称索引（跳过斗魂竞技场等变体）、合成树与当前版本价格（同步数据优先）
+ITEM_DB = items.ItemDB(ITEM_MAP)
+ITEM_DB.apply_economics((ARAM_META.get("cdragon") or {}).get("items"))
+# 符文树：把手写数据里的符文名还原成客户端符文页 ID
+RUNE_TREE: Dict[str, Any] = json.loads((DATA_DIR / "runes.json").read_text(encoding="utf-8"))
+# 海克斯大乱斗强化符文池
+AUGMENTS_STATIC = DATA_DIR / "augments.json"
+AUGMENT_POOL: list = augments.load_pool((ARAM_META.get("cdragon") or {}).get("augments"), AUGMENTS_STATIC)
+RUNES_CFG: Dict[str, Any] = {"auto_apply": False, **CONFIG.get("runes", {})}
+# 哪些等级会弹强化符文三选一（未在实机确认，可在 config.json 的 augments.levels 改）
+AUGMENT_CFG: Dict[str, Any] = {"levels": [3, 7, 11, 15], **CONFIG.get("augments", {})}
+
 ARAM_BUILD_REPLACEMENTS: Dict[str, str] = {
     "守护天使": "死亡之舞",
     "石像鬼石板甲": "日炎圣盾",
@@ -88,18 +101,28 @@ def normalize_role(role: str) -> str:
     return ROLE_ALIASES.get(role, role)
 
 
+def replace_banned_items(build: list) -> tuple:
+    """大乱斗禁用装备换成替代品；替换后与已有装备重复（如 守护天使→死亡之舞）的直接去掉。
+
+    返回 (新出装, 替换数, 去重数)。
+    """
+    out, replaced, deduped = [], 0, 0
+    for item in build:
+        repl = ARAM_BUILD_REPLACEMENTS.get(item, item)
+        replaced += repl != item
+        if repl in out:
+            deduped += 1
+            continue
+        out.append(repl)
+    return out, replaced, deduped
+
+
 _replaced = _deduped = 0
 for _cid, _cdata in CHAMPIONS_DB.items():
     _cdata["role"] = normalize_role(_cdata.get("role", ""))
-    _new_build = []
-    for _item in _cdata.get("build", []):
-        _repl = ARAM_BUILD_REPLACEMENTS.get(_item, _item)
-        _replaced += _repl != _item
-        if _repl in _new_build:  # 替换后与已有装备重复（如 守护天使→死亡之舞），直接去掉
-            _deduped += 1
-            continue
-        _new_build.append(_repl)
-    _cdata["build"] = _new_build
+    _cdata["build"], _r, _d = replace_banned_items(_cdata.get("build", []))
+    _replaced += _r
+    _deduped += _d
 log.info(f"  出装中禁用装备替换 {_replaced} 处，替换后重复去掉 {_deduped} 件")
 
 from contextlib import asynccontextmanager
@@ -108,33 +131,55 @@ _data_sync_lock = asyncio.Lock()
 
 
 async def refresh_aram_meta(force: bool = False) -> Dict[str, Any]:
-    """数据过期（或 force）时同步 OP.GG / Meraki 数据，成功后原地替换 ARAM_META。"""
+    """数据过期（或 force）时同步 OP.GG / Meraki / CommunityDragon，成功后原地替换 ARAM_META。
+
+    非 force 时只拉过期的数据源（失败过的下次启动会重试，成功的 24 小时内不重复下载）。
+    """
     if _data_sync_lock.locked():
         return {"status": "running"}
     async with _data_sync_lock:
-        if not force and not data_sync.is_stale(ARAM_META, DATA_SYNC_CFG["max_age_hours"]):
+        only = None if force else data_sync.stale_sources(ARAM_META, DATA_SYNC_CFG["max_age_hours"])
+        if only == []:
             return {"status": "fresh"}
-        log.info("同步大乱斗数据（OP.GG / Meraki / CommunityDragon）...")
+        log.info(f"同步大乱斗数据: {only or '全部'}")
         try:
-            report = await data_sync.sync(DATA_DIR, ITEM_MAP)
+            report = await data_sync.sync(DATA_DIR, ITEM_MAP, only=only)
         except Exception as e:
             log.exception("大乱斗数据同步失败")
             return {"status": "error", "error": str(e)[:200]}
-        fresh = data_sync.load_meta(DATA_DIR)
+        fresh = await asyncio.to_thread(data_sync.load_meta, DATA_DIR)
         if fresh:
             ARAM_META.clear()
             ARAM_META.update(fresh)
+            cd = ARAM_META.get("cdragon") or {}
+            ITEM_DB.apply_economics(cd.get("items"))
+            AUGMENT_POOL[:] = augments.load_pool(cd.get("augments"), AUGMENTS_STATIC)
+            _mean_strength_cache.clear()
         log.info(f"大乱斗数据同步结束: {report}")
         return {"status": "done", "report": report}
+
+
+_background_tasks: set = set()
+
+
+def spawn(coro) -> asyncio.Task:
+    """后台任务要留引用，否则可能被 GC 回收；退出时统一取消。"""
+    task = asyncio.create_task(coro)
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
+    return task
 
 
 @asynccontextmanager
 async def lifespan(application: FastAPI):
     log.info("Starting ARAM Coach...")
-    asyncio.create_task(poll_lcu())
+    spawn(poll_lcu())
     if DATA_SYNC_CFG.get("auto"):
-        asyncio.create_task(refresh_aram_meta())
+        spawn(refresh_aram_meta())
     yield
+    for task in list(_background_tasks):
+        task.cancel()
+    await asyncio.gather(*_background_tasks, return_exceptions=True)
     await lcu.close()
     await llm_client.close()
 
@@ -145,6 +190,7 @@ lcu = LCUClient(search_paths=CONFIG["lol_install_paths"])
 llm_client = LLMClient(CONFIG.get("llm", {}))
 
 ws_clients: list[WebSocket] = []
+LAST_STATE: Dict[str, Any] = {}
 
 GAMEFLOW_PHASES = [
     "None",
@@ -169,6 +215,28 @@ def resolve_champion_name(character_id: Any) -> Optional[str]:
     return CHAMPION_MAP.get(key) or CHAMPIONS_DB.get(key, {}).get("name")
 
 
+def kb_specific_for(name: str) -> Optional[Dict[str, Any]]:
+    """知识库里这个英雄的专属数据（版本强度、核心出装、专属强化符文……），没有返回 None。"""
+    if not KNOWLEDGE_BASE or not name:
+        return None
+    aliases = {
+        "chogath_specific": ["虚空恐惧", "科加斯", "大虫子"],
+        "darius_specific": ["诺克萨斯之手", "诺手", "德莱厄斯"],
+    }
+    for kb_key, names in aliases.items():
+        if name in names:
+            return KNOWLEDGE_BASE.get(kb_key)
+    for v in KNOWLEDGE_BASE.values():
+        if isinstance(v, dict) and v.get("chinese") == name:
+            return v
+    return None
+
+
+def opgg_runes_for(character_id: Any) -> Optional[Dict[str, Any]]:
+    meta = (ARAM_META.get("champions") or {}).get(str(character_id)) or {}
+    return (meta.get("opgg_build") or {}).get("runes")
+
+
 def get_champion_coach(character_id: Any) -> Optional[Dict[str, Any]]:
     if character_id is None:
         return None
@@ -191,31 +259,17 @@ def get_champion_coach(character_id: Any) -> Optional[Dict[str, Any]]:
     opgg = meta.get("opgg") or {}
     opgg_build = meta.get("opgg_build") or {}
     balance = meta.get("aram_balance") or {}
-    if opgg.get("strength"):
+    if opgg.get("strength") is not None:
         aram_strength = opgg["strength"]
+    starter_items = list(opgg_build.get("starter_items", []))
     if opgg_build.get("build"):
-        build = list(opgg_build["build"])
-        # 前端拿它和当前金币比"下一件大件攒了多少"，所以取第一件核心装的价格，不是三件之和
-        first_core = (opgg_build.get("build_ids") or [None])[0]
-        core_cost = ITEM_MAP.get(str(first_core), {}).get("gold_total") or core_cost
+        # OP.GG 是全体大乱斗的统计，里面可能有海克斯大乱斗禁用的装备
+        build, _, _ = replace_banned_items(opgg_build["build"])
+        starter_items, _, _ = replace_banned_items(starter_items)
     if opgg_build.get("runes"):
         runes = {k: opgg_build["runes"][k] for k in rune_fields}
 
-    kb_specific = None
-    if KNOWLEDGE_BASE:
-        cn_name_map = {
-            "chogath_specific": ["虚空恐惧", "科加斯", "大虫子"],
-            "darius_specific": ["诺克萨斯之手", "诺手", "德莱厄斯"],
-        }
-        for kb_key, aliases in cn_name_map.items():
-            if name in aliases:
-                kb_specific = KNOWLEDGE_BASE.get(kb_key)
-                break
-        if not kb_specific:
-            for k, v in KNOWLEDGE_BASE.items():
-                if isinstance(v, dict) and v.get("chinese") == name:
-                    kb_specific = v
-                    break
+    kb_specific = kb_specific_for(name)
 
     if kb_specific:
         if kb_specific.get("tips"):
@@ -231,6 +285,11 @@ def get_champion_coach(character_id: Any) -> Optional[Dict[str, Any]]:
     if opgg_build.get("skill_priority") and not (kb_specific or {}).get("skill_order"):
         tips.insert(0, f"加点: {opgg_build['skill_priority']}")
 
+    build_ids = [ITEM_DB.id_of(n) for n in build]
+    # 前端拿它和当前金币比"下一件大件攒了多少"，所以取第一件核心装的价格，不是几件之和
+    if build_ids and build_ids[0]:
+        core_cost = ITEM_DB.total(build_ids[0]) or core_cost
+
     return {
         "character_id": character_id,
         "name": name,
@@ -239,7 +298,8 @@ def get_champion_coach(character_id: Any) -> Optional[Dict[str, Any]]:
         **runes,
         "rune_shards": (opgg_build.get("runes") or {}).get("shards", []),
         "build": build,
-        "starter_items": opgg_build.get("starter_items", []),
+        "build_ids": build_ids,
+        "starter_items": starter_items,
         "spells": opgg_build.get("spells", []),
         "skill_priority": opgg_build.get("skill_priority", ""),
         "core_cost": core_cost,
@@ -313,44 +373,22 @@ def evaluate_team_fit(my_team: list, my_coach: Optional[Dict[str, Any]],
     return max(0, min(100, fitness)), notes
 
 
-def compute_reroll_advice(my_team: list, my_coach: Optional[Dict[str, Any]],
-                          remaining_dice: int, my_champion_id: Any = None) -> Dict[str, Any]:
-    advice = {
-        "remaining_dice": remaining_dice,
-        "decision": "keep",
-        "score": 0,
-        "strength": 65,
-        "fitness": 50,
-        "reason": "",
-        "suggestions": [],
-    }
+_mean_strength_cache: Dict[str, float] = {}
 
-    if my_coach:
-        strength = my_coach.get("aram_strength", 65)
-        advice["strength"] = strength
-    else:
-        strength = 50
 
-    fitness, notes = evaluate_team_fit(my_team, my_coach, my_champion_id)
-    reasons = [text for _kind, text in notes]
-    advice["fitness"] = fitness
-    advice["score"] = int(strength * 0.6 + fitness * 0.4)
+def mean_strength() -> float:
+    """全英雄平均强度（同步数据更新后重算），用来估计"用骰子随一个"的期望。"""
+    if "v" not in _mean_strength_cache:
+        vals = [c["aram_strength"] for cid in CHAMPIONS_DB if (c := get_champion_coach(cid))]
+        _mean_strength_cache["v"] = sum(vals) / len(vals) if vals else 70.0
+    return _mean_strength_cache["v"]
 
-    if remaining_dice <= 0:
-        advice["decision"] = "keep"
-        advice["reason"] = "骰子用完了，只能保留"
-    elif advice["score"] < 50:
-        advice["decision"] = "reroll"
-        advice["reason"] = f"综合分 {advice['score']} 太低，强烈建议骰子重随"
-    elif advice["score"] < 65:
-        advice["decision"] = "consider"
-        advice["reason"] = f"综合分 {advice['score']}，看你喜好"
-    else:
-        advice["decision"] = "keep"
-        advice["reason"] = f"综合分 {advice['score']}，建议保留"
 
-    advice["suggestions"] = reasons
-    return advice
+def rune_page_for(character_id: Any, coach: Optional[Dict[str, Any]]) -> tuple:
+    """(符文页, 来源 opgg/local 或失败原因)"""
+    if not coach:
+        return None, "没有英雄数据"
+    return runes.build_page(coach, opgg_runes_for(character_id), RUNE_TREE)
 
 
 async def broadcast(message: Dict[str, Any]):
@@ -422,11 +460,20 @@ async def collect_game_state() -> Dict[str, Any]:
                         state["my_coach"] = get_champion_coach(cid)
                         break
 
-            remaining_dice = state.get("reroll_remaining", 2)
-            state["reroll_advice"] = compute_reroll_advice(
-                state["my_team"], state.get("my_coach"), remaining_dice,
-                state.get("my_champion_id"),
+            # 大乱斗备选席：新版字段 benchChampions=[{championId}]，旧版 benchChampionIds=[id]
+            bench_ids = [b.get("championId") for b in session.get("benchChampions") or [] if isinstance(b, dict)]
+            bench_ids += [c for c in session.get("benchChampionIds") or [] if isinstance(c, int)]
+            bench = [{"champion_id": cid, "champion_name": resolve_champion_name(cid), "coach": get_champion_coach(cid)}
+                     for cid in dict.fromkeys(bench_ids) if cid]
+            state["bench"] = [{k: b[k] for k in ("champion_id", "champion_name")} for b in bench]
+            state["verdict"] = advice.champ_select_verdict(
+                state["my_team"], state.get("my_champion_id"), state.get("my_coach"), bench,
+                state.get("reroll_remaining", 0), evaluate_team_fit, mean_strength(),
             )
+            page, source = rune_page_for(state.get("my_champion_id"), state.get("my_coach"))
+            state["rune_page"] = {"available": bool(page), "source": source if page else "",
+                                  "reason": "" if page else source,
+                                  "auto_apply": bool(RUNES_CFG.get("auto_apply"))}
 
     elif phase_data in ("GameStart", "InProgress", "Reconnect"):
         summoner = await lcu.get("/lol-summoner/v1/current-summoner")
@@ -487,8 +534,14 @@ async def collect_game_state() -> Dict[str, Any]:
         lcd_raw = await asyncio.to_thread(lcd_client.fetch_allgamedata)
         if lcd_raw:
             state["lcd"] = extract_lcd_data(lcd_raw, state)
+            lcd = state["lcd"]
+            me = next((p for team in (lcd.get("team_map") or {}).values() for p in team if p.get("is_me")), None)
+            state["moment"] = advice.in_game_moment(
+                state.get("my_coach"), me, lcd.get("active") or {}, lcd.get("game_time", 0),
+                state.get("enemy_team") or [], ITEM_DB,
+            )
 
-    if state.get("my_team") or state.get("enemy_team"):
+    if phase_data == "ChampSelect" and (state.get("my_team") or state.get("enemy_team")):
         state["composite_advice"] = compute_composite_advice(state)
 
     return state
@@ -734,31 +787,21 @@ def state_to_md(state: Dict[str, Any]) -> str:
                 lines.append(f"- {t}")
         lines.append("")
 
-    composite = state.get("composite_advice") or {}
-    if composite:
-        score = composite.get("score")
-        if score:
-            lines.append(f"## 🎯 当前教练评分: **{score} 分**")
-            lines.append("")
-        tips = composite.get("tips") or []
-        if tips:
-            lines.append("**即时提示**:")
-            for t in tips[:5]:
-                lines.append(f"- ⚠️ {t}")
+    verdict = state.get("verdict") or {}
+    if verdict.get("headline"):
+        lines.append(f"## 🎯 选人建议: **{verdict['headline']}**")
+        lines.append("")
+        if verdict.get("reason"):
+            lines.append(f"> {verdict['reason']}")
             lines.append("")
 
-    matchup = state.get("matchup_analysis") or {}
-    if matchup:
-        advs = matchup.get("item_advs") or []
-        tips2 = matchup.get("tips") or []
-        if advs or tips2:
-            lines.append("## ⚔️ 对局分析")
-            lines.append("")
-            for a in advs:
-                lines.append(f"- 🛡️ {a}")
-            for t in tips2:
-                lines.append(f"- 💡 {t}")
-            lines.append("")
+    moment_md = advice.moment_text(state.get("moment"))
+    if moment_md:
+        lines.append("## 🛒 出装决策")
+        lines.append("")
+        for t in moment_md.split("\n"):
+            lines.append(f"- {t}")
+        lines.append("")
 
     lcd_events = (lcd.get("events") or [])
     if lcd_events:
@@ -798,546 +841,12 @@ def _pct(val) -> str:
     return f"{val:.0f}%"
 
 
-def generate_quick_html(state: Dict[str, Any]) -> str:
-    lcd = state.get("lcd") or {}
-    active = (lcd.get("active") or {})
-    stats = active.get("champion_stats") or {}
-    gold = int(active.get("gold", 0))
-    level = active.get("level", "?")
-    game_time = lcd.get("game_time", 0)
-
-    my_team, enemy_team = resolve_my_enemy_teams(lcd.get("team_map") or {})
-
-    my_alive = sum(1 for p in my_team if not p.get("is_dead"))
-    enemy_alive = sum(1 for p in enemy_team if not p.get("is_dead"))
-    alive_diff = my_alive - enemy_alive
-
-    my_total_gold = sum(p.get("item_gold", 0) for p in my_team)
-    enemy_total_gold = sum(p.get("item_gold", 0) for p in enemy_team)
-    gold_diff = my_total_gold - enemy_total_gold
-
-    me = None
-    for p in my_team:
-        if p.get("is_me"):
-            me = p
-            break
-    if not me and my_team:
-        me = my_team[0]
-
-    my_kda = f"{me.get('kills',0)}/{me.get('deaths',0)}/{me.get('assists',0)}" if me else "?"
-
-    coach = state.get("my_coach") or {}
-    build = coach.get("build") or []
-
-    me_items = me.get("items") if me and me.get("is_me") else []
-    owned_items = [it.get("name", "") for it in me_items or [] if it.get("name")]
-    next_item = None
-    for b in build:
-        if b not in owned_items:
-            next_item = b
-            break
-
-    # LCD 的玩家条目没有英雄 ID，敌方英雄特征用 LCU 对局会话里的 enemy_team
-    lcu_enemies = state.get("enemy_team") or []
-    enemy_mages = [e for e in lcu_enemies if (e.get("coach") or {}).get("role") == "法师"]
-    enemy_tanks = [e for e in lcu_enemies if (e.get("coach") or {}).get("role") == "坦克"]
-    build_tips = enemy_counter_tips(lcu_enemies, coach, owned_items)
-    situational = coach.get("situational") or {}
-
-    hp_pct = stats.get("hp", 0) / stats.get("max_hp", 1) * 100 if stats.get("max_hp", 0) > 0 else 100
-    if hp_pct < 30 and "need_survive" in situational:
-        build_tips.append(f"你残血！{situational['need_survive']}")
-
-    owned_brief = [b for b in build if b in owned_items]
-    need_brief = [b for b in build if b not in owned_items]
-
-    situation_tips = []
-    composite = state.get("composite_advice") or {}
-    matchup = state.get("matchup_analysis") or {}
-    if matchup.get("tips"):
-        situation_tips.extend(matchup["tips"][:2])
-    if alive_diff < 0:
-        situation_tips.append(f"人少！等队友复活再团")
-    if gold_diff > 500:
-        situation_tips.append(f"装备大优势(+{gold_diff}G) 主动开！")
-    elif gold_diff < -500:
-        situation_tips.append(f"装备落后({gold_diff}G) poke为主")
-    if hp_pct < 25 and not (me or {}).get("is_dead"):
-        situation_tips.append(f"你只有 {hp_pct:.0f}% 血！先回家！")
-
-    my_role = coach.get("role", "")
-    my_champion_name = me.get("champion") if me else ""
-    kb = KNOWLEDGE_BASE
-    my_kb_specific = None
-    if kb:
-        for key, val in kb.items():
-            if isinstance(val, dict) and val.get("chinese") == my_champion_name:
-                my_kb_specific = val
-                break
-        if my_champion_name == "虚空恐惧":
-            my_kb_specific = kb.get("chogath_specific") or my_kb_specific
-        elif my_champion_name == "诺克萨斯之手":
-            my_kb_specific = kb.get("darius_specific") or my_kb_specific
-
-    action_tips = []
-    if coach.get("tips"):
-        action_tips.extend(coach["tips"][:2])
-    if my_kb_specific and my_kb_specific.get("tips"):
-        for t in my_kb_specific["tips"][:2]:
-            if t not in action_tips and len(action_tips) < 4:
-                action_tips.append(t)
-    if coach.get("snowball_tip"):
-        action_tips.append(f"雪球: {coach['snowball_tip']}")
-    if coach.get("flash_tip"):
-        action_tips.append(f"闪现: {coach['flash_tip']}")
-    if composite.get("tips"):
-        for t in composite["tips"]:
-            if t not in action_tips and len(action_tips) < 4:
-                action_tips.append(t)
-
-    t0_set = set()
-    t1_set = set()
-    if kb:
-        for t in kb.get("tier_list", {}).get("t0", []):
-            t0_set.add(t.get("chinese") or t.get("name"))
-        for t in kb.get("tier_list", {}).get("t1", []):
-            t1_set.add(t.get("chinese") or t.get("name"))
-
-    threats = []
-    for p in enemy_team:
-        if p.get("is_dead"):
-            continue
-        cn = p.get("champion", "")
-        kd = p.get("kills", 0) - p.get("deaths", 0)
-        threat_score = 0
-        is_tier_threat = False
-        if cn in t0_set:
-            threat_score += 100
-            is_tier_threat = True
-        elif cn in t1_set:
-            threat_score += 50
-            is_tier_threat = True
-        threat_score += max(kd * 10, p.get("kills", 0) * 5)
-        if kd >= 2 or p.get("is_carry") or is_tier_threat:
-            _enriched = dict(p)
-            _enriched["threat_score"] = threat_score
-            _enriched["is_tier_threat"] = is_tier_threat
-            _enriched["is_t0"] = cn in t0_set
-            threats.append(_enriched)
-    threats = sorted(threats, key=lambda x: x.get("threat_score", 0), reverse=True)[:3]
-
-    kb_t0_enemy = []
-    kb_t1_enemy = []
-    enemy_names_kb = set(p.get("champion","") for p in enemy_team)
-    if kb:
-        for t0 in kb.get("tier_list", {}).get("t0", []):
-            if t0.get("chinese","") in enemy_names_kb or t0.get("name","") in enemy_names_kb:
-                kb_t0_enemy.append(t0)
-        for t1 in kb.get("tier_list", {}).get("t1", []):
-            if t1.get("chinese","") in enemy_names_kb or t1.get("name","") in enemy_names_kb:
-                kb_t1_enemy.append(t1)
-
-    role_build_formula = ""
-    if kb:
-        formulas = kb.get("core_build_recipes", {})
-        if my_role == "战士":
-            role_build_formula = formulas.get("战士通用公式", {})
-        elif my_role == "坦克":
-            role_build_formula = formulas.get("坦克通用公式", {})
-        elif my_role == "法师":
-            if enemy_mages and len(enemy_mages) >= 2:
-                role_build_formula = formulas.get("法师持续伤害公式", {})
-            else:
-                role_build_formula = formulas.get("法师爆发公式", {})
-        elif my_role in ("射手", "ADC"):
-            if enemy_tanks and len(enemy_tanks) >= 2:
-                role_build_formula = formulas.get("射手暴击公式", {})
-            else:
-                role_build_formula = formulas.get("射手暴击公式", {})
-        elif my_role == "刺客":
-            role_build_formula = formulas.get("刺客通用公式", {})
-
-    kb_build_tips = []
-    if role_build_formula and role_build_formula.get("note"):
-        kb_build_tips.append(role_build_formula["note"])
-
-    if role_build_formula and not my_kb_specific:
-        _kb_first = role_build_formula.get("first", [])
-        _kb_second = role_build_formula.get("second", [])
-        _kb_third = role_build_formula.get("third", [])
-        _kb_all = _kb_first + _kb_second + _kb_third
-        if _kb_all:
-            _existing_set = set(build)
-            _kb_prefixed = [x for x in _kb_all if x not in _existing_set]
-            build = _kb_first + _kb_second + _kb_third + [b for b in build if b not in _kb_all]
-            build = list(dict.fromkeys(build))
-            if _kb_prefixed:
-                kb_build_tips.insert(0, f"版本推荐首出: {' / '.join(_kb_first[:2])}")
-
-    next_item = None
-    for b in build:
-        if b not in owned_items:
-            next_item = b
-            break
-
-    kb_snowball_tip = ""
-    if kb.get("snowball_tips"):
-        import random as _r
-        kb_snowball_tip = _r.choice(kb["snowball_tips"][:4])
-
-    def _role_action(situation):
-        _META = "大乱斗一直打架"
-        role_map = {
-            "坦克": {
-                "big_win": "5v3！雪球拉最前面的开团！心之钢叠起来就是爸爸！",
-                "small_win": "人多一个！雪球开塔前的！顶上去放心之钢层！",
-                "even_rich": "装备碾压！雪球开脆皮！顶塔推别怕死！",
-                "even_poor": "装备差！先poke耗血，雪球等队友到齐，心之钢先叠几层",
-                "even": "技能齐了！雪球拉脸控住！一波推！心之钢别断！",
-                "small_lose": "少一人！躲草丛等雪球好，心之钢别死，叠层掉光亏大了",
-                "big_lose": "崩了！草丛蹲好，雪球逃跑用，撑住不死心之钢还能叠",
-            },
-            "战士": {
-                "big_win": "人多！雪球拉后排carry！直接切！黑切破甲巨快！",
-                "small_win": "压上去！雪球开塔前脆皮！焚天续航顶住！",
-                "even_rich": "装备好！星蚀滚雪球！雪球拉脸R开！一波推！",
-                "even_poor": "装备贫！poke耗血，雪球等残血再开，星蚀先出最便宜",
-                "even": "技能齐！雪球拉脸接R！秒一个！",
-                "small_lose": "少人！草丛蹲好，雪球留逃跑，别硬接",
-                "big_lose": "崩了！雪球用来逃跑，别出塔！死亡之舞保你不暴毙",
-            },
-            "法师": {
-                "big_win": "人多！站后排QW甩！珠光护手暴击秒人！雪球留补伤害！",
-                "small_win": "压上去poke！炼狱导管叠灼烧刷CD！雪球拉残血收！",
-                "even_rich": "装备好！峡谷制造者/大面具poke穿！雪球拉脸R秒脆皮！",
-                "even_poor": "装备贫！远距离poke！雪球用来拉开距离！别被贴脸",
-                "even": "poke到血线！珠光护手暴击一发入魂！雪球接R秒！",
-                "small_lose": "躲后排poke！雪球拉开别被贴脸！",
-                "big_lose": "站最远清兵！雪球一被粘就用！",
-            },
-            "射手": {
-                "big_win": "人多！站桩狂射！不朽盾弓保你活！雪球逃跑用！",
-                "small_win": "压上去点塔！雪球拉开躲突脸！",
-                "even_rich": "装备神装！无尽+飓风射爆！站前排后面！",
-                "even_poor": "装备差！猥琐poke发育等大件！巨蛇之牙破肉！",
-                "even": "走位输出！盾弓触发就反打！雪球被贴脸就用！",
-                "small_lose": "躲后排射！雪球拉开距离！",
-                "big_lose": "塔下清兵！雪球一被碰就跑！",
-            },
-            "刺客": {
-                "big_win": "人多！雪球拉后排！巨蛇之牙破石像鬼！秒了就撤！",
-                "small_win": "蹲草丛！雪球拉塔前脆皮！巨蛇之牙必备！",
-                "even_rich": "装备好！暮刃+赛瑞尔达！雪球拉谁谁死！",
-                "even_poor": "装备差！蹲草丛捡残血！雪球留逃跑！巨蛇之牙优先",
-                "even": "蹲好！残血一露雪球拉脸秒！",
-                "small_lose": "少人！草丛蹲好别动，等对面落单",
-                "big_lose": "崩了！雪球逃跑用，别出塔！",
-            },
-        }
-        return role_map.get(my_role, role_map["战士"]).get(situation, role_map["战士"][situation])
-
-    if alive_diff >= 2:
-        situation_color = "#43cea2"
-        situation_label = "🟢 大优势"
-        action = _role_action("big_win")
-    elif alive_diff == 1:
-        situation_color = "#43cea2"
-        situation_label = "🟢 小优"
-        action = _role_action("small_win")
-    elif alive_diff == 0:
-        situation_color = "#f5b041"
-        situation_label = "🟡 均势"
-        if gold_diff > 300:
-            action = _role_action("even_rich")
-        elif gold_diff < -300:
-            action = _role_action("even_poor")
-        else:
-            action = _role_action("even")
-    elif alive_diff == -1:
-        situation_color = "#ef5350"
-        situation_label = "🔴 小劣"
-        action = _role_action("small_lose")
-    else:
-        situation_color = "#ef5350"
-        situation_label = "🔴 大劣"
-        action = _role_action("big_lose")
-
-    if gold_diff > 500:
-        situation_label += " 💰"
-    elif gold_diff < -500:
-        situation_label += " 💸"
-
-    build_section = ""
-    build_rows = []
-    if next_item:
-        build_rows.append(
-            f'<div style="font-size:18px;font-weight:700;color:#ffd54f;">{next_item}</div>'
-            f'<div style="font-size:12px;opacity:0.85;margin-top:2px;">你有 {gold}G</div>'
-        )
-    if owned_brief:
-        build_rows.append(f'<div style="font-size:11px;opacity:0.7;">✅ 已买: {" · ".join(owned_brief)}</div>')
-    if need_brief and len(need_brief) > 1:
-        rest = " → ".join(need_brief[1:4])
-        build_rows.append(f'<div style="font-size:11px;opacity:0.65;">🔜 后续: {rest}</div>')
-    if build_tips:
-        build_rows.append("".join(f'<div style="font-size:11px;color:#ffab91;margin-top:2px;">💡 {t}</div>' for t in build_tips))
-    if kb_build_tips:
-        build_rows.append("".join(f'<div style="font-size:11px;color:#a78bfa;margin-top:2px;">📐 {t}</div>' for t in kb_build_tips))
-    if build_rows:
-        build_section = f'''
-        <div style="background:linear-gradient(135deg,#667eea33,#764ba233);border:1px solid #667eea;border-radius:10px;padding:12px 14px;margin-top:10px;">
-            <div style="font-size:12px;color:#a78bfa;font-weight:600;margin-bottom:6px;">🛒 出装建议</div>
-            {''.join(f'<div style="margin:2px 0;">{r}</div>' for r in build_rows)}
-        </div>'''
-
-    threat_section = ""
-    if threats:
-        threat_cards = []
-        for t in threats:
-            dead_tag = f' <span style="color:#888">💀复活{t.get("respawn_timer",0):.0f}s</span>' if t.get("is_dead") else ""
-            tier_tag = ""
-            if t.get("is_t0"):
-                tier_tag = f' <span style="background:#ffd54f;color:#000;border-radius:4px;padding:1px 5px;font-size:10px;font-weight:700;">🔥T0</span>'
-            elif t.get("is_tier_threat"):
-                tier_tag = f' <span style="background:#f5b041;color:#000;border-radius:4px;padding:1px 5px;font-size:10px;font-weight:700;">⚡T1</span>'
-            threat_cards.append(
-                f'<span style="background:rgba(239,83,80,0.15);border:1px solid rgba(239,83,80,0.5);border-radius:6px;padding:4px 10px;font-size:12px;color:#ff8a80;">'
-                f'{t.get("champion","?")} K{t.get("kills",0)}{tier_tag}</span>{dead_tag}'
-            )
-        threat_section = f'''
-        <div style="margin-top:8px;border:1px solid #ef5350;border-radius:10px;padding:10px 14px;background:rgba(239,83,80,0.06);">
-            <div style="font-size:12px;color:#ef5350;font-weight:600;margin-bottom:6px;">⚠️ 敌方威胁</div>
-            <div>{" ".join(threat_cards)}</div>
-        </div>'''
-
-    situation_section = ""
-    sit_rows = []
-    if situation_tips:
-        sit_rows.extend(
-            f'<div style="font-size:12px;color:#c8d6e5;">⚡ {t}</div>' for t in situation_tips[:3]
-        )
-    if sit_rows:
-        situation_section = f'''
-        <div style="background:rgba(245,176,65,0.1);border:1px solid #f5b041;border-radius:10px;padding:10px 14px;margin-top:8px;">
-            <div style="font-size:12px;color:#f5b041;font-weight:600;margin-bottom:4px;">⚔️ 局势判断</div>
-            {''.join(f'<div style="margin:2px 0;">{r}</div>' for r in sit_rows)}
-        </div>'''
-
-    action_section = ""
-    act_rows = []
-    if action_tips:
-        act_rows.extend(
-            f'<div style="font-size:12px;color:#c8d6e5;">🎯 {t}</div>' for t in action_tips[:4]
-        )
-    if act_rows:
-        action_section = f'''
-        <div style="background:rgba(67,206,162,0.1);border:1px solid #43cea2;border-radius:10px;padding:10px 14px;margin-top:8px;">
-            <div style="font-size:12px;color:#43cea2;font-weight:600;margin-bottom:4px;">🎮 操作要点</div>
-            {''.join(f'<div style="margin:2px 0;">{r}</div>' for r in act_rows)}
-        </div>'''
-
-    kb_section = ""
-    if kb:
-        kb_parts = []
-
-        if kb_t0_enemy:
-            t0_names = [t.get("chinese") or t.get("name") for t in kb_t0_enemy]
-            kb_parts.append(
-                f'<div style="background:rgba(239,83,80,0.12);border:1px solid #ef5350;border-radius:8px;padding:8px 12px;margin-bottom:6px;">'
-                f'<div style="font-size:11px;color:#ef5350;font-weight:600;">🔥 版本T0警告</div>'
-                f'<div style="font-size:13px;color:#ff8a80;font-weight:700;margin-top:2px;">敌方有 {" · ".join(t0_names)}</div>'
-                f'<div style="font-size:10px;color:#ffab91;margin-top:2px;">别硬接！找单抓！</div>'
-                f'</div>'
-            )
-
-        if role_build_formula:
-            first_items = role_build_formula.get("first", [])
-            if first_items and not next_item:
-                kb_parts.append(
-                    f'<div style="background:rgba(102,126,234,0.12);border:1px solid #667eea;border-radius:8px;padding:8px 12px;margin-bottom:6px;">'
-                    f'<div style="font-size:11px;color:#a78bfa;font-weight:600;">📐 版本出装公式</div>'
-                    f'<div style="font-size:13px;color:#c8d6e5;margin-top:2px;">首出: {" / ".join(first_items[:2])}</div>'
-                    f'</div>'
-                )
-
-        if my_kb_specific and my_kb_specific.get("best_runes"):
-            runes_short = " · ".join(my_kb_specific["best_runes"][:3])
-            kb_parts.append(
-                f'<div style="background:rgba(255,213,79,0.12);border:1px solid #ffd54f;border-radius:8px;padding:8px 12px;margin-bottom:6px;">'
-                f'<div style="font-size:11px;color:#ffd54f;font-weight:600;">✨ 专属强化符文</div>'
-                f'<div style="font-size:12px;color:#c8d6e5;margin-top:2px;">{runes_short}</div>'
-                f'</div>'
-            )
-
-        if kb_snowball_tip:
-            kb_parts.append(
-                f'<div style="background:rgba(67,206,162,0.1);border:1px solid #43cea2;border-radius:8px;padding:8px 12px;margin-bottom:6px;">'
-                f'<div style="font-size:11px;color:#43cea2;font-weight:600;">❄️ 雪球技巧</div>'
-                f'<div style="font-size:12px;color:#c8d6e5;margin-top:2px;">{kb_snowball_tip}</div>'
-                f'</div>'
-            )
-
-        meta_summary = kb.get("meta_summary", "")
-        kb_version = kb.get("version", "")
-        if meta_summary:
-            kb_parts.append(
-                f'<div style="font-size:9px;color:#556;margin-top:4px;text-align:center;">{kb_version} · {meta_summary[:30]}</div>'
-            )
-
-        if kb_parts:
-            kb_section = f'''
-            <div style="margin-top:10px;">
-                {''.join(kb_parts)}
-            </div>'''
-
-    mm = int(game_time // 60)
-    ss = int(game_time % 60)
-
-    return f"""
-<div style="font-family:-apple-system,'Segoe UI',sans-serif;color:#c8d6e5;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-        <span style="font-size:13px;color:#8899aa;">⏱️ {mm}:{ss} · Lv.{level}</span>
-        <span style="font-size:13px;color:#8899aa;">💰 {gold}G</span>
-    </div>
-
-    <div style="background:{situation_color};border-radius:12px;padding:14px;text-align:center;color:white;">
-        <div style="font-size:14px;opacity:0.9;">{situation_label}</div>
-        <div style="font-size:28px;font-weight:800;margin:4px 0;">{action}</div>
-        <div style="font-size:12px;opacity:0.9;">🟢 {my_alive} vs 🔴 {enemy_alive} · KDA {my_kda}</div>
-    </div>
-
-    {build_section}
-    {threat_section}
-    {situation_section}
-    {action_section}
-    {kb_section}
-
-    <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
-        <div style="background:#1e2d3d;border-radius:8px;padding:8px;text-align:center;">
-            <div style="font-size:10px;color:#888;">HP</div>
-            <div style="font-size:14px;font-weight:700;">{int(stats.get('hp',0))}</div>
-        </div>
-        <div style="background:#1e2d3d;border-radius:8px;padding:8px;text-align:center;">
-            <div style="font-size:10px;color:#888;">法强AP</div>
-            <div style="font-size:14px;font-weight:700;color:#bb86fc;">{stats.get('ap',0)}</div>
-        </div>
-        <div style="background:#1e2d3d;border-radius:8px;padding:8px;text-align:center;">
-            <div style="font-size:10px;color:#888;">技能急速</div>
-            <div style="font-size:14px;font-weight:700;color:#43cea2;">{stats.get('ability_haste',0)}</div>
-        </div>
-    </div>
-</div>"""
-
-
-# 回复能力强、值得出重伤的英雄（按英雄 ID，名称见 champion_map.json）
-HEALER_CHAMPION_IDS = {
-    16, 267, 37, 350, 902, 147, 44, 40, 235,   # 治疗型辅助：索拉卡/娜美/娑娜/悠米/米利欧/萨勒芬妮/塔里克/迦娜/赛娜
-    8, 50, 19, 36, 266, 517, 233, 23, 9, 20,   # 高额自我回复：吸血鬼/乌鸦/狼人/蒙多/剑魔/塞拉斯/贝蕾亚/蛮王/稻草人/努努
-}
-# 英雄自己的 situational 没写时，按定位给通用的重伤/破甲装（多个选项按 AD / AP 排列）
-ANTI_HEAL_ITEMS = {
-    "射手": ["凡性的提醒"],
-    "法师": ["莫雷洛秘典"],
-    "坦克": ["荆棘之甲"],
-    "战士": ["炼金朋克链锯剑", "莫雷洛秘典"],
-    "刺客": ["炼金朋克链锯剑", "莫雷洛秘典"],
-    "辅助": ["莫雷洛秘典", "荆棘之甲"],
-}
-ANTI_TANK_ITEMS = {
-    "射手": ["多米尼克领主的致意"],
-    "法师": ["虚空之杖"],
-    "战士": ["黑色切割者"],
-    "刺客": ["赛瑞尔达的怨恨", "虚空之杖"],
-}
-
-
-def enemy_counter_tips(enemy_team: list, my_coach: Optional[Dict[str, Any]],
-                       owned_items: list) -> list:
-    """敌方有回复型英雄 / 坦克 ≥2 时的针对性出装提示。已经有对应装备就不再提示。"""
-    my_coach = my_coach or {}
-    situational = my_coach.get("situational") or {}
-    role = my_coach.get("role", "")
-    owned = set(owned_items or [])
-    tips = []
-
-    def _tip(names, emoji, label, own_keys, items_by_role, generic_label):
-        own = next((situational[k] for k in own_keys if situational.get(k)), None)
-        items = items_by_role.get(role, [])
-        head = f"{emoji} {label}（{'、'.join(names)}）："
-        if own:
-            tips.append(head + own)
-        elif items and not owned & set(items):
-            tips.append(head + f"{generic_label} {' / '.join(items)}")
-
-    healers = [m.get("champion_name") or "?" for m in enemy_team
-               if m.get("champion_id") in HEALER_CHAMPION_IDS]
-    if healers:
-        _tip(healers, "🩸", "敌方回复强", ("against_heal", "enemy_heal"), ANTI_HEAL_ITEMS, "考虑重伤装")
-
-    tanks = [m.get("champion_name") or "?" for m in enemy_team
-             if (m.get("coach") or {}).get("role") == "坦克"]
-    if len(tanks) >= 2:
-        _tip(tanks, "🛡️", "敌方坦克多", ("against_tank", "all_tank"), ANTI_TANK_ITEMS, "考虑穿透装")
-    return tips
-
-
 def compute_matchup_analysis(my_team: list, enemy_team: list,
                               my_coach: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-    analysis = {
-        "enemy_ap_count": 0,
-        "enemy_ad_count": 0,
-        "enemy_roles": {},
-        "tips": [],
-        "item_advs": [],
-    }
-
-    for m in enemy_team:
-        coach = m.get("coach")
-        if not coach:
-            analysis["enemy_ad_count"] += 1
-            continue
-        role = coach.get("role", "")
-        analysis["enemy_roles"][role] = analysis["enemy_roles"].get(role, 0) + 1
-        if role in ("法师", "辅助"):
-            analysis["enemy_ap_count"] += 1
-        elif role in ("射手", "ADC", "战士", "刺客"):
-            analysis["enemy_ad_count"] += 1
-        elif role == "坦克":
-            analysis["enemy_ad_count"] += 1
-
-    ap_ratio = analysis["enemy_ap_count"] / max(1, len(enemy_team))
-    if ap_ratio >= 0.6:
-        analysis["item_advs"].append("对面AP伤害占比≥60%，第二件考虑⇒ 自然之力 / 振奋盔甲")
-        analysis["tips"].append("AP多：保持移动，别被持续范围技能命中")
-    elif ap_ratio <= 0.3:
-        analysis["item_advs"].append("对面AD伤害占比≥70%，第二件考虑⇒ 兰顿之兆 / 荆棘之甲")
-        analysis["tips"].append("AD多：注意走位躲关键控制技能")
-    else:
-        analysis["item_advs"].append("对面AP/AD混合输出，均衡出装即可")
-
-    enemy_mages = []
-    enemy_cc = []
-    for m in enemy_team:
-        coach = m.get("coach")
-        if not coach:
-            continue
-        name = coach.get("name", "")
-        role = coach.get("role", "")
-        if role == "法师":
-            enemy_mages.append(name)
-        if name in ("拉克丝", "泽拉斯", "龙龟", "墨菲特", "石头人", "妮蔻", "发条", "阿狸"):
-            enemy_cc.append(name)
-
-    if enemy_mages:
-        analysis["tips"].append(f"敌方法师: {', '.join(enemy_mages)}，小心他们的远程爆发")
-    if enemy_cc:
-        analysis["tips"].append(f"敌方强控制: {', '.join(enemy_cc)}，建议带净化或提前预判")
-
-    enemy_tanks = [m["champion_name"] for m in enemy_team if (m.get("coach") or {}).get("role") == "坦克"]
-    if enemy_tanks:
-        analysis["tips"].append(f"敌方有肉坦克({', '.join(enemy_tanks)})，先集火脆皮")
-
-    return analysis
+    """敌方阵容构成（只给事实：AP/AD 人数、回复型英雄、坦克）。怎么出装应对见 advice.counter_adjustments。"""
+    th = advice.enemy_threats(enemy_team)
+    return {"enemy_ap_count": th["ap"], "enemy_ad_count": th["ad"],
+            "healers": th["healers"], "tanks": th["tanks"]}
 
 
 ROLE_COUNTERS = {
@@ -1385,204 +894,42 @@ def compute_counter_score(my_role: str, my_name: str,
     return max(0, min(100, score))
 
 
-def analyze_item_status(recommended_build: list, owned_item_ids: list) -> Dict[str, Any]:
-    if not recommended_build:
-        return {"owned": [], "next": None, "missing": [], "owned_items_data": []}
-
-    owned_names = []
-    for iid in owned_item_ids:
-        name = ITEM_MAP.get(str(iid), {}).get("name")
-        if name:  # 空名会让下面的 `owned in rec_item` 恒为真
-            owned_names.append(name)
-
-    owned_in_build = []
-    for rec_item in recommended_build:
-        for owned in owned_names:
-            if rec_item == owned or rec_item in owned or owned in rec_item:
-                if rec_item not in owned_in_build:
-                    owned_in_build.append(rec_item)
-
-    missing = [it for it in recommended_build if it not in owned_in_build]
-    next_item = missing[0] if missing else None
-
-    next_item_cost = 0
-    if next_item:
-        # 同名的还有斗魂竞技场版本（22xxxx，价格不同），取 ID 最短的常规版本
-        matches = [(len(iid), iid) for iid, info in ITEM_MAP.items() if info["name"] == next_item]
-        if matches:
-            next_item_cost = ITEM_MAP[min(matches)[1]]["gold_total"]
-
-    return {
-        "owned_in_build": owned_in_build,
-        "next_item": next_item,
-        "next_item_cost": next_item_cost,
-        "remaining": missing,
-        "owned_count": len(owned_in_build),
-        "total_count": len(recommended_build),
-    }
-
-
 def compute_composite_advice(state: Dict[str, Any]) -> Dict[str, Any]:
-    advice: Dict[str, Any] = {
-        "phase": state.get("phase", "None"),
-        "score": 50,
-        "score_breakdown": {},
-        "immediate_action": "",
-        "next_priority": "",
-        "suggestions": [],
-        "build_recommendation": {},
-        "teamfight_readiness": None,
-        "gold_tip": "",
-        "survival_tip": "",
-    }
-
+    """选人阶段的综合分（强度 / 阵容适配 / 克制），给骰子弹窗显示；要怎么做看 state["verdict"]。"""
     my_coach = state.get("my_coach")
     my_team = state.get("my_team") or []
     enemy_team = state.get("enemy_team") or []
-    phase = state.get("phase", "None")
-    lcd = state.get("lcd")
 
-    suggestions = []
-    score_breakdown: Dict[str, float] = {}
-
-    if my_coach:
-        base_strength = my_coach.get("aram_strength", 65)
-    else:
-        base_strength = 50
-    score_breakdown["英雄强度"] = base_strength
-
-    team_fit, fit_notes = evaluate_team_fit(my_team, my_coach, state.get("my_champion_id"))
-    fit_prefix = {"gap": "", "fill": "✅ ", "dup": "⚠️ "}
-    suggestions.extend(fit_prefix[kind] + text for kind, text in fit_notes)
-    score_breakdown["阵容适配"] = team_fit
-
+    base_strength = my_coach.get("aram_strength", 65) if my_coach else 50
+    team_fit, _notes = evaluate_team_fit(my_team, my_coach, state.get("my_champion_id"))
     counter_score = 50
     if my_coach and enemy_team:
-        counter_score = compute_counter_score(
-            my_coach.get("role", ""), my_coach.get("name", ""), enemy_team
-        )
-        if counter_score >= 70:
-            suggestions.append("🎯 英雄克制敌方阵容，对线有优势")
-        elif counter_score <= 35:
-            suggestions.append("⚠️ 英雄被敌方克制，需要靠操作弥补")
-    score_breakdown["敌方克制"] = counter_score
+        counter_score = compute_counter_score(my_coach.get("role", ""), my_coach.get("name", ""), enemy_team)
+    breakdown = {"英雄强度": base_strength, "阵容适配": team_fit, "敌方克制": counter_score}
+    return {
+        "phase": state.get("phase", "None"),
+        "score": int(base_strength * 0.4 + team_fit * 0.3 + counter_score * 0.3),
+        "score_breakdown": breakdown,
+        "immediate_action": (state.get("verdict") or {}).get("headline", ""),
+    }
 
-    reroll_weight = 0.4
-    fit_weight = 0.3
-    counter_weight = 0.3
-    composite = int(
-        base_strength * reroll_weight +
-        team_fit * fit_weight +
-        counter_score * counter_weight
-    )
-    advice["score"] = composite
-    advice["score_breakdown"] = score_breakdown
 
-    if phase == "ChampSelect":
-        remaining = state.get("reroll_advice", {}).get("remaining_dice", 2)
-        if remaining <= 0:
-            advice["immediate_action"] = "骰子用完了，接受命运吧"
-        elif composite < 50:
-            advice["immediate_action"] = "🎲 强烈建议骰子重随！综合分太低"
-        elif composite < 65:
-            advice["immediate_action"] = "🤔 综合分一般，可以看看有没有更好的选择"
-        else:
-            advice["immediate_action"] = "✅ 这个英雄挺好的，保留"
-
-    elif phase in ("InProgress", "GameStart", "Reconnect"):
-        if lcd and lcd.get("available"):
-            active = lcd.get("active", {})
-            gold = active.get("gold", 0)
-            level = active.get("level", 1)
-            stats = active.get("champion_stats", {})
-            hp = stats.get("hp", 0)
-            max_hp = stats.get("max_hp", 1)
-            hp_pct = hp / max_hp if max_hp > 0 else 0
-            gold_tip = ""
-            if gold < 300:
-                gold_tip = "金币不足300，别乱花钱，等大装"
-            elif gold < 1000:
-                gold_tip = "可以买个小件过渡（鞋/短剑/增幅典籍）"
-            elif gold >= 2000:
-                gold_tip = "💰 金币充足！赶紧回城合大件"
-            else:
-                gold_tip = "金币够买一些核心组件了"
-            advice["gold_tip"] = gold_tip
-
-            survival_tip = ""
-            if hp_pct < 0.2:
-                survival_tip = "⚠️ 血量危险！别冲，找队友/雪球撤退"
-            elif hp_pct < 0.4 and level < 6:
-                survival_tip = "💡 血量低且等级不高，以发育为主"
-            elif hp_pct > 0.8 and gold > 1500:
-                survival_tip = "💪 状态好金币多，找机会打一波然后回城"
-            else:
-                survival_tip = "👍 状态正常，正常打"
-            advice["survival_tip"] = survival_tip
-
-            team_map = lcd.get("team_map", {})
-            my_list, enemy_list = resolve_my_enemy_teams(team_map)
-            my_alive = sum(1 for p in my_list if not p.get("is_dead"))
-            enemy_alive = sum(1 for p in enemy_list if not p.get("is_dead"))
-            teamfight_ready = {
-                "my_alive": my_alive,
-                "enemy_alive": enemy_alive,
-                "advantage": my_alive - enemy_alive,
-            }
-            advice["teamfight_readiness"] = teamfight_ready
-
-            if my_alive > enemy_alive:
-                suggestions.append(f"🟢 我方多 {my_alive - enemy_alive} 人存活，可以主动开团")
-            elif enemy_alive > my_alive:
-                suggestions.append(f"🔴 敌方多 {enemy_alive - my_alive} 人存活，避战等队友复活")
-
-            owned_ids = []
-            for p in my_list:
-                if p.get("is_me"):
-                    owned_ids = [it.get("item_id") for it in p.get("items", []) if it.get("item_id")]
-                    break
-
-            if my_coach:
-                build_status = analyze_item_status(my_coach.get("build", []), owned_ids)
-                advice["build_recommendation"] = build_status
-
-                next_item = build_status.get("next_item")
-                next_cost = build_status.get("next_item_cost", 0)
-                if next_item:
-                    if gold >= next_cost and next_cost > 0:
-                        advice["next_priority"] = f"🟢 回城合装：{next_item}（差 {next_cost - gold}G）" if gold < next_cost else f"💰 回城买 {next_item}！金币够了"
-                    elif gold >= next_cost * 0.7:
-                        advice["next_priority"] = f"🔜 攒钱买 {next_item}（还差 {next_cost - gold:.0f}G）"
-                    else:
-                        advice["next_priority"] = f"📦 规划：{next_item}（约 {next_cost}G）"
-                    suggestions.append(advice["next_priority"])
-
-            owned_names = [ITEM_MAP.get(str(i), {}).get("name") for i in owned_ids]
-            counter_tips = enemy_counter_tips(state.get("enemy_team") or [], my_coach, owned_names)
-            advice["counter_items"] = counter_tips
-            suggestions.extend(counter_tips)
-
-            matchup = state.get("matchup_analysis", {})
-            if matchup:
-                item_advs = matchup.get("item_advs", [])
-                for adv in item_advs:
-                    suggestions.append(f"🛡️ {adv}")
-
-        else:
-            matchup = state.get("matchup_analysis", {})
-            if matchup:
-                for adv in matchup.get("item_advs", []):
-                    suggestions.append(f"🛡️ {adv}")
-
-    advice["suggestions"] = suggestions[:8]
-    return advice
+async def apply_rune_page(character_id: Any) -> Dict[str, Any]:
+    coach = get_champion_coach(character_id)
+    page, source = rune_page_for(character_id, coach)
+    if not page:
+        return {"ok": False, "reason": source}
+    result = await runes.apply_page(lcu, coach["name"], page)
+    result.update(source=source, champion=coach["name"], perks=runes.describe(page, RUNE_TREE))
+    log.info(f"写入符文页 {coach['name']}（{source}）: {result.get('action') or result.get('reason')}")
+    return result
 
 
 async def poll_lcu():
     last_phase = None
     last_champ_id = None
-    last_rolls_used = None
     last_level = None
+    runes_applied_for = None
     _debug_count = 0
     while True:
         try:
@@ -1593,8 +940,8 @@ async def poll_lcu():
                 log.info(f"Phase changed: {last_phase} -> {state['phase']}")
                 last_phase = state["phase"]
                 last_champ_id = None
-                last_rolls_used = None
                 last_level = None
+                runes_applied_for = None
                 _debug_count = 0
                 await broadcast({"type": "phase_change", "data": state})
 
@@ -1615,29 +962,30 @@ async def poll_lcu():
                             "new_champion_id": cur_champ,
                             "new_champion_name": state.get("my_champion_name"),
                             "remaining_dice": cur_rolls,
-                            "advice": state.get("reroll_advice"),
+                            "verdict": state.get("verdict"),
                             "composite": state.get("composite_advice"),
                         }
                     })
                 if cur_champ and cur_champ != 0:
                     last_champ_id = cur_champ
+                    if RUNES_CFG.get("auto_apply") and cur_champ != runes_applied_for:
+                        runes_applied_for = cur_champ
+                        spawn(apply_rune_page(cur_champ))
 
             if state["phase"] in ("InProgress", "GameStart"):
                 active = (state.get("lcd") or {}).get("active") or {}
                 cur_level = active.get("level")
                 if last_level is not None and cur_level is not None and cur_level > last_level:
-                    log.info(f"⭐ 升级! Lv.{last_level} -> Lv.{cur_level} (可能触发强化符文选择)")
+                    augment = any(last_level < lv <= cur_level for lv in AUGMENT_CFG["levels"])
+                    log.info(f"⭐ 升级! Lv.{last_level} -> Lv.{cur_level}" + (" (强化符文三选一)" if augment else ""))
                     await broadcast({
                         "type": "level_up",
-                        "data": {
-                            "old_level": last_level,
-                            "new_level": cur_level,
-                            "composite": state.get("composite_advice"),
-                            "gold": active.get("gold"),
-                        }
+                        "data": {"old_level": last_level, "new_level": cur_level, "augment": augment},
                     })
                 last_level = cur_level
 
+            LAST_STATE.clear()
+            LAST_STATE.update(state)
             await broadcast({"type": "state_update", "data": state})
 
             try:
@@ -1769,14 +1117,73 @@ async def api_coach_md():
         return {"exists": False, "content": "", "error": str(e)}
 
 
-@app.get("/api/coach/quick")
-async def api_coach_quick():
-    try:
-        state = await collect_game_state()
-        html = generate_quick_html(state)
-        return HTMLResponse(content=html)
-    except Exception as e:
-        return HTMLResponse(content=f"<div style='color:#ef5350;padding:20px;'>❌ 生成失败: {e}</div>")
+async def current_state() -> Dict[str, Any]:
+    """轮询循环每 2 秒采集一次状态；端点直接用它，不再额外打 LCU。"""
+    return LAST_STATE or await collect_game_state()
+
+
+async def _lcu_action(method: str, path: str, what: str) -> Dict[str, Any]:
+    if not lcu.connected:
+        return {"ok": False, "reason": "LoL 客户端未连接"}
+    status, body = await lcu.request(method, path)
+    if 200 <= status < 300:
+        return {"ok": True}
+    msg = body.get("message") if isinstance(body, dict) else str(body or "")
+    return {"ok": False, "reason": f"{what}失败（{status}）{(msg or '')[:120]}"}
+
+
+@app.post("/api/runes/apply")
+async def api_runes_apply(champion_id: Optional[int] = None):
+    """把推荐符文写成客户端里的临时符文页（不占页位，之后原地改写，不删任何页）。"""
+    cid = champion_id or (await current_state()).get("my_champion_id")
+    if not cid:
+        return {"ok": False, "reason": "还没有分配到英雄"}
+    if not lcu.connected:
+        return {"ok": False, "reason": "LoL 客户端未连接"}
+    return await apply_rune_page(cid)
+
+
+@app.post("/api/champ-select/swap/{champion_id}")
+async def api_bench_swap(champion_id: int):
+    """和大乱斗备选席上的英雄交换。"""
+    return await _lcu_action("POST", f"/lol-champ-select/v1/session/bench/swap/{champion_id}", "交换英雄")
+
+
+@app.post("/api/champ-select/reroll")
+async def api_reroll():
+    return await _lcu_action("POST", "/lol-champ-select/v1/session/my-selection/reroll", "重随")
+
+
+class AugmentOptions(BaseModel):
+    options: List[str]
+
+
+def _augment_ranking(state: Dict[str, Any], options: List[str]) -> Dict[str, Any]:
+    coach = state.get("my_coach") or {}
+    return augments.rank(options, coach, kb_specific_for(coach.get("name", "")), KNOWLEDGE_BASE, AUGMENT_POOL)
+
+
+@app.get("/api/augments")
+async def api_augments():
+    return {
+        "augments": [{"name": a["name"], "rarity": a.get("rarity", "")} for a in AUGMENT_POOL],
+        "levels": AUGMENT_CFG["levels"],
+        "llm": llm_client.enabled,
+    }
+
+
+@app.post("/api/augments/rank")
+async def api_augments_rank(body: AugmentOptions):
+    opts = [o.strip() for o in body.options if o.strip()][:3]
+    return _augment_ranking(await current_state(), opts)
+
+
+@app.post("/api/augments/ai")
+async def api_augments_ai(body: AugmentOptions):
+    opts = [o.strip() for o in body.options if o.strip()][:3]
+    state = await current_state()
+    ranking = _augment_ranking(state, opts)
+    return {"text": await llm_client.pick_augment(state, opts, ranking["ranked"])}
 
 
 def _deep_analysis(state: Dict[str, Any]) -> str:
@@ -1974,25 +1381,10 @@ def _deep_analysis(state: Dict[str, Any]) -> str:
     if formula_note:
         lines.append(f"版本备注: {formula_note}")
 
-    gold_needed = 0
-    next_item = ""
-    if coach_build and gold > 0:
-        for item_name in coach_build:
-            if item_name not in my_items:
-                for item_key, item_data in ITEM_MAP.items():
-                    if item_data.get("name") == item_name:
-                        gold_needed = item_data.get("gold", 0)
-                        break
-                next_item = item_name
-                break
-
-    if next_item and gold_needed:
+    moment = state.get("moment")
+    if moment:
         lines.append("")
-        lines.append(f"下一件: 【{next_item}】 需 {gold_needed}G，你有 {gold}G")
-        if gold >= gold_needed:
-            lines.append("  ✅ 金币充足，回城立即出！")
-        else:
-            lines.append(f"  还需 {gold_needed - gold}G，大概 {max(1, (gold_needed - gold) // 25)} 波兵")
+        lines.append(advice.moment_text(moment).split("\n")[0])
 
     # 海克斯大乱斗专属
     lines.append("")
@@ -2069,7 +1461,6 @@ def _deep_analysis(state: Dict[str, Any]) -> str:
 
     lines.append("【雪球技巧】")
     lines.append("  • 先 Q 再雪球：很多英雄技能命中后雪球更准")
-    lines.append("  • 雪球飞一半按回城：骗对面走位")
     lines.append("  • 草丛躲雪球：雪球没视野会断")
 
     lines.append("")
@@ -2091,12 +1482,8 @@ def _deep_analysis(state: Dict[str, Any]) -> str:
         lines.append("  • 黑切叠层后追着砍")
     lines.append("")
 
-    lines.append("【兵线与经济】")
-    lines.append(f"  • 你有 {gold}G，回城优先级：大件 > 小件 > 药水")
-    if gold < 500:
-        lines.append("  • 金币太少，清兵/助攻攒一波再回")
-    elif gold > 2000:
-        lines.append("  • 金币很多了，别贪，回城把装备拉满")
+    lines.append("【经济】")
+    lines.append(f"  • 你有 {gold}G。大乱斗不能回城，阵亡时按上面的购物清单买")
     lines.append("")
 
     # 6. 海克斯大乱斗强化符文
@@ -2187,8 +1574,7 @@ async def ws_endpoint(ws: WebSocket):
     await ws.accept()
     ws_clients.append(ws)
     try:
-        initial_state = await collect_game_state()
-        await ws.send_json({"type": "initial", "data": initial_state})
+        await ws.send_json({"type": "initial", "data": await current_state()})
         while True:
             data = await ws.receive_text()
             if data == "ping":

@@ -178,6 +178,23 @@ class LCUClient:
         except Exception:
             return None
 
+    async def request(self, method: str, path: str, json: Any = None) -> tuple:
+        """写操作（POST/PUT/PATCH）用：返回 (状态码, 响应体)，连接失败时状态码为 0。
+
+        不对非 2xx 重试——像建符文页这种请求，重试一次就会多出一页。
+        """
+        if not self.connected:
+            return 0, "LCU 未连接"
+        try:
+            resp = await self._http.request(method, path, json=json)
+        except Exception as e:
+            return 0, str(e) or type(e).__name__
+        try:
+            body = resp.json() if resp.content else None
+        except ValueError:
+            body = resp.text
+        return resp.status_code, body
+
     async def wait_for_connection(self, poll_interval: float = 3.0):
         import asyncio
 

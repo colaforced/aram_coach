@@ -4,6 +4,7 @@
 读取游戏客户端数据，结合版本知识库与本地规则引擎（可选接入大模型），在选人、选装备、对线、团战各阶段给出可执行建议。
 
 - 实时读取，无需截图、无需 OCR
+- **只在三个决策时刻给明确答案**：选人（换 / 骰 / 留）、阵亡或开局（买什么）、升级（选哪个强化符文）；不刷泛泛的提示
 - 大乱斗数据自动同步：OP.GG 大乱斗统计（梯度、胜率、出装、符文、召唤师技能、加点）+ 大乱斗平衡修正（造成/承受伤害、治疗、护盾等），拉不到时退回本地 170 名英雄数据
 - 版本知识库驱动（海克斯大乱斗 `25.24_2025-12`）
 - 双模式：配置了 API Key 走 LLM 深度分析，未配置自动降级为本地规则引擎
@@ -27,31 +28,38 @@
 
 ## 功能特性
 
-### 选人阶段（ChampSelect）
+### 选人阶段（ChampSelect）：换 / 骰 / 留
 
-- 实时展示我方/敌方英雄阵容与各自的教练数据
-- **骰子重随建议**：结合英雄乱斗强度与阵容契合度给出 `保留 / 考虑 / 强烈建议重随` 三档结论，并说明理由
-- 阵容契合度计算：自动识别队伍是否缺前排、缺 AP、缺持续输出，并指出你是否正好补齐缺口
+- **一句结论**：比较当前英雄、备选席（bench）上的每个英雄和"用骰子随一个"的期望，给出 `换成 X` / `用骰子重随` / `保留` 之一，并说明理由（OP.GG 梯度与胜率、是否补上阵容缺口）
+- 综合分 = 乱斗强度 × 0.6 + 阵容适配 × 0.4；阵容适配会识别队伍缺前排 / 缺 AP / 缺持续输出，以及你是否正好补上
+- **一键操作**：换成备选席英雄、重随、把推荐符文写进客户端
+- **符文页导入**：建一个临时符文页（不占页位），之后原地改写它，从不删除任何符文页；有 OP.GG 数据用它的符文页（含属性碎片），否则把 `champions.json` 的符文名还原成符文页。可在配置里开启换英雄后自动导入
 
-### 对局阶段（InProgress）
+### 对局阶段（InProgress）：买什么
 
-- 实时属性面板：等级、金币、HP、AD/AP、护甲/魔抗、攻速、移速、技能急速、暴击、双穿透、全能吸血、韧性
-- 已购装备 vs 推荐出装对比，标注缺失的关键装备与替代方案
-- 双方阵容对比与对位克制分析（`compute_matchup_analysis`）
-- 综合评分：英雄强度 + 阵容契合 + 装备完成度 + 团队战力，给出即时行动项与下一优先级
+大乱斗不能回城，只有开局和阵亡时能买装备，所以对局里的核心是一张购物卡：
 
-### 强化符文与升级节点
+- **阵亡时**：按当前金币给出复活前要买的东西——买得起成装就买成装，买不起就挑一组总价最高的零件，并说明还差多少钱；装备栏满了会提示
+- **开局**：有 OP.GG 出门装统计就照它买
+- **活着时**：预告下次阵亡要买什么
+- **针对敌方阵容提前装备**：敌方有回复型英雄 → 重伤装，坦克 ≥2 → 穿透装，前排遇到 AP/AD 为主的阵容 → 对应防装；按你的定位和出装是 AD 还是 AP 选具体装备，已经有了就不再提
+- 价格和合成树来自 CommunityDragon 的当前版本数据；同名的斗魂竞技场变体装备会被排除
+- 实时属性面板、双方实时战况（KDA、补刀、视野分、装备总价）、事件流照常显示
 
-- 监听等级提升事件，触发强化符文（Hextech Augment）抉择提示
-- 知识库内置 T0/T1 梯度、雪球技巧、草丛视野、装备公式、强化符文三选一建议
+### 强化符文三选一（海克斯大乱斗）
+
+- 升到强化符文等级时自动弹出选择器（也可随时点右下角按钮打开），把看到的三个选项填进去（输入几个字即可筛选，符文池来自 CommunityDragon 的海克斯大乱斗列表）
+- 按知识库排序：英雄专属推荐 > 知识库梯度 > 是否适合你的定位；知识库没覆盖的不硬给结论
+- 配置了 LLM 时可以点"问 AI"，只返回三行：选哪个、为什么、拿了之后怎么调整
+- LCD 接口拿不到当前给出的选项，所以需要手动填；弹出的等级默认 3/7/11/15，未经实机确认，可在配置里改
 
 ### 大乱斗数据同步
 
 - 启动时若数据超过 24 小时未同步，后台自动拉取，完成后无需重启即生效；也可 `python update_data.py` 或 `POST /api/data/refresh` 手动刷新
 - **OP.GG 大乱斗**：T 级与胜率（换算为乱斗强度）、最常见的出装与符文页、召唤师技能、加点顺序
 - **Meraki（源自 LoL Wiki）**：每个英雄的大乱斗平衡修正，显示在英雄卡片并写入 AI 提示词
-- **CommunityDragon**：符文、召唤师技能的中文名
-- 各数据源互相独立，失败时沿用上次结果；完全没有同步数据时使用 `champions.json`
+- **CommunityDragon**：符文、召唤师技能、装备的中文名，装备合成树与当前版本价格，海克斯大乱斗强化符文池
+- 各数据源互相独立，失败时沿用上次结果；每个数据源单独判断是否过期，失败的下次启动会重试，成功的有效期内不重复下载；完全没有同步数据时使用 `champions.json` 和仓库里的静态快照
 - 优先级：知识库（手写的版本专属数据）> OP.GG 统计 > `champions.json`；提示语（tips / 雪球 / 闪现技巧）始终来自 `champions.json`
 
 ### 事件流
@@ -139,6 +147,8 @@ python run.py
 | `llm.timeout` | 请求超时（秒） |
 | `data_sync.auto` | 可选，默认 `true`：启动时数据过期则后台自动同步 |
 | `data_sync.max_age_hours` | 可选，默认 `24`：同步数据的有效期（小时） |
+| `runes.auto_apply` | 可选，默认 `false`：选人阶段换英雄后自动把推荐符文写进客户端（临时符文页，不删任何页） |
+| `augments.levels` | 可选，默认 `[3, 7, 11, 15]`：升到这些等级时弹出强化符文选择器 |
 
 ### 接入其他大模型
 
@@ -156,8 +166,8 @@ python run.py
 
 | 路径 | 页面 | 说明 |
 | --- | --- | --- |
-| `/` | 主控台 | WebSocket 实时推送，完整展示属性面板、阵容对比、装备状态、事件流与 LLM 追问 |
-| `/coach` | 实时卡片 | 每 2 秒自动刷新的精简卡片，适合放在副屏常驻 |
+| `/` | 主控台 | WebSocket 实时推送：决策卡（选人结论 / 购物卡）、属性面板、实时战况、事件流、英雄卡与 LLM 追问 |
+| `/coach` | 实时卡片 | 只有决策卡和几项关键数字，适合放在副屏常驻；和主控台共用同一个组件 |
 | `/deep` | 深度分析 | 一次性生成完整对局分析报告（有 Key 走 LLM，否则走本地规则） |
 
 ---
@@ -168,24 +178,32 @@ python run.py
 .
 ├── app/
 │   ├── __init__.py
-│   ├── main.py          # FastAPI 应用主体：路由、状态采集、规则引擎、卡片渲染
-│   ├── lcu_client.py    # LCU 连接器：定位 lockfile / 解析日志取认证信息
-│   ├── lcd_client.py    # LCD 客户端：读取局内实时数据（https://127.0.0.1:2999）、划分我方/敌方
-│   ├── llm_client.py    # LLM 客户端：OpenAI 兼容接口调用、流式输出、429 重试
+│   ├── main.py          # FastAPI 应用主体：路由、状态采集、轮询推送
+│   ├── advice.py        # 决策时刻：选人结论、购物卡、针对敌方阵容的装备调整
+│   ├── items.py         # 装备：常规装备索引、合成树计价、购物清单
+│   ├── runes.py         # 符文页：OP.GG / 手写数据 → 客户端临时符文页
+│   ├── augments.py      # 海克斯大乱斗强化符文：符文池、三选一排序
+│   ├── lcu_client.py    # LCU 连接器：定位 lockfile / 解析日志取认证信息、读写请求
+│   ├── lcd_client.py    # LCD 客户端：读取局内实时数据（https://127.0.0.1:2999）、识别自己、划分我方/敌方
+│   ├── llm_client.py    # LLM 客户端：OpenAI 兼容接口调用、429 重试
 │   └── data_sync.py     # 大乱斗数据同步：OP.GG / Meraki / CommunityDragon → aram_meta.json
 ├── data/
 │   ├── champions.json       # 170 名英雄的乱斗数据（兜底 + 手写提示语）
 │   ├── champion_map.json    # championId → 英雄名 映射
-│   ├── item_map.json        # itemId → 装备属性 映射
+│   ├── item_map.json        # itemId → 装备名称、价格、合成树
+│   ├── runes.json           # 符文树（符文名 → 客户端符文页 ID）
+│   ├── augments.json        # 海克斯大乱斗强化符文池（静态快照）
 │   ├── knowledge_base.json  # 版本知识库（梯度/技巧/装备公式/强化符文）
 │   └── aram_meta.json       # 同步生成的运行时缓存（gitignore）
 ├── frontend/
 │   ├── index.html       # 主控台
 │   ├── coach.html       # 实时卡片
+│   ├── coach-card.js    # 决策卡 / 强化符文选择器（两个页面共用）
 │   └── deep.html        # 深度分析报告
 ├── config.json          # 路径、端口、LLM 配置
 ├── requirements.txt
-├── run.py               # 唯一启动入口（含 Windows 异步 IO 兼容处理，读取 web_port）
+├── run.py               # 唯一启动入口（读取 web_port）
+├── win_compat.py        # Windows 异步 IO 兼容垫片（run.py / update_data.py 先导入它）
 ├── start.bat            # Windows 一键启动
 ├── start.ps1            # 启动脚本主体（依赖检查 + 调用 run.py + 开浏览器）
 ├── update_data.py       # 手动同步大乱斗数据
@@ -201,9 +219,11 @@ python run.py
 | --- | --- |
 | `data/champions.json` | 每名英雄包含 `name` / `title` / `role` / `aram_strength` / `build` / `core_cost` / `primary_branch` / `primary_rune` / `primary_details`（主系四个符文）/ `secondary_branch` / `secondary_rune` / `tips` / `snowball_tip` / `flash_tip` / `situational` 等字段。`role` 取 坦克/战士/刺客/法师/射手/辅助 之一；`build` 里的装备名需与 `item_map.json` 一致，否则无法识别是否已购买；带 `auto_generated: true` 的条目是按定位套用的模板数据，有待逐个英雄细化 |
 | `data/champion_map.json` | `championId → 英雄名`，用于把客户端返回的 ID 还原成名字 |
-| `data/item_map.json` | `itemId → {name, gold_total, gold_base, sell}`，用于把局内装备 ID 还原成装备并计算总价 |
+| `data/item_map.json` | `itemId → {name, gold_total, gold_base, sell, from, cats}`：`gold_base` 是合成费，`from` 是子件 ID，`cats` 是分类。用于还原局内装备、计算装备总价和购物清单；同步成功后价格与合成树会被当前版本数据覆盖（名字不变） |
+| `data/runes.json` | 符文树：每个符文系各行可选的符文（ID + 中文名）和默认属性碎片，用于把手写数据里的符文名还原成客户端符文页 |
+| `data/augments.json` | 海克斯大乱斗强化符文池（名称、稀有度），同步成功后以同步数据为准 |
 | `data/knowledge_base.json` | 版本级知识：`tier_list`（梯度）、`snowball_tips`、`grass_tips`、`item_myths`、`core_build_recipes`、`hextech_augments`（强化符文梯度）以及个别英雄专属数据 |
-| `data/aram_meta.json` | `update_data.py` / 启动时自动同步生成的缓存，按英雄 ID 存 `opgg`（T 级、胜率、选取率、换算后的强度）、`opgg_build`（出装及装备 ID、符文页及 9 个符文 ID、召唤师技能、加点）、`aram_balance`（平衡修正）。不纳入版本管理 |
+| `data/aram_meta.json` | `update_data.py` / 启动时自动同步生成的缓存：按英雄 ID 存 `opgg`（T 级、胜率、选取率、换算后的强度）、`opgg_build`（出装及装备 ID、符文页及 9 个符文 ID、召唤师技能、加点）、`aram_balance`（平衡修正）；`cdragon` 存中文名、装备价格与合成树、强化符文池。不纳入版本管理 |
 
 ### 维护数据
 
@@ -228,7 +248,6 @@ python rebuild_db.py
 | GET | `/coach` | 实时卡片页面 |
 | GET | `/deep` | 深度分析页面 |
 | GET | `/api/state` | 当前完整对局状态（JSON） |
-| GET | `/api/coach/quick` | 实时建议卡片（HTML 片段） |
 | GET | `/api/coach/deep` | 深度分析（LLM 或规则引擎，返回 `mode` 字段标识来源） |
 | GET | `/api/coach/ask?q=` | 向 LLM 追问，流式返回 |
 | GET | `/api/coach/md` | 当前状态的 Markdown 快照 |
@@ -236,10 +255,16 @@ python rebuild_db.py
 | GET | `/api/kb/status` | 知识库加载状态与统计 |
 | GET | `/api/data/status` | 大乱斗同步数据的状态：各数据源上次结果、覆盖英雄数 |
 | POST | `/api/data/refresh` | 立即重新同步大乱斗数据（同步中再次调用返回 `running`） |
+| POST | `/api/runes/apply?champion_id=` | 把推荐符文写成客户端临时符文页（不传 ID 则用当前英雄） |
+| POST | `/api/champ-select/swap/{id}` | 和备选席上的英雄交换 |
+| POST | `/api/champ-select/reroll` | 用骰子重随 |
+| GET | `/api/augments` | 强化符文池、弹出等级、是否可问 AI |
+| POST | `/api/augments/rank` | 强化符文三选一排序，body `{"options": [...]}` |
+| POST | `/api/augments/ai` | 让 LLM 在三个选项里挑一个（三行结论） |
 | GET | `/api/lcu/status` | LCU 连接状态 |
 | GET | `/api/champion/{id}` | 单个英雄的教练数据 |
 | GET | `/api/champions/search?q=` | 英雄搜索 |
-| WS | `/ws` | 实时事件推送（`state_update` / `phase_change` / `dice_rolled` / `level_up`） |
+| WS | `/ws` | 实时事件推送（`state_update` / `phase_change` / `dice_rolled` / `level_up`，升到强化符文等级时 `augment: true`） |
 
 ---
 
@@ -264,8 +289,8 @@ python rebuild_db.py
 ┌────────────────────────────────────────┐
 │  main.py  collect_game_state()         │
 │  ├─ 合并 LCU + LCD + 本地英雄数据        │
-│  ├─ 规则引擎：重随建议 / 综合评分 / 对位   │
-│  └─ 渲染卡片 + 推送 WebSocket            │
+│  ├─ 决策时刻：选人结论 / 购物卡 / 强化符文 │
+│  └─ 推送 WebSocket（前端渲染决策卡）      │
 └───────────────┬────────────────────────┘
                 │ ④ 组装 prompt + 知识库
                 ▼
@@ -288,7 +313,7 @@ python rebuild_db.py
 A：确认客户端已登录；确认 `config.json` 的 `lol_install_paths` 覆盖了实际安装目录；`/api/lcu/status` 可查看连接细节。
 
 **Q：启动报 `_overlapped` 相关错误？**
-A：`run.py` 已内置 Windows 异步 IO 兼容垫片，请通过 `run.py` 或 `start.bat`（内部也是调用 `run.py`）启动，不要直接 `uvicorn app.main:app`。
+A：`run.py` / `update_data.py` 会先导入 `win_compat.py`（Windows 异步 IO 兼容垫片），请通过它们或 `start.bat`（内部也是调用 `run.py`）启动，不要直接 `uvicorn app.main:app`。
 
 **Q：端口 8765 被占用？**
 A：修改 `config.json` 的 `web_port` 后重启。
@@ -301,6 +326,9 @@ A：LCD 端口 `2999` 仅在对局中开放，选人阶段该接口不可用属�
 
 **Q：英雄卡片没有"出装/符文来自 OP.GG 统计"标记？**
 A：说明 OP.GG 没同步成功，正在用 `champions.json`。看 `/api/data/status` 的 `last_report`，或运行 `python update_data.py` 看各数据源结果。OP.GG 是非官方接口，部分网络（如公司网络）会在 TLS 握手阶段被重置；平衡修正与中文名来自另外两个数据源，不受影响。
+
+**Q：符文页导入失败？**
+A：只能在选人阶段写入。导入的是名字以 ` (AC)` 结尾的临时符文页，不占页位、不会删除你自己的符文页；失败原因会显示在页面底部的提示里。手写数据里的符文名在当前版本不存在时无法还原，需要同步到 OP.GG 数据或修正 `champions.json`。
 
 **Q：想贡献英雄数据？**
 A：编辑 `data/champions.json`，字段参考现有条目；改完用 `python check_id.py` 校验 ID 映射。出装/符文/强度有 OP.GG 数据时会被覆盖，手写数据主要用于提示语和兜底。

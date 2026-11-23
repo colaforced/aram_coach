@@ -2,6 +2,8 @@
 
 应用启动时也会在数据过期后自动同步，这个脚本用于手动刷新或排查网络问题。
 """
+import win_compat  # noqa: F401  必须在 import asyncio 之前（同 run.py）
+
 import asyncio
 import json
 import logging

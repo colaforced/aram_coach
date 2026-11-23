@@ -1,17 +1,7 @@
 """ARAM Coach 唯一启动入口（start.bat / start.ps1 也是调用它）。"""
-import sys
-import types
-
-# 必须在 import asyncio 之前注入：部分 Windows Python 环境加载 _overlapped 会报错，
-# 用空壳顶替后改用 SelectorEventLoop，不再依赖它
-_overlapped_fake = types.ModuleType("_overlapped")
-_overlapped_fake.OVERLAPPED_PIPE = 0
-_overlapped_fake.OVERLAPPED_SOCKET = 1
-sys.modules["_overlapped"] = _overlapped_fake
+import win_compat  # noqa: F401  必须在 import asyncio 之前
 
 import asyncio
-if sys.platform == "win32":
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 import uvicorn
 from app.main import app, CONFIG, log
