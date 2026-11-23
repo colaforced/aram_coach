@@ -4,7 +4,7 @@
 读取游戏客户端数据，结合版本知识库与本地规则引擎（可选接入大模型），在选人、选装备、对线、团战各阶段给出可执行建议。
 
 - 实时读取，无需截图、无需 OCR
-- 170 名英雄的大乱斗专属数据（乱斗强度、出装、符文、雪球/闪现技巧）
+- 大乱斗数据自动同步：OP.GG 大乱斗统计（梯度、胜率、出装、符文、召唤师技能、加点）+ 大乱斗平衡修正（造成/承受伤害、治疗、护盾等），拉不到时退回本地 170 名英雄数据
 - 版本知识库驱动（海克斯大乱斗 `25.24_2025-12`）
 - 双模式：配置了 API Key 走 LLM 深度分析，未配置自动降级为本地规则引擎
 
@@ -44,6 +44,15 @@
 
 - 监听等级提升事件，触发强化符文（Hextech Augment）抉择提示
 - 知识库内置 T0/T1 梯度、雪球技巧、草丛视野、装备公式、强化符文三选一建议
+
+### 大乱斗数据同步
+
+- 启动时若数据超过 24 小时未同步，后台自动拉取，完成后无需重启即生效；也可 `python update_data.py` 或 `POST /api/data/refresh` 手动刷新
+- **OP.GG 大乱斗**：T 级与胜率（换算为乱斗强度）、最常见的出装与符文页、召唤师技能、加点顺序
+- **Meraki（源自 LoL Wiki）**：每个英雄的大乱斗平衡修正，显示在英雄卡片并写入 AI 提示词
+- **CommunityDragon**：符文、召唤师技能的中文名
+- 各数据源互相独立，失败时沿用上次结果；完全没有同步数据时使用 `champions.json`
+- 优先级：知识库（手写的版本专属数据）> OP.GG 统计 > `champions.json`；提示语（tips / 雪球 / 闪现技巧）始终来自 `champions.json`
 
 ### 事件流
 
@@ -128,6 +137,8 @@ python run.py
 | `llm.model` | 模型名 |
 | `llm.temperature` | 采样温度 |
 | `llm.timeout` | 请求超时（秒） |
+| `data_sync.auto` | 可选，默认 `true`：启动时数据过期则后台自动同步 |
+| `data_sync.max_age_hours` | 可选，默认 `24`：同步数据的有效期（小时） |
 
 ### 接入其他大模型
 
@@ -160,12 +171,14 @@ python run.py
 │   ├── main.py          # FastAPI 应用主体：路由、状态采集、规则引擎、卡片渲染
 │   ├── lcu_client.py    # LCU 连接器：定位 lockfile / 解析日志取认证信息
 │   ├── lcd_client.py    # LCD 客户端：读取局内实时数据（https://127.0.0.1:2999）、划分我方/敌方
-│   └── llm_client.py    # LLM 客户端：OpenAI 兼容接口调用、流式输出、429 重试
+│   ├── llm_client.py    # LLM 客户端：OpenAI 兼容接口调用、流式输出、429 重试
+│   └── data_sync.py     # 大乱斗数据同步：OP.GG / Meraki / CommunityDragon → aram_meta.json
 ├── data/
-│   ├── champions.json       # 170 名英雄的乱斗数据
+│   ├── champions.json       # 170 名英雄的乱斗数据（兜底 + 手写提示语）
 │   ├── champion_map.json    # championId → 英雄名 映射
 │   ├── item_map.json        # itemId → 装备属性 映射
-│   └── knowledge_base.json  # 版本知识库（梯度/技巧/装备公式/强化符文）
+│   ├── knowledge_base.json  # 版本知识库（梯度/技巧/装备公式/强化符文）
+│   └── aram_meta.json       # 同步生成的运行时缓存（gitignore）
 ├── frontend/
 │   ├── index.html       # 主控台
 │   ├── coach.html       # 实时卡片
@@ -175,6 +188,7 @@ python run.py
 ├── run.py               # 唯一启动入口（含 Windows 异步 IO 兼容处理，读取 web_port）
 ├── start.bat            # Windows 一键启动
 ├── start.ps1            # 启动脚本主体（依赖检查 + 调用 run.py + 开浏览器）
+├── update_data.py       # 手动同步大乱斗数据
 ├── check_id.py          # 英雄 ID 与名称映射校验脚本
 └── rebuild_db.py        # 依据 champion_map 重建 champions.json 的数据脚本
 ```
@@ -189,10 +203,14 @@ python run.py
 | `data/champion_map.json` | `championId → 英雄名`，用于把客户端返回的 ID 还原成名字 |
 | `data/item_map.json` | `itemId → {name, gold_total, gold_base, sell}`，用于把局内装备 ID 还原成装备并计算总价 |
 | `data/knowledge_base.json` | 版本级知识：`tier_list`（梯度）、`snowball_tips`、`grass_tips`、`item_myths`、`core_build_recipes`、`hextech_augments`（强化符文梯度）以及个别英雄专属数据 |
+| `data/aram_meta.json` | `update_data.py` / 启动时自动同步生成的缓存，按英雄 ID 存 `opgg`（T 级、胜率、选取率、换算后的强度）、`opgg_build`（出装及装备 ID、符文页及 9 个符文 ID、召唤师技能、加点）、`aram_balance`（平衡修正）。不纳入版本管理 |
 
 ### 维护数据
 
 ```bash
+# 同步 OP.GG 大乱斗统计与平衡修正（应用启动时也会自动做）
+python update_data.py
+
 # 校验 championId 与英雄名是否错配
 python check_id.py
 
@@ -216,6 +234,8 @@ python rebuild_db.py
 | GET | `/api/coach/md` | 当前状态的 Markdown 快照 |
 | GET | `/api/coach/status` | LLM 是否启用及模型信息 |
 | GET | `/api/kb/status` | 知识库加载状态与统计 |
+| GET | `/api/data/status` | 大乱斗同步数据的状态：各数据源上次结果、覆盖英雄数 |
+| POST | `/api/data/refresh` | 立即重新同步大乱斗数据（同步中再次调用返回 `running`） |
 | GET | `/api/lcu/status` | LCU 连接状态 |
 | GET | `/api/champion/{id}` | 单个英雄的教练数据 |
 | GET | `/api/champions/search?q=` | 英雄搜索 |
@@ -279,8 +299,11 @@ A：检查 `config.json` 的 `api_key` 是否有效；`/api/coach/status` 可确
 **Q：局内数据不刷新？**
 A：LCD 端口 `2999` 仅在对局中开放，选人阶段该接口不可用属正常现象。
 
+**Q：英雄卡片没有"出装/符文来自 OP.GG 统计"标记？**
+A：说明 OP.GG 没同步成功，正在用 `champions.json`。看 `/api/data/status` 的 `last_report`，或运行 `python update_data.py` 看各数据源结果。OP.GG 是非官方接口，部分网络（如公司网络）会在 TLS 握手阶段被重置；平衡修正与中文名来自另外两个数据源，不受影响。
+
 **Q：想贡献英雄数据？**
-A：编辑 `data/champions.json`，字段参考现有条目；改完用 `python check_id.py` 校验 ID 映射。
+A：编辑 `data/champions.json`，字段参考现有条目；改完用 `python check_id.py` 校验 ID 映射。出装/符文/强度有 OP.GG 数据时会被覆盖，手写数据主要用于提示语和兜底。
 
 ---
 

@@ -1901,6 +1901,25 @@ function renderCoachCard(coach, isMine) {
 
     const tipsHtml = (coach.tips || []).map(t => `<li>${t}</li>`).join('');
 
+    const pct = v => `${((v || 0) * 100).toFixed(1)}%`;
+    const opgg = coach.opgg;
+    const opggHtml = opgg
+        ? `<div style="font-size:12px;color:#90a4ae;margin-top:6px;">OP.GG 大乱斗 T${opgg.tier} · 胜率 ${pct(opgg.win_rate)} · 选取率 ${pct(opgg.pick_rate)}${opgg.version ? ` · ${opgg.version}` : ''}</div>`
+        : '';
+    const balanceHtml = coach.aram_balance_text
+        ? `<div style="font-size:12px;color:#ffb74d;margin-top:4px;">⚖️ 大乱斗平衡：${coach.aram_balance_text}</div>`
+        : '';
+    const sourceTag = coach.data_source === 'opgg'
+        ? '<span style="font-size:11px;color:#66bb6a;margin-left:6px;">出装/符文来自 OP.GG 统计</span>'
+        : '';
+    const shardsHtml = (coach.rune_shards || []).length
+        ? `<div style="margin-top:6px;font-size:12px;color:#90a4ae;">属性碎片：${coach.rune_shards.join(' · ')}</div>`
+        : '';
+    const extraBuildHtml = [
+        (coach.starter_items || []).length ? `出门装：${coach.starter_items.join(' + ')}` : '',
+        (coach.spells || []).length ? `召唤师技能：${coach.spells.join(' + ')}` : '',
+    ].filter(Boolean).map(t => `<div style="margin-top:6px;font-size:12px;color:#90a4ae;">${t}</div>`).join('');
+
     return `
         <div class="panel">
             <div class="champion-card">
@@ -1909,9 +1928,11 @@ function renderCoachCard(coach, isMine) {
                     <span class="champion-role">${coach.role}</span>
                     ${coach.core_cost ? `<span style="margin-left:auto;font-size:12px;color:#78909c;">核心总价 ${coach.core_cost}G</span>` : ''}
                 </div>
+                ${opggHtml}
+                ${balanceHtml}
 
                 <div class="section">
-                    <div class="section-title">✨ 符文</div>
+                    <div class="section-title">✨ 符文${sourceTag}</div>
                     <div style="margin-bottom:4px;">
                         <span class="rune-box rune-primary">主系 · ${coach.primary_branch} · ${coach.primary_rune}</span>
                     </div>
@@ -1919,11 +1940,13 @@ function renderCoachCard(coach, isMine) {
                     <div style="margin-top:8px;">
                         <span class="rune-box rune-secondary">副系 · ${coach.secondary_branch} · ${coach.secondary_rune}</span>
                     </div>
+                    ${shardsHtml}
                 </div>
 
                 <div class="section">
                     <div class="section-title">🗡️ 出装顺序</div>
                     <div class="build-list">${buildHtml}</div>
+                    ${extraBuildHtml}
                 </div>
 
                 ${situationalHtml}

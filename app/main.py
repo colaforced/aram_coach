@@ -15,7 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse, HTMLResponse
 
 from app.lcu_client import LCUClient
-from app import lcd_client
+from app import data_sync, lcd_client
 from app.lcd_client import resolve_my_enemy_teams
 from app.llm_client import LLMClient
 
@@ -48,6 +48,17 @@ _item_map_path = BASE_DIR / "data" / "item_map.json"
 if _item_map_path.exists():
     with open(_item_map_path, "r", encoding="utf-8") as f:
         ITEM_MAP = json.load(f)
+
+# OP.GG / Meraki 同步来的大乱斗数据（运行时缓存，可能不存在）
+DATA_DIR = BASE_DIR / "data"
+ARAM_META: Dict[str, Any] = data_sync.load_meta(DATA_DIR)
+DATA_SYNC_CFG: Dict[str, Any] = {"auto": True, "max_age_hours": 24, **CONFIG.get("data_sync", {})}
+if ARAM_META:
+    _opgg_src = (ARAM_META.get("sources") or {}).get("opgg") or {}
+    log.info(f"  大乱斗数据已加载: {len(ARAM_META.get('champions', {}))} 个英雄, "
+             f"OP.GG 版本={_opgg_src.get('version', '无')}")
+else:
+    log.info("  尚无大乱斗同步数据（data/aram_meta.json），暂用 champions.json")
 
 ARAM_BUILD_REPLACEMENTS: Dict[str, str] = {
     "守护天使": "死亡之舞",
@@ -92,10 +103,36 @@ for _cid, _cdata in CHAMPIONS_DB.items():
 
 from contextlib import asynccontextmanager
 
+_data_sync_lock = asyncio.Lock()
+
+
+async def refresh_aram_meta(force: bool = False) -> Dict[str, Any]:
+    """数据过期（或 force）时同步 OP.GG / Meraki 数据，成功后原地替换 ARAM_META。"""
+    if _data_sync_lock.locked():
+        return {"status": "running"}
+    async with _data_sync_lock:
+        if not force and not data_sync.is_stale(ARAM_META, DATA_SYNC_CFG["max_age_hours"]):
+            return {"status": "fresh"}
+        log.info("同步大乱斗数据（OP.GG / Meraki / CommunityDragon）...")
+        try:
+            report = await data_sync.sync(DATA_DIR, ITEM_MAP)
+        except Exception as e:
+            log.exception("大乱斗数据同步失败")
+            return {"status": "error", "error": str(e)[:200]}
+        fresh = data_sync.load_meta(DATA_DIR)
+        if fresh:
+            ARAM_META.clear()
+            ARAM_META.update(fresh)
+        log.info(f"大乱斗数据同步结束: {report}")
+        return {"status": "done", "report": report}
+
+
 @asynccontextmanager
 async def lifespan(application: FastAPI):
     log.info("Starting ARAM Coach...")
     asyncio.create_task(poll_lcu())
+    if DATA_SYNC_CFG.get("auto"):
+        asyncio.create_task(refresh_aram_meta())
     yield
     await lcu.close()
     await llm_client.close()
@@ -143,6 +180,25 @@ def get_champion_coach(character_id: Any) -> Optional[Dict[str, Any]]:
     tips = list(data.get("tips", []))
     build = list(data.get("build", []))
     snowball_tip = data.get("snowball_tip", "")
+    aram_strength = data.get("aram_strength", 65)
+    core_cost = data.get("core_cost", 0)
+    rune_fields = ("primary_rune", "primary_branch", "primary_details", "secondary_rune", "secondary_branch")
+    runes = {k: data.get(k, [] if k == "primary_details" else "") for k in rune_fields}
+
+    # 优先级：知识库（手写的版本专属数据）> OP.GG 统计（aram_meta.json）> champions.json 模板
+    meta = (ARAM_META.get("champions") or {}).get(key) or {}
+    opgg = meta.get("opgg") or {}
+    opgg_build = meta.get("opgg_build") or {}
+    balance = meta.get("aram_balance") or {}
+    if opgg.get("strength"):
+        aram_strength = opgg["strength"]
+    if opgg_build.get("build"):
+        build = list(opgg_build["build"])
+        # 前端拿它和当前金币比"下一件大件攒了多少"，所以取第一件核心装的价格，不是三件之和
+        first_core = (opgg_build.get("build_ids") or [None])[0]
+        core_cost = ITEM_MAP.get(str(first_core), {}).get("gold_total") or core_cost
+    if opgg_build.get("runes"):
+        runes = {k: opgg_build["runes"][k] for k in rune_fields}
 
     kb_specific = None
     if KNOWLEDGE_BASE:
@@ -171,23 +227,35 @@ def get_champion_coach(character_id: Any) -> Optional[Dict[str, Any]]:
             tips.insert(0, f"加点: {kb_specific['skill_order']}")
         if kb_specific.get("best_runes"):
             tips.insert(0, f"强化符文: {' · '.join(kb_specific['best_runes'][:3])}")
+    if opgg_build.get("skill_priority") and not (kb_specific or {}).get("skill_order"):
+        tips.insert(0, f"加点: {opgg_build['skill_priority']}")
 
     return {
         "character_id": character_id,
         "name": name,
         "role": data.get("role", "未知"),
-        "aram_strength": data.get("aram_strength", 65),
-        "primary_rune": data.get("primary_rune", ""),
-        "primary_branch": data.get("primary_branch", ""),
-        "primary_details": data.get("primary_details", []),
-        "secondary_rune": data.get("secondary_rune", ""),
-        "secondary_branch": data.get("secondary_branch", ""),
+        "aram_strength": aram_strength,
+        **runes,
+        "rune_shards": (opgg_build.get("runes") or {}).get("shards", []),
         "build": build,
-        "core_cost": data.get("core_cost", 0),
+        "starter_items": opgg_build.get("starter_items", []),
+        "spells": opgg_build.get("spells", []),
+        "skill_priority": opgg_build.get("skill_priority", ""),
+        "core_cost": core_cost,
         "situational": data.get("situational", {}),
         "tips": tips,
         "snowball_tip": snowball_tip,
         "flash_tip": data.get("flash_tip", ""),
+        "aram_balance": balance,
+        "aram_balance_text": data_sync.balance_text(balance),
+        "opgg": {
+            "tier": opgg.get("tier"),
+            "rank": opgg.get("rank"),
+            "win_rate": opgg.get("win_rate"),
+            "pick_rate": opgg.get("pick_rate"),
+            "version": ((ARAM_META.get("sources") or {}).get("opgg") or {}).get("version", ""),
+        } if opgg else None,
+        "data_source": "opgg" if (opgg_build.get("build") or opgg_build.get("runes")) else "local",
         "kb_enhanced": bool(kb_specific),
     }
 
@@ -670,6 +738,14 @@ def state_to_md(state: Dict[str, Any]) -> str:
             lines.append(f"**符文**: {coach.get('primary_branch')} - {coach.get('primary_rune')} / {coach.get('secondary_branch')}")
         if coach.get("build"):
             lines.append(f"**推荐出装**: {' → '.join(coach['build'])}")
+        if coach.get("spells"):
+            lines.append(f"**召唤师技能**: {' + '.join(coach['spells'])}")
+        if coach.get("opgg"):
+            o = coach["opgg"]
+            lines.append(f"**OP.GG 大乱斗**: T{o.get('tier')} · 胜率 {(o.get('win_rate') or 0) * 100:.1f}%"
+                         f" · 选取率 {(o.get('pick_rate') or 0) * 100:.1f}% · 版本 {o.get('version')}")
+        if coach.get("aram_balance_text"):
+            lines.append(f"**大乱斗平衡**: {coach['aram_balance_text']}")
         if coach.get("tips"):
             lines.append("")
             lines.append("**大乱斗 Tips**:")
@@ -1588,6 +1664,27 @@ async def api_coach_ask(q: str = ""):
             yield f"\n\n❌ 内部错误: {str(e)[:200]}"
 
     return StreamingResponse(generate(), media_type="text/event-stream")
+
+
+@app.get("/api/data/status")
+async def api_data_status():
+    champs = ARAM_META.get("champions") or {}
+    return {
+        "loaded": bool(ARAM_META),
+        "syncing": _data_sync_lock.locked(),
+        "generated_at": ARAM_META.get("generated_at"),
+        "sources": ARAM_META.get("sources", {}),
+        "last_report": ARAM_META.get("last_report", {}),
+        "champions": len(champs),
+        "with_opgg_build": sum(1 for c in champs.values() if c.get("opgg_build")),
+        "with_balance": sum(1 for c in champs.values() if c.get("aram_balance")),
+        "auto_sync": DATA_SYNC_CFG,
+    }
+
+
+@app.post("/api/data/refresh")
+async def api_data_refresh():
+    return await refresh_aram_meta(force=True)
 
 
 @app.get("/api/coach/status")

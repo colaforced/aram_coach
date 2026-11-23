@@ -15,3 +15,7 @@ Thumbs.db
 
 *.tmp
 *.bak
+
+# 大乱斗同步数据（OP.GG / Meraki 运行时缓存）
+data/aram_meta.json
+data/aram_meta.tmp

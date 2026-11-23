@@ -134,6 +134,14 @@ def _format_state_for_prompt(state: Dict[str, Any]) -> str:
             if coach.get("secondary_branch"):
                 rune_line += f"；副系 {coach['secondary_branch']}·{coach.get('secondary_rune', '')}"
             parts.append(f"【推荐符文】{rune_line}")
+        if coach.get("spells"):
+            parts.append(f"【召唤师技能】{' + '.join(coach['spells'])}")
+        if coach.get("opgg"):
+            o = coach["opgg"]
+            parts.append(f"【OP.GG 大乱斗数据】T{o.get('tier')}，胜率 {(o.get('win_rate') or 0) * 100:.1f}%，"
+                         f"选取率 {(o.get('pick_rate') or 0) * 100:.1f}%（版本 {o.get('version')}）")
+        if coach.get("aram_balance_text"):
+            parts.append(f"【大乱斗平衡修正】{coach['aram_balance_text']}")
 
     composite = state.get("composite_advice") or {}
     if composite:
