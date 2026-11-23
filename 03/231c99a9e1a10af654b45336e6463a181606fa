@@ -1,0 +1,28 @@
+app/main.py
+  s_c6feb0cb0b80d0::t_5bc6d43ec628b1 1311-1313,1318
+  s_c6feb0cb0b80d0::t_3a108d0756f4c2 1434
+  s_c6feb0cb0b80d0::t_f6c921d4f6e1db 1384-1390
+  s_c6feb0cb0b80d0::t_0f964af4815ae0 1338-1339
+  s_c6feb0cb0b80d0::t_fc9c83720fa775 1408-1409
+.claude/skills/run-aram-coach/mock_run.py
+  s_c6feb0cb0b80d0::t_71c1e0c7fe2673 105
+frontend/index.html
+  s_c6feb0cb0b80d0::t_0c57edce3b51b8 1634-1642
+  s_c6feb0cb0b80d0::t_41ff4d5856054a 1673-1683
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "03231c99a9e1a10af654b45336e6463a181606fa",
+  "prompts": {},
+  "sessions": {
+    "s_c6feb0cb0b80d0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bbaf2dd0-ebda-4a87-ae45-b1af8e219ab1",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "pengyong <pengyong@trip.com>"
+    }
+  }
+}
