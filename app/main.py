@@ -12,7 +12,7 @@ from typing import Dict, Any, List, Optional
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, RedirectResponse, StreamingResponse
 from pydantic import BaseModel
 
 from app.lcu_client import LCUClient
@@ -1005,13 +1005,10 @@ async def index():
 
 
 @app.get("/coach")
-async def coach_page():
-    return FileResponse(str(BASE_DIR / "frontend" / "coach.html"))
-
-
 @app.get("/deep")
-async def deep_page():
-    return FileResponse(str(BASE_DIR / "frontend" / "deep.html"))
+async def old_pages():
+    """以前的副屏卡片 / 深度分析页已合并进主页面，旧书签跳回首页。"""
+    return RedirectResponse("/")
 
 
 @app.get("/api/state")

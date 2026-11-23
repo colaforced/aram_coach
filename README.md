@@ -166,9 +166,9 @@ python run.py
 
 | 路径 | 页面 | 说明 |
 | --- | --- | --- |
-| `/` | 主控台 | WebSocket 实时推送：决策卡（选人结论 / 购物卡）、属性面板、实时战况、事件流、英雄卡与 LLM 追问 |
-| `/coach` | 实时卡片 | 只有决策卡和几项关键数字，适合放在副屏常驻；和主控台共用同一个组件 |
-| `/deep` | 深度分析 | 一次性生成完整对局分析报告（有 Key 走 LLM，否则走本地规则） |
+| `/` | 主控台（唯一页面） | WebSocket 实时推送：决策卡（选人结论 / 购物卡）、属性面板、实时战况、事件流、英雄卡；英雄卡下的"问 AI 教练"里可以追问 LLM，或点"完整分析"生成整局报告（有 Key 走 LLM，否则走本地规则） |
+
+以前的 `/coach`（副屏卡片）和 `/deep`（深度分析）已合并进主控台，旧地址会跳回首页。
 
 ---
 
@@ -196,10 +196,8 @@ python run.py
 │   ├── knowledge_base.json  # 版本知识库（梯度/技巧/装备公式/强化符文）
 │   └── aram_meta.json       # 同步生成的运行时缓存（gitignore）
 ├── frontend/
-│   ├── index.html       # 主控台
-│   ├── coach.html       # 实时卡片
-│   ├── coach-card.js    # 决策卡 / 强化符文选择器（两个页面共用）
-│   └── deep.html        # 深度分析报告
+│   ├── index.html       # 主控台（唯一页面）
+│   └── coach-card.js    # 决策卡 / 强化符文选择器
 ├── config.json          # 路径、端口、LLM 配置
 ├── requirements.txt
 ├── run.py               # 唯一启动入口（读取 web_port）
@@ -245,8 +243,6 @@ python rebuild_db.py
 | 方法 | 路径 | 说明 |
 | --- | --- | --- |
 | GET | `/` | 主控台页面 |
-| GET | `/coach` | 实时卡片页面 |
-| GET | `/deep` | 深度分析页面 |
 | GET | `/api/state` | 当前完整对局状态（JSON） |
 | GET | `/api/coach/deep` | 深度分析（LLM 或规则引擎，返回 `mode` 字段标识来源） |
 | GET | `/api/coach/ask?q=` | 向 LLM 追问，流式返回 |

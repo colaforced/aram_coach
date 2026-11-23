@@ -1,4 +1,4 @@
-// 决策卡片：主页面（index.html）和副屏实时卡片（coach.html）共用。
+// 决策卡片与强化符文选择器（index.html 引用）。
 // 只在三个时刻给明确答案：选人（换 / 骰 / 留）、阵亡或开局（买什么）、升级（选哪个强化符文）。
 // 数据来自后端 state 的 verdict / rune_page / moment。
 (function () {
@@ -41,7 +41,6 @@ const STYLE = `
 .cc-chip { font-size: 12px; padding: 3px 9px; border-radius: 6px; background: rgba(255,255,255,0.05); color: #78909c; }
 .cc-chip.done { color: #81c784; text-decoration: line-through; }
 .cc-chip.next { color: #ffd54f; border: 1px solid #ffd54f; }
-.cc-empty { text-align: center; color: #78909c; padding: 28px 10px; font-size: 14px; }
 #cc-toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); background: #263646; color: #eceff1;
   padding: 10px 18px; border-radius: 10px; font-size: 13px; z-index: 10000; box-shadow: 0 6px 24px rgba(0,0,0,0.4); max-width: 80vw; }
 #cc-toast.bad { background: #5d2626; }
@@ -71,7 +70,6 @@ if (!document.getElementById('cc-style')) {
 }
 
 const pct = v => `${((v || 0) * 100).toFixed(1)}%`;
-const IN_GAME = ['GameStart', 'InProgress', 'Reconnect'];
 
 function toast(msg, ok = true) {
     let el = document.getElementById('cc-toast');
@@ -168,18 +166,7 @@ function momentCard(s) {
     </div>`;
 }
 
-function empty(text) {
-    return `<div class="cc-card"><div class="cc-empty">${esc(text)}</div></div>`;
-}
-
-function render(s) {
-    if (!s || !s.lcu_connected) return empty('等待 LoL 客户端连接');
-    if (s.phase === 'ChampSelect') return verdictCard(s) || empty('等待分配英雄…');
-    if (IN_GAME.includes(s.phase)) return momentCard(s) || empty('对局数据加载中…');
-    return empty('等待进入大乱斗对局');
-}
-
-window.CoachCard = { render, verdictCard, momentCard, toast };
+window.CoachCard = { verdictCard, momentCard, toast };
 
 // ---------------------------------------------------------------- 按钮动作
 

@@ -1348,7 +1348,6 @@ function render() {
         main.innerHTML = emptyPanel('等待进入大乱斗对局...', '请点击 Play → ARAM 开始匹配');
     }
     AugmentPicker.showLauncher(s.lcu_connected && ['GameStart', 'InProgress', 'Reconnect'].includes(s.phase));
-    if (aiCoachEl) refreshQuickCard();
 }
 
 function emptyPanel(title, subtitle) {
@@ -1847,9 +1846,8 @@ function openAICoach(initialQuestion) {
                 </div>
             </div>
             <div class="ai-modal-body">
-                <div id="aiQuickCard" class="ai-quick-card">加载中...</div>
-                <div style="border-top:1px solid #1e2d3d;margin:12px 0;"></div>
                 <div class="ai-quick-row">
+                    <div class="ai-quick-chip" onclick="runDeepAnalysis()">📊 完整分析</div>
                     ${AI_QUICK_QUESTIONS.map(q => `<div class="ai-quick-chip" onclick="askAICoach('${q.replace(/'/g, "\\'")}')">${q}</div>`).join('')}
                 </div>
                 <div id="aiAnswer" class="ai-answer" style="display:none;"></div>
@@ -1863,17 +1861,23 @@ function openAICoach(initialQuestion) {
 
     document.body.appendChild(overlay);
     aiCoachEl = overlay;
-
-    loadQuickCard();
 }
 
-function loadQuickCard() {
-    const card = aiCoachEl && aiCoachEl.querySelector("#aiQuickCard");
-    if (card) card.innerHTML = CoachCard.render(currentState);
-}
-
-function refreshQuickCard() {
-    loadQuickCard();
+// 完整对局分析：配置了 LLM Key 走 LLM，否则走本地规则引擎
+async function runDeepAnalysis() {
+    const answerEl = aiCoachEl.querySelector("#aiAnswer");
+    answerEl.style.display = "block";
+    answerEl.classList.add("loading");
+    answerEl.textContent = "正在结合知识库分析对局数据...";
+    try {
+        const data = await (await fetch("/api/coach/deep")).json();
+        const tag = data.mode === "llm" ? `🤖 LLM ${data.model || ""}` : "⚡ 本地规则引擎";
+        answerEl.textContent = `【${tag}】\n\n${data.analysis || "（无分析内容）"}`;
+    } catch (e) {
+        answerEl.textContent = `❌ 出错了: ${e.message}`;
+    } finally {
+        answerEl.classList.remove("loading");
+    }
 }
 
 function closeAICoach() {
