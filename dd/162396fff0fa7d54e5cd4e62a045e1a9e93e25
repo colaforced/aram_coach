@@ -1,0 +1,26 @@
+frontend/coach-card.js
+  s_71ca9d00bfdd1c::t_8b475d7c81b19a 169
+  s_71ca9d00bfdd1c::t_2ab8e3c0e80407 1
+frontend/index.html
+  s_71ca9d00bfdd1c::t_2ab8e3c0e80407 1850,1866-1880
+README.md
+  s_71ca9d00bfdd1c::t_2ab8e3c0e80407 169-171,199-200
+app/main.py
+  s_71ca9d00bfdd1c::t_2ab8e3c0e80407 15,1009-1011
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "dd162396fff0fa7d54e5cd4e62a045e1a9e93e25",
+  "prompts": {},
+  "sessions": {
+    "s_71ca9d00bfdd1c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e8dbbbc7-1596-44aa-a98a-482619dd431f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "pengyong <pengyong@trip.com>"
+    }
+  }
+}
