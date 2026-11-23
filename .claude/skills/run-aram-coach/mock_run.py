@@ -102,6 +102,7 @@ def lcd_data():
         {"EventName": "ChampionKill", "EventTime": 248.1, "KillerName": "韦鲁斯", "VictimName": "锤石不空大"},
         {"EventName": "ChampionKill", "EventTime": 251.7, "KillerName": "诺手五杀", "VictimName": "赛恩冲冲冲"},
         {"EventName": "Multikill", "EventTime": 253.0, "KillerName": "诺手五杀", "KillStreak": 2},
+        {"EventName": "FirstBrick", "EventTime": 402.6, "KillerName": "诺手五杀"},
         {"EventName": "TurretKilled", "EventTime": 402.6, "KillerName": "诺手五杀"},
         {"EventName": "ChampionKill", "EventTime": 571.3, "KillerName": ME, "VictimName": "奶妈在此"},
         {"EventName": "ChampionKill", "EventTime": 705.9, "KillerName": "光辉之子", "VictimName": "韦鲁斯"},

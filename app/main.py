@@ -1308,11 +1308,14 @@ def _deep_analysis(state: Dict[str, Any]) -> str:
     level = active.get("level") or (my_info.get("level", "?") if my_info else "?")
     phase = state.get("phase", "Unknown")
     hp_pct = stats.get("hp_pct", 0)
+    # 自己阵亡时按复活后的局面判断：血量 0% 不算数，自己也算存活（否则会把"在等复活"判成劣势）
+    me_dead = bool(my_info and my_info.get("is_dead"))
+    respawn = round((my_info or {}).get("respawn_timer") or 0)
 
     my_team_gold = sum(p.get("item_gold", 0) for p in my_team)
     enemy_team_gold = sum(p.get("item_gold", 0) for p in enemy_team)
     gold_diff = my_team_gold - enemy_team_gold
-    my_alive = sum(1 for p in my_team if not p.get("is_dead", False))
+    my_alive = sum(1 for p in my_team if p.get("is_me") or not p.get("is_dead", False))
     enemy_alive = sum(1 for p in enemy_team if not p.get("is_dead", False))
 
     kb = KNOWLEDGE_BASE
@@ -1332,7 +1335,8 @@ def _deep_analysis(state: Dict[str, Any]) -> str:
 
     lines.append("=" * 50)
     lines.append(f"🎮 乱斗深度分析 · {my_champ} Lv.{level}")
-    lines.append(f"⏱️ {m}:{s} · 💰 {gold}G · ❤️ HP {hp_pct:.0f}%")
+    hp_text = f"💀 阵亡中（{respawn}s 后复活）" if me_dead else f"❤️ HP {hp_pct:.0f}%"
+    lines.append(f"⏱️ {m}:{s:02d} · 💰 {gold}G · {hp_text}")
     if my_tier:
         lines.append(f"⭐ 英雄定位: {my_tier} {my_role}")
     else:
@@ -1377,12 +1381,13 @@ def _deep_analysis(state: Dict[str, Any]) -> str:
         adv_score += 1
         reasons.append(f"T0 英雄自带强度加成")
 
-    if hp_pct < 30:
-        adv_score -= 2
-        reasons.append(f"血量极低 ({hp_pct:.0f}%)，容易被秒")
-    elif hp_pct < 50:
-        adv_score -= 1
-        reasons.append(f"血量偏低 ({hp_pct:.0f}%)，谨慎操作")
+    if not me_dead:
+        if hp_pct < 30:
+            adv_score -= 2
+            reasons.append(f"血量极低 ({hp_pct:.0f}%)，容易被秒")
+        elif hp_pct < 50:
+            adv_score -= 1
+            reasons.append(f"血量偏低 ({hp_pct:.0f}%)，谨慎操作")
 
     if adv_score >= 4:
         verdict = "🟢 大优势 · 主动开团"
@@ -1400,6 +1405,8 @@ def _deep_analysis(state: Dict[str, Any]) -> str:
         lines.append(f"  • {r}")
     if not reasons:
         lines.append("  • 无明显优劣势，看操作")
+    if me_dead:
+        lines.append("  • 你正在等复活，以上按复活后的局面判断；现在先照购物卡买装备")
     lines.append("")
 
     # 2. 属性面板解读
@@ -1424,7 +1431,7 @@ def _deep_analysis(state: Dict[str, Any]) -> str:
             panel_tips.append("法强偏低，优先堆法强（卢登/永霜/暗夜收割者）")
         if stats.get('magic_pen_flat', 0) + stats.get('magic_pen_pct', 0) < 0.1:
             panel_tips.append("法穿不足，对面有魔抗时需要法穿棒或虚空之杖")
-        if stats.get('hp_pct', 1) < 0.5:
+        if not me_dead and hp_pct < 50:  # hp_pct 是百分数（0~100）
             panel_tips.append("法师脆皮，注意站位，别被雪球拉脸")
     elif my_role in ("射手",):
         if stats.get('attack_speed', 0) < 1.2:

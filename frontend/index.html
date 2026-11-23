@@ -1631,6 +1631,15 @@ function renderLiveTeamPanel(lcd) {
     </div>`;
 }
 
+// LCD 里不带人名的事件；没列出的事件名原样显示
+const EVENT_LABELS = {
+    GameStart: '🎮 对局开始',
+    MinionsSpawning: '🌊 小兵出发',
+    InhibRespawningSoon: '💎 水晶即将重生',
+    InhibRespawned: '💎 水晶已重生',
+    GameEnd: '🏁 对局结束',
+};
+
 function renderEventStream(events) {
     const recent = events.slice(-12);
     const html = recent.map(e => {
@@ -1661,6 +1670,17 @@ function renderEventStream(events) {
         } else if (name === 'HeraldKill') {
             cls = 'edragon';
             text = `🦅 ${esc(e.KillerName)} 击杀峡谷先锋`;
+        } else if (name === 'FirstBlood') {
+            cls = 'ekill';
+            text = `🩸 ${esc(e.Recipient)} 拿下一血`;
+        } else if (name === 'FirstBrick') {
+            cls = 'eturret';
+            text = `🏰 ${esc(e.KillerName)} 拿下首座防御塔`;
+        } else if (name === 'Ace') {
+            cls = 'ekill';
+            text = `💥 ${esc(e.Acer)} 完成团灭`;
+        } else if (EVENT_LABELS[name]) {
+            text = EVENT_LABELS[name];
         } else {
             text = esc(name);
         }
