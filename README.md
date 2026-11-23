@@ -7,7 +7,7 @@
 - **只在三个决策时刻给明确答案**：选人（换 / 骰 / 留）、阵亡或开局（买什么）、升级（选哪个强化符文）；不刷泛泛的提示
 - 大乱斗数据自动同步：OP.GG 大乱斗统计（梯度、胜率、出装、符文、召唤师技能、加点）+ 大乱斗平衡修正（造成/承受伤害、治疗、护盾等），拉不到时退回本地 170 名英雄数据
 - 版本知识库驱动（海克斯大乱斗 `25.24_2025-12`）
-- 双模式：配置了 API Key 走 LLM 深度分析，未配置自动降级为本地规则引擎
+- 双模式：配置了 API Key 时 AI 教练走 LLM（流式输出，可追问），未配置自动降级为本地规则引擎
 
 ---
 
@@ -145,6 +145,8 @@ python run.py
 | `llm.model` | 模型名 |
 | `llm.temperature` | 采样温度 |
 | `llm.timeout` | 请求超时（秒） |
+| `llm.max_tokens` | 可选，各任务的输出上限（含推理模型的思考过程），默认 `{"ask": 4000, "deep": 6000, "augment": 2000}` |
+| `llm.extra_body` | 可选，原样并入请求体的额外参数；默认：月之暗面发 `{"reasoning_effort": "low"}`，其他服务商不发 |
 | `data_sync.auto` | 可选，默认 `true`：启动时数据过期则后台自动同步 |
 | `data_sync.max_age_hours` | 可选，默认 `24`：同步数据的有效期（小时） |
 | `runes.auto_apply` | 可选，默认 `false`：选人阶段换英雄后自动把推荐符文写进客户端（临时符文页，不删任何页） |
@@ -158,7 +160,19 @@ python run.py
 - DeepSeek：`https://api.deepseek.com/v1`
 - OpenAI：`https://api.openai.com/v1`
 
-> ⚠️ `config.json` 已被纳入版本管理，正式公开前请移除其中的 `api_key`，或改为从环境变量读取。
+### 不把 Key 放进仓库
+
+`config.json` 纳入了版本管理，Key 建议放在下面两处之一（优先级从高到低），启动日志会写明 Key 来自哪里：
+
+1. 环境变量 `ARAM_COACH_LLM_API_KEY`
+2. `config.local.json`（已 gitignore）：内容会叠加到 `config.json` 之上，例如 `{"llm": {"api_key": "sk-..."}}`
+
+### AI 教练是怎么用 LLM 的
+
+- **分工**：价格、合成、敌我划分、该买什么、换不换英雄由本地规则算好，作为"本地规则结论"交给模型；模型负责解释和补充判断，提示词要求数值只用提供的数据（附当前版本装备价格），不凭记忆
+- **上下文**（`app/ai.py`）：只放本局事实和与本局相关的知识库内容（本局英雄的梯度、你这个英雄的专属数据、你这个定位的出装公式；整局分析再加强化符文、装备误区、雪球技巧），不发召唤师名
+- **三个任务各有提示词**：问 AI 直接回答、几行以内，带本局最近 4 轮问答以便追问（进入新一局的选人阶段自动清空）；深度分析固定四段（选人阶段换一套）；强化符文三选一只要三行
+- **传输**（`app/llm_client.py`）：真流式输出，推理模型思考时界面显示"思考中"；开始输出前遇到 429/5xx 自动重试；浏览器中途放弃时连接随之关闭
 
 ---
 
@@ -185,7 +199,8 @@ python run.py
 │   ├── augments.py      # 海克斯大乱斗强化符文：符文池、三选一排序
 │   ├── lcu_client.py    # LCU 连接器：定位 lockfile / 解析日志取认证信息、读写请求
 │   ├── lcd_client.py    # LCD 客户端：读取局内实时数据（https://127.0.0.1:2999）、识别自己、划分我方/敌方
-│   ├── llm_client.py    # LLM 客户端：OpenAI 兼容接口调用、429 重试
+│   ├── ai.py            # AI 教练：本局事实与知识库切片、三个任务的提示词、追问历史
+│   ├── llm_client.py    # LLM 传输层：OpenAI 兼容接口、真流式、重试
 │   └── data_sync.py     # 大乱斗数据同步：OP.GG / Meraki / CommunityDragon → aram_meta.json
 ├── data/
 │   ├── champions.json       # 170 名英雄的乱斗数据（兜底 + 手写提示语）
@@ -198,7 +213,7 @@ python run.py
 ├── frontend/
 │   ├── index.html       # 主控台（唯一页面）
 │   └── coach-card.js    # 决策卡 / 强化符文选择器
-├── config.json          # 路径、端口、LLM 配置
+├── config.json          # 路径、端口、LLM 配置（Key 建议放 config.local.json 或环境变量）
 ├── requirements.txt
 ├── run.py               # 唯一启动入口（读取 web_port）
 ├── win_compat.py        # Windows 异步 IO 兼容垫片（run.py / update_data.py 先导入它）
@@ -244,8 +259,8 @@ python rebuild_db.py
 | --- | --- | --- |
 | GET | `/` | 主控台页面 |
 | GET | `/api/state` | 当前完整对局状态（JSON） |
-| GET | `/api/coach/deep` | 深度分析（LLM 或规则引擎，返回 `mode` 字段标识来源） |
-| GET | `/api/coach/ask?q=` | 向 LLM 追问，流式返回 |
+| POST | `/api/ai/deep` | 整局分析，SSE 流式（有 Key 走 LLM，否则一次给出本地规则引擎的结果；`start` 事件的 `mode` 标识来源） |
+| POST | `/api/ai/ask` | 问 AI 教练，body `{"question": "...", "history": [{"q", "a"}]}`，SSE 流式 |
 | GET | `/api/coach/md` | 当前状态的 Markdown 快照 |
 | GET | `/api/coach/status` | LLM 是否启用及模型信息 |
 | GET | `/api/kb/status` | 知识库加载状态与统计 |
@@ -299,7 +314,7 @@ python rebuild_db.py
 
 **轮询**：后台任务每 2 秒采集一次状态，检测到阶段变化、骰子重随、等级提升时通过 WebSocket 主动推送增量事件。
 
-**双模式**：`llm_client.enabled` 取决于 `config.json` 是否配置了 `api_key`。配置了就走 LLM 生成深度分析，没配置就走 `_deep_analysis()` 本地规则引擎，页面右上角标签会显示当前模式。
+**双模式**：`llm_client.enabled` 取决于是否配置了 Key（`config.json` / `config.local.json` / 环境变量）。配置了就走 LLM，没配置时深度分析走 `_deep_analysis()` 本地规则引擎，报告上方会标明当前模式。AI 接口用 SSE 推送事件：`start` → `thinking` → `delta`… → `done`（出错为 `error`）。
 
 ---
 
@@ -315,7 +330,7 @@ A：`run.py` / `update_data.py` 会先导入 `win_compat.py`（Windows 异步 IO
 A：修改 `config.json` 的 `web_port` 后重启。
 
 **Q：LLM 分析没有返回内容？**
-A：检查 `config.json` 的 `api_key` 是否有效；`/api/coach/status` 可确认是否启用；月之暗面有并发限制，超时会自动重试 3 次。
+A：先看启动日志里的 `LLM:` 一行（Key 来自哪里），`/api/coach/status` 可确认是否启用；Key 无效会直接提示 401。提示"思考用完了长度上限"说明推理模型思考太久，调大 `llm.max_tokens` 对应任务的值；换成不认 `reasoning_effort` 的服务商时，把 `llm.extra_body` 设为 `{}`。
 
 **Q：局内数据不刷新？**
 A：LCD 端口 `2999` 仅在对局中开放，选人阶段该接口不可用属正常现象。
@@ -339,7 +354,7 @@ A：编辑 `data/champions.json`，字段参考现有条目；改完用 `python 
 
 - 遵守《英雄联盟》玩家守则与 Riot Games 相关规定，避免违反反作弊条款
 - 切勿用于任何形式的自动化游戏操控
-- 请勿将 `config.json` 中的 `api_key` 提交到公开仓库
+- 请勿将 API Key 提交到公开仓库：放 `config.local.json` 或环境变量 `ARAM_COACH_LLM_API_KEY`
 
 ---
 

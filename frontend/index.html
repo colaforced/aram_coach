@@ -44,6 +44,14 @@ body {
 .guide-tabs button.on { background: #1e2a3a; color: #4fc3f7; border-color: #4fc3f7; }
 .guide-pane[hidden] { display: none; }
 .guide-pane .ai-answer { max-height: 70vh; overflow-y: auto; }
+.ai-thread { max-height: 62vh; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+.ai-thread:empty { display: none; }
+.ai-thread .ai-answer { max-height: none; overflow: visible; }
+.ai-q { font-size: 13px; color: #90caf9; margin-bottom: 6px; }
+.ai-thinking { color: #90a4ae; }
+.ai-thread-tools { text-align: right; margin-top: 6px; }
+.ai-thread-tools button { background: none; border: none; color: #607d8b; font-size: 12px; cursor: pointer; }
+.ai-thread-tools button:hover { color: #b0bec5; }
 .guide-pane .ai-input-row { padding: 12px 0 0; background: none; border-top: none; }
 .deep-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 12px; color: #78909c; }
 .deep-head button {
@@ -1201,7 +1209,8 @@ body {
             </div>
             <div class="guide-pane" data-pane="ai" hidden>
                 <div class="ai-quick-row" id="aiQuick"></div>
-                <div id="aiAnswer" class="ai-answer" style="display:none;"></div>
+                <div id="aiThread" class="ai-thread ai-scroll"></div>
+                <div class="ai-thread-tools"><button onclick="resetAIThread()">清空对话</button></div>
                 <div class="ai-input-row">
                     <input id="aiInput" type="text" placeholder="问 LLM… 比如 这个装备为什么推荐？"
                         onkeydown="if(event.key==='Enter') askAICoach(this.value)">
@@ -1230,6 +1239,7 @@ function connectWS() {
             render();
         } else if (msg.type === 'phase_change') {
             currentState = msg.data;
+            if (msg.data.phase === 'ChampSelect') resetAIThread();
             render();
         } else if (msg.type === 'dice_rolled') {
             const d = msg.data;
@@ -1869,31 +1879,127 @@ function scrollToCoach() { focusGuide('coach'); }
 function openDeepAnalysis() { if (focusGuide('deep')) runDeepAnalysis(); }
 function openAICoach() { if (focusGuide('ai')) document.getElementById('aiInput').focus(); }
 
-// 深度分析（整局报告）：配置了 LLM Key 走 LLM，否则走本地规则引擎
-async function runDeepAnalysis() {
-    const out = document.getElementById('deepReport');
-    const btn = document.getElementById('deepBtn');
-    const meta = document.getElementById('deepMeta');
-    out.style.display = 'block';
-    out.classList.add('loading');
-    out.textContent = '正在结合知识库分析对局数据...';
-    btn.disabled = true;
-    try {
-        const data = await (await fetch('/api/coach/deep')).json();
-        const mode = data.mode === 'llm' ? `🤖 LLM ${data.model || ''}` : '⚡ 本地规则引擎（未配置 LLM Key）';
-        meta.textContent = `${mode} · ${new Date().toLocaleTimeString()}`;
-        out.innerHTML = renderLite(data.analysis || '（无分析内容）');
-    } catch (e) {
-        out.textContent = `❌ 出错了: ${e.message}`;
-    } finally {
-        out.classList.remove('loading');
-        btn.disabled = false;
-        btn.textContent = '重新生成';
-    }
-}
+// ---------------------------------------------------------------- AI 输出（SSE 流式）
+// 服务端事件：start {mode, model} → thinking（推理模型在思考）→ delta {text}… → done；出错 error {text}
 
 function renderLite(text) {
     return esc(text).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+}
+
+// fetch + ReadableStream 读 SSE（EventSource 不支持 POST）
+async function readSSE(url, body, onEvent, signal) {
+    const resp = await fetch(url, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body || {}), signal,
+    });
+    if (!resp.ok) throw new Error(`请求失败 (${resp.status})`);
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+    for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        let i;
+        while ((i = buf.indexOf('\n\n')) >= 0) {
+            const line = buf.slice(0, i).split('\n').find(l => l.startsWith('data:'));
+            buf = buf.slice(i + 2);
+            if (line) onEvent(JSON.parse(line.slice(5)));
+        }
+    }
+}
+
+// 把一次输出渲染到 el：思考中计时，正文边到边显示。返回 { handle(ev), text(), meta }
+function streamView(el) {
+    let text = '', timer = null, started = Date.now();
+    const meta = {};
+    const thinking = () => {
+        const sec = Math.round((Date.now() - started) / 1000);
+        el.innerHTML = `<span class="ai-thinking">🤔 思考中 ${sec}s…</span>`;
+    };
+    const stop = () => { if (timer) { clearInterval(timer); timer = null; } };
+    return {
+        meta,
+        text: () => text,
+        handle(ev) {
+            if (ev.type === 'start') { Object.assign(meta, ev); el.innerHTML = '<span class="ai-thinking">⏳ 连接中…</span>'; }
+            else if (ev.type === 'thinking') { started = Date.now(); thinking(); timer = setInterval(thinking, 1000); }
+            else if (ev.type === 'delta') { stop(); text += ev.text; el.innerHTML = renderLite(text); el.classList.add('loading'); }
+            else if (ev.type === 'error') { stop(); text += (text ? '\n\n' : '') + ev.text; el.innerHTML = renderLite(text); meta.error = true; }
+            else if (ev.type === 'done') { stop(); }
+            const box = el.closest('.ai-scroll') || el;
+            box.scrollTop = box.scrollHeight;
+        },
+        finish() { stop(); el.classList.remove('loading'); },
+    };
+}
+
+let deepAbort = null;
+
+// 深度分析（整局报告）：配置了 LLM Key 走 LLM（流式），否则走本地规则引擎
+async function runDeepAnalysis() {
+    const out = document.getElementById('deepReport');
+    const btn = document.getElementById('deepBtn');
+    const metaEl = document.getElementById('deepMeta');
+    if (deepAbort) deepAbort.abort();
+    deepAbort = new AbortController();
+    out.style.display = 'block';
+    btn.disabled = true;
+    metaEl.textContent = '生成中…';
+    const view = streamView(out);
+    try {
+        await readSSE('/api/ai/deep', {}, ev => view.handle(ev), deepAbort.signal);
+        const m = view.meta;
+        metaEl.textContent = `${m.mode === 'llm' ? `🤖 LLM ${m.model || ''}` : '⚡ 本地规则引擎（未配置 LLM Key）'} · ${new Date().toLocaleTimeString()}`;
+    } catch (e) {
+        if (e.name !== 'AbortError') { out.textContent = `❌ 出错了: ${e.message}`; metaEl.textContent = ''; }
+    } finally {
+        view.finish();
+        btn.disabled = false;
+        btn.textContent = '重新生成';
+        deepAbort = null;
+    }
+}
+
+// 问 AI：本局的问答串，追问时带上最近几轮
+let aiHistory = [];
+
+function resetAIThread() {
+    if (aiAbort) aiAbort.abort();
+    aiHistory = [];
+    const thread = document.getElementById('aiThread');
+    if (thread) thread.innerHTML = '';
+}
+
+async function askAICoach(question) {
+    question = (question || '').trim();
+    if (!question) return;
+    const thread = document.getElementById('aiThread');
+    const sendBtn = document.getElementById('aiSendBtn');
+    const input = document.getElementById('aiInput');
+    if (aiAbort) aiAbort.abort();
+    const controller = new AbortController();
+    aiAbort = controller;
+
+    const turn = document.createElement('div');
+    turn.className = 'ai-turn';
+    turn.innerHTML = `<div class="ai-q"></div><div class="ai-answer loading"></div>`;
+    turn.firstChild.textContent = `🙋 ${question}`;
+    thread.appendChild(turn);
+    const view = streamView(turn.lastChild);
+    input.value = '';
+    sendBtn.disabled = true;
+    try {
+        await readSSE('/api/ai/ask', { question, history: aiHistory.slice(-4) }, ev => view.handle(ev), controller.signal);
+        if (!view.meta.error && view.text()) aiHistory.push({ q: question, a: view.text() });
+    } catch (e) {
+        turn.lastChild.textContent = e.name === 'AbortError' ? '（已中断）' : `❌ 出错了: ${e.message}`;
+    } finally {
+        view.finish();
+        sendBtn.disabled = false;
+        input.focus();
+        if (aiAbort === controller) aiAbort = null;
+    }
 }
 
 function initGuide() {
@@ -1949,65 +2055,6 @@ function copyMd() {
         btn.textContent = "✅ 已复制!";
         setTimeout(() => btn.textContent = old, 1500);
     });
-}
-
-async function askAICoach(question) {
-    if (!question || !question.trim()) return;
-    question = question.trim();
-
-    const answerEl = document.getElementById("aiAnswer");
-    const sendBtn = document.getElementById("aiSendBtn");
-    const input = document.getElementById("aiInput");
-
-    if (aiAbort) {
-        aiAbort.abort();
-    }
-
-    answerEl.style.display = "block";
-    answerEl.textContent = "";
-    answerEl.classList.add("loading");
-    sendBtn.disabled = true;
-    input.disabled = true;
-
-    const controller = new AbortController();
-    aiAbort = controller;
-
-    try {
-        const url = `/api/coach/ask?q=${encodeURIComponent(question)}`;
-        const resp = await fetch(url, { signal: controller.signal });
-
-        if (!resp.ok) {
-            answerEl.classList.remove("loading");
-            answerEl.textContent = `❌ 请求失败 (${resp.status})`;
-            return;
-        }
-
-        const reader = resp.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
-
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            buffer += decoder.decode(value, { stream: true });
-            answerEl.innerHTML = renderLite(buffer);
-            answerEl.scrollTop = answerEl.scrollHeight;
-        }
-
-        answerEl.classList.remove("loading");
-    } catch (err) {
-        if (err.name === "AbortError") {
-            answerEl.textContent += "\n\n（已中断）";
-        } else {
-            answerEl.classList.remove("loading");
-            answerEl.textContent = `❌ 出错了: ${err.message}`;
-        }
-    } finally {
-        sendBtn.disabled = false;
-        input.disabled = false;
-        input.focus();
-        aiAbort = null;
-    }
 }
 
 initGuide();

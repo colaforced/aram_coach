@@ -19,3 +19,6 @@ Thumbs.db
 # 大乱斗同步数据（OP.GG / Meraki 运行时缓存）
 data/aram_meta.json
 data/aram_meta.tmp
+
+# 本地私人配置（LLM Key 等），覆盖 config.json
+config.local.json

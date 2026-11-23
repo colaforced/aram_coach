@@ -16,9 +16,9 @@ from fastapi.responses import FileResponse, RedirectResponse, StreamingResponse
 from pydantic import BaseModel
 
 from app.lcu_client import LCUClient
-from app import advice, augments, data_sync, items, lcd_client, runes
+from app import advice, ai, augments, data_sync, items, lcd_client, runes
 from app.lcd_client import resolve_my_enemy_teams
-from app.llm_client import LLMClient
+from app.llm_client import LLMClient, LLMError
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 log = logging.getLogger("aram_coach")
@@ -26,8 +26,36 @@ log = logging.getLogger("aram_coach")
 BASE_DIR = Path(__file__).resolve().parent.parent
 GAME_STATE_FILE = BASE_DIR / "game_state.md"
 
-with open(BASE_DIR / "config.json", "r", encoding="utf-8") as f:
-    CONFIG = json.load(f)
+LLM_KEY_ENV = "ARAM_COACH_LLM_API_KEY"
+
+
+def _merge(base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
+    out = dict(base)
+    for k, v in override.items():
+        out[k] = _merge(out[k], v) if isinstance(v, dict) and isinstance(out.get(k), dict) else v
+    return out
+
+
+def load_config(base_dir: Path) -> tuple:
+    """config.json 之上叠加 config.local.json（gitignore，放 Key 等私人配置），
+    最后环境变量 ARAM_COACH_LLM_API_KEY 覆盖 Key。返回 (配置, Key 来源)。"""
+    with open(base_dir / "config.json", "r", encoding="utf-8") as f:
+        cfg = json.load(f)
+    key_from = "config.json" if (cfg.get("llm") or {}).get("api_key") else ""
+    local = base_dir / "config.local.json"
+    if local.exists():
+        with open(local, "r", encoding="utf-8") as f:
+            override = json.load(f)
+        cfg = _merge(cfg, override)
+        if (override.get("llm") or {}).get("api_key"):
+            key_from = "config.local.json"
+    if os.environ.get(LLM_KEY_ENV):
+        cfg.setdefault("llm", {})["api_key"] = os.environ[LLM_KEY_ENV]
+        key_from = f"环境变量 {LLM_KEY_ENV}"
+    return cfg, key_from
+
+
+CONFIG, LLM_KEY_FROM = load_config(BASE_DIR)
 
 with open(BASE_DIR / "data" / "champions.json", "r", encoding="utf-8") as f:
     CHAMPIONS_DB = json.load(f)
@@ -192,6 +220,10 @@ app.mount("/static", StaticFiles(directory=str(BASE_DIR / "frontend")), name="st
 
 lcu = LCUClient(search_paths=CONFIG["lol_install_paths"])
 llm_client = LLMClient(CONFIG.get("llm", {}))
+log.info(f"  LLM: {llm_client.model if llm_client.enabled else '未配置 Key（深度分析走本地规则）'}"
+         + (f"，Key 来自 {LLM_KEY_FROM}" if llm_client.enabled else ""))
+AI_DEPS = ai.Deps(items=ITEM_DB, kb=KNOWLEDGE_BASE, kb_specific_for=lambda name: kb_specific_for(name),
+                  banned=ARAM_BUILD_REPLACEMENTS, alias=CHAMPION_ALIAS)
 
 ws_clients: list[WebSocket] = []
 LAST_STATE: Dict[str, Any] = {}
@@ -1027,21 +1059,6 @@ async def api_state():
     return await collect_game_state()
 
 
-@app.get("/api/coach/ask")
-async def api_coach_ask(q: str = ""):
-    state = await collect_game_state()
-
-    async def generate():
-        try:
-            async for chunk in llm_client.analyze(state, question=q):
-                yield chunk
-        except Exception as e:
-            log.exception("Coach stream error")
-            yield f"\n\n❌ 内部错误: {str(e)[:200]}"
-
-    return StreamingResponse(generate(), media_type="text/event-stream")
-
-
 @app.get("/api/data/status")
 async def api_data_status():
     champs = ARAM_META.get("champions") or {}
@@ -1191,7 +1208,82 @@ async def api_augments_ai(body: AugmentOptions):
     opts = [o.strip() for o in body.options if o.strip()][:3]
     state = await current_state()
     ranking = _augment_ranking(state, opts)
-    return {"text": await llm_client.pick_augment(state, opts, ranking["ranked"])}
+    try:
+        text = await llm_client.chat(ai.augment_messages(state, AI_DEPS, opts, ranking["ranked"]), "augment")
+    except LLMError as e:
+        return {"text": str(e), "ok": False}
+    return {"text": text.replace("**", ""), "ok": True}
+
+
+# ---------------------------------------------------------------- AI 教练（SSE 流式）
+# 事件：start {mode, model} → thinking（推理模型在思考）→ delta {text}… → done；出错 error {text}
+
+class AskBody(BaseModel):
+    question: str
+    history: List[Dict[str, str]] = []
+
+
+def _sse(event: Dict[str, Any]) -> str:
+    return f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+
+
+async def _relay(messages: List[Dict[str, str]], task: str):
+    yield _sse({"type": "start", "mode": "llm", "model": llm_client.model})
+    thinking = False
+    try:
+        async for kind, text in llm_client.stream(messages, task):
+            if kind == "reasoning":
+                if not thinking:
+                    thinking = True
+                    yield _sse({"type": "thinking"})
+            else:
+                yield _sse({"type": "delta", "text": text})
+        yield _sse({"type": "done"})
+    except LLMError as e:
+        yield _sse({"type": "error", "text": str(e)})
+    except Exception as e:  # 别让一个异常把连接挂住
+        log.exception("AI 流式输出出错")
+        yield _sse({"type": "error", "text": f"❌ 内部错误：{str(e)[:160]}"})
+
+
+def _sse_response(gen) -> StreamingResponse:
+    return StreamingResponse(gen, media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
+@app.post("/api/ai/ask")
+async def api_ai_ask(body: AskBody):
+    """向 AI 教练提问；history 是本局之前的问答 [{q, a}]，用于追问。"""
+    question = body.question.strip()
+
+    async def fail(text):
+        yield _sse({"type": "error", "text": text})
+
+    if not question:
+        return _sse_response(fail("问题是空的"))
+    if not llm_client.enabled:
+        return _sse_response(fail("⚠️ 未配置 LLM API Key：在 config.local.json 或环境变量 "
+                                  f"{LLM_KEY_ENV} 里配置后重启"))
+    state = await current_state()
+    return _sse_response(_relay(ai.ask_messages(state, AI_DEPS, question, body.history), "ask"))
+
+
+@app.post("/api/ai/deep")
+async def api_ai_deep():
+    """整局分析：配置了 Key 走 LLM（流式），否则走本地规则引擎（一次给完）。"""
+    state = await current_state()
+    if llm_client.enabled:
+        return _sse_response(_relay(ai.deep_messages(state, AI_DEPS), "deep"))
+
+    async def rules():
+        yield _sse({"type": "start", "mode": "rules"})
+        try:
+            yield _sse({"type": "delta", "text": _deep_analysis(state)})
+            yield _sse({"type": "done"})
+        except Exception as e:
+            log.exception("规则引擎深度分析失败")
+            yield _sse({"type": "error", "text": f"❌ 分析失败：{str(e)[:160]}"})
+    return _sse_response(rules())
 
 
 def _deep_analysis(state: Dict[str, Any]) -> str:
@@ -1522,26 +1614,6 @@ def _deep_analysis(state: Dict[str, Any]) -> str:
     lines.append("=" * 50)
 
     return "\n".join(lines)
-
-
-@app.get("/api/coach/deep")
-async def api_coach_deep():
-    try:
-        state = await collect_game_state()
-        if llm_client.enabled:
-            log.info("Deep analysis: using LLM (%s)", llm_client.model)
-            chunks = []
-            async for chunk in llm_client.analyze(state, kb=KNOWLEDGE_BASE):
-                chunks.append(chunk)
-            text = "".join(chunks)
-            return {"analysis": text, "mode": "llm", "model": llm_client.model}
-        else:
-            log.info("Deep analysis: LLM not configured, fallback to rules")
-            text = _deep_analysis(state)
-            return {"analysis": text, "mode": "rules"}
-    except Exception as e:
-        log.exception("Deep analysis failed")
-        return {"analysis": f"❌ 分析失败: {e}"}
 
 
 @app.get("/api/lcu/status")
