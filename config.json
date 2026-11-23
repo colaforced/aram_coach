@@ -8,7 +8,7 @@
     "dev_mode": false,
     "llm": {
         "base_url": "https://api.moonshot.cn/v1",
-        "api_key": "sk-ms-YQnOmRi1HAHHML6vvYfaeQ7ZXq3C2yjHiSYjHVfUjHQKZjCnwifeG57D",
+        "api_key": "",
         "model": "kimi-k3",
         "temperature": 1.0,
         "timeout": 60.0
