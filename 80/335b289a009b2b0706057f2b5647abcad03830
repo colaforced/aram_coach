@@ -1,0 +1,19 @@
+config.json
+  s_71ca9d00bfdd1c::t_28f3608a6ec612 11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "80335b289a009b2b0706057f2b5647abcad03830",
+  "prompts": {},
+  "sessions": {
+    "s_71ca9d00bfdd1c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e8dbbbc7-1596-44aa-a98a-482619dd431f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "pengyong <pengyong@trip.com>"
+    }
+  }
+}
