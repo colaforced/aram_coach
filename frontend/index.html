@@ -1640,9 +1640,11 @@ function renderBuildProgress(lcd, coach) {
 }
 
 function renderLiveTeamPanel(lcd) {
+    // 按 is_me 判断我方，找不到自己时退回 ORDER（与后端 resolve_my_enemy_teams 一致）
     const tm = lcd.team_map || {};
-    const myList = tm['ORDER'] || [];
-    const enemyList = tm['CHAOS'] || [];
+    const iAmChaos = (tm['CHAOS'] || []).some(p => p.is_me);
+    const myList = (iAmChaos ? tm['CHAOS'] : tm['ORDER']) || [];
+    const enemyList = (iAmChaos ? tm['ORDER'] : tm['CHAOS']) || [];
 
     function kdaRatio(k, d, a) {
         if (!k && !a) return 0;
@@ -1667,11 +1669,10 @@ function renderLiveTeamPanel(lcd) {
             }
         }
 
-        const goldEarned = Math.round(p.gold_earned || 0);
-        const damage = Math.round(p.total_damage_champs || 0);
-        const cs = p.minions_killed || 0;
-        const wardsP = p.ward_placed || 0;
-        const multiKill = p.largest_multi_kill || 0;
+        // LCD 只提供 KDA/补刀/视野分/装备；当前金币只有自己的
+        const itemGold = p.item_gold || 0;
+        const cs = p.cs || 0;
+        const wardScore = p.ward_score || 0;
 
         return `<div class="player-card ${dead ? 'dead' : ''} ${p.is_me ? 'me' : ''}">
             <div class="player-head">
@@ -1680,40 +1681,39 @@ function renderLiveTeamPanel(lcd) {
                     <span class="champ">${p.champion}</span>
                     <span class="lvl">Lv${p.level || 1}</span>
                 </span>
-                ${dead ? `<span class="dead-tag">💀 ${p.respawn_timer || 0}s</span>` : (multiKill > 1 ? `<span class="dead-tag">🔥${multiKill}连杀</span>` : '')}
+                ${dead ? `<span class="dead-tag">💀 ${p.respawn_timer || 0}s</span>` : ''}
             </div>
             <div class="player-stats-row">
                 <span class="kda">KDA <span class="kda-val ${kdaClass(ratio)}">${p.kills || 0}/${p.deaths || 0}/${p.assists || 0}</span> <span style="color:#b0bec5;">(${ratio})</span></span>
             </div>
             <div class="player-stats-row">
-                <span class="gold-earned">💰 ${Math.round(p.gold || 0)}G (累计${goldEarned}G)</span>
-                <span class="dmg">⚔️ ${damage}伤害</span>
+                <span class="gold-earned">💰 装备 ${itemGold}G${p.is_me && p.gold != null ? ` · 现金 ${Math.round(p.gold)}G` : ''}</span>
             </div>
-            ${(cs > 0 || wardsP > 0) ? `<div class="player-stats-row">
+            ${(cs > 0 || wardScore > 0) ? `<div class="player-stats-row">
                 ${cs > 0 ? `<span>🌾 ${cs}补刀</span>` : ''}
-                ${wardsP > 0 ? `<span>👁️ ${wardsP}插眼</span>` : ''}
+                ${wardScore > 0 ? `<span>👁️ 视野 ${wardScore}</span>` : ''}
             </div>` : ''}
             <div class="player-items-row">${itemsHtml.join('')}</div>
         </div>`;
     }
 
     function renderCol(list, isMine) {
-        const totalGold = list.reduce((s, p) => s + Math.round(p.gold || 0), 0);
+        const totalGold = list.reduce((s, p) => s + (p.item_gold || 0), 0);
         const totalKills = list.reduce((s, p) => s + (p.kills || 0), 0);
         const totalDeaths = list.reduce((s, p) => s + (p.deaths || 0), 0);
-        const totalDamage = list.reduce((s, p) => s + Math.round(p.total_damage_champs || 0), 0);
+        const totalCs = list.reduce((s, p) => s + (p.cs || 0), 0);
         const aliveCount = list.filter(p => !p.is_dead).length;
         return `<div>
             <div class="team-col-title ${isMine ? 'my' : 'enemy'}">${isMine ? '🟢 我方' : '🔴 敌方'} · ${aliveCount}/5 存活</div>
             ${list.map(p => renderPlayerCard(p, isMine)).join('')}
             <div style="margin-top:6px;padding:6px 10px;background:#0f1923;border-radius:6px;font-size:11px;color:#78909c;">
-                总计: KDA ${totalKills}/${totalDeaths}/${list.reduce((s,p)=>s+(p.assists||0),0)} · 💰${totalGold}G · ⚔️${totalDamage}
+                总计: KDA ${totalKills}/${totalDeaths}/${list.reduce((s,p)=>s+(p.assists||0),0)} · 💰装备${totalGold}G · 🌾${totalCs}
             </div>
         </div>`;
     }
 
-    const myTotalGold = myList.reduce((s, p) => s + Math.round(p.gold || 0), 0);
-    const enemyTotalGold = enemyList.reduce((s, p) => s + Math.round(p.gold || 0), 0);
+    const myTotalGold = myList.reduce((s, p) => s + (p.item_gold || 0), 0);
+    const enemyTotalGold = enemyList.reduce((s, p) => s + (p.item_gold || 0), 0);
     const goldDiff = myTotalGold - enemyTotalGold;
     const diffAbs = Math.abs(goldDiff);
 
@@ -1722,15 +1722,15 @@ function renderLiveTeamPanel(lcd) {
         <div class="gold-summary">
             <div class="gs-item">
                 <div class="gs-val" style="color:#66bb6a;">${myTotalGold}G</div>
-                <div class="gs-label">我方总金币</div>
+                <div class="gs-label">我方装备总价</div>
             </div>
             <div class="gs-item ${goldDiff >= 0 ? 'diff-pos' : 'diff-neg'}">
                 <div class="gs-val">${goldDiff >= 0 ? '+' : '-'}${diffAbs}G</div>
-                <div class="gs-label">金币差</div>
+                <div class="gs-label">装备差</div>
             </div>
             <div class="gs-item">
                 <div class="gs-val" style="color:#ef5350;">${enemyTotalGold}G</div>
-                <div class="gs-label">敌方总金币</div>
+                <div class="gs-label">敌方装备总价</div>
             </div>
         </div>
         <div class="team-panel">

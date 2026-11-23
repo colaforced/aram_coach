@@ -19,13 +19,13 @@ SYSTEM_PROMPT = """你是英雄联盟大乱斗（ARAM）专家教练，名叫"�
 回答风格：
 - 简洁实用，分点列出，每点不超 20 字
 - 先给结论，再解释原因
-- 数据说话（装备对比、属性差距、金币差）
+- 数据说话（装备对比、属性差距、装备总价差）
 - 不用 markdown 标题，直接用 emoji 分点
 - 特殊提示用 ⚠️ 标记
 
 当被要求分析时，按以下结构输出：
 1. 🎯 当前局势（优/均/劣，理由）
-2. 📊 装备对比（我 vs 对面关键装备、金币差）
+2. 📊 装备对比（我 vs 对面关键装备、装备总价差）
 3. 💪 属性面板解读（当前面板是否合理，缺什么）
 4. 🛒 下一件装备推荐（优先级 + 替代）
 5. ⚡ 操作建议（雪球怎么用、团战站位、技能连招）
@@ -80,9 +80,9 @@ def _format_state_for_prompt(state: Dict[str, Any]) -> str:
 
     my_team, enemy_team = resolve_my_enemy_teams(team_map)
 
-    my_total_gold = sum(int(p.get("gold", 0)) for p in my_team)
-    enemy_total_gold = sum(int(p.get("gold", 0)) for p in enemy_team)
-    parts.append(f"【团队金币差】我方={my_total_gold}G vs 敌方={enemy_total_gold}G (差={my_total_gold - enemy_total_gold:+d})")
+    my_total_gold = sum(p.get("item_gold", 0) for p in my_team)
+    enemy_total_gold = sum(p.get("item_gold", 0) for p in enemy_team)
+    parts.append(f"【团队装备总价】我方={my_total_gold}G vs 敌方={enemy_total_gold}G (差={my_total_gold - enemy_total_gold:+d})")
 
     def _fmt_player(p: Dict[str, Any]) -> str:
         name = p.get("name", "?")
@@ -91,22 +91,16 @@ def _format_state_for_prompt(state: Dict[str, Any]) -> str:
         k = p.get("kills", 0)
         d = p.get("deaths", 0)
         a = p.get("assists", 0)
-        gold = int(p.get("gold", 0))
         dead = p.get("is_dead", False)
         respawn = p.get("respawn_timer", 0)
         dead_tag = f" 💀复活{respawn}s" if dead else ""
         items = [it.get("name", "") for it in p.get("items", []) if it.get("name")]
         item_str = f" 装备=[{','.join(items)}]" if items else ""
-        is_me = p.get("is_me", False)
-        me_tag = " (我)" if is_me else ""
-        dmg = int(p.get("total_damage_champs", 0))
-        cs = p.get("minions_killed", 0)
-        extra = ""
-        if dmg:
-            extra += f" 伤害={dmg}"
-        if cs:
-            extra += f" 补刀={cs}"
-        return f"  - {name}{me_tag} [{champ}] Lv.{level} KDA={k}/{d}/{a} 金币={gold}{dead_tag}{item_str}{extra}"
+        me_tag = " (我)" if p.get("is_me") else ""
+        cs = p.get("cs", 0)
+        extra = f" 补刀={cs}" if cs else ""
+        return (f"  - {name}{me_tag} [{champ}] Lv.{level} KDA={k}/{d}/{a} "
+                f"装备总价={p.get('item_gold', 0)}G{dead_tag}{item_str}{extra}")
 
     if my_team:
         parts.append("【我方】")

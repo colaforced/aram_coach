@@ -3,7 +3,7 @@ import ssl
 import logging
 import urllib.request
 import urllib.error
-from typing import Dict, Any, Optional
+from typing import Dict, Any, List, Optional
 
 log = logging.getLogger("aram_coach.lcd")
 
@@ -36,6 +36,28 @@ def fetch_allgamedata() -> Optional[Dict[str, Any]]:
 def is_available() -> bool:
     data = fetch("/liveclientdata/activeplayer", timeout=2.0)
     return data is not None
+
+
+def find_me_index(players: List[Dict[str, Any]], active_player: Dict[str, Any],
+                  lcu_game_name: str = "") -> Optional[int]:
+    """在 allPlayers 里找到自己。
+
+    Riot ID 改版后，LCD 的 summonerName 可能是 "名字#TAG"，和 LCU 的 gameName
+    对不上。所以先用同一个接口里 activePlayer 的身份字段精确匹配，再退到
+    gameName 匹配 riotIdGameName / summonerName 去掉 #TAG 的部分。
+    """
+    for key in ("riotId", "summonerName"):
+        target = active_player.get(key)
+        if target:
+            for i, p in enumerate(players):
+                if p.get(key) == target:
+                    return i
+    if lcu_game_name:
+        for i, p in enumerate(players):
+            sn = p.get("summonerName") or ""
+            if lcu_game_name in (p.get("riotIdGameName"), sn, sn.split("#")[0]):
+                return i
+    return None
 
 
 def resolve_my_enemy_teams(team_map: Dict[str, Any]) -> tuple:

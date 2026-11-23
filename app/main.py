@@ -550,29 +550,34 @@ def extract_lcd_data(lcd_raw: Dict[str, Any], state: Dict[str, Any]) -> Dict[str
                 "rawDescription": ab.get("rawDescription", ""),
             }
 
+    # LCD 的 allPlayers 只给 KDA / 补刀 / 视野分和装备，拿不到别人的金币和伤害，
+    # 所以团队经济用"装备总价"衡量；当前金币只有自己的（activePlayer）。
     all_p = lcd_raw.get("allPlayers", [])
     team_map: Dict[str, Dict[str, Any]] = {}
-    my_summoner = state.get("summoner_name", "")
-    for p in all_p:
-        name = p.get("summonerName", "")
+    me_idx = lcd_client.find_me_index(all_p, ap, state.get("summoner_name") or "")
+    for idx, p in enumerate(all_p):
         team = p.get("team", "")
         scores = p.get("scores", {})
         items = []
+        item_gold = 0
         for it in p.get("items", []):
+            count = it.get("count") or 1
+            unit = (ITEM_MAP.get(str(it.get("itemID"))) or {}).get("gold_total") or it.get("price", 0)
+            item_gold += unit * count
             items.append({
                 "name": it.get("displayName", ""),
                 "item_id": it.get("itemID"),
                 "price": it.get("price", 0),
+                "count": count,
                 "slot": it.get("slot"),
             })
         entry = {
-            "name": name,
+            "name": p.get("riotIdGameName") or p.get("summonerName", ""),
             "team": team,
             "champion": p.get("championName", ""),
             "is_dead": p.get("isDead", False),
             "respawn_timer": round(p.get("respawnTimer", 0), 1),
             "level": p.get("level"),
-            "gold": round(p.get("currentGold", 0), 0),
             "kills": scores.get("kills", 0),
             "deaths": scores.get("deaths", 0),
             "assists": scores.get("assists", 0),
@@ -580,22 +585,15 @@ def extract_lcd_data(lcd_raw: Dict[str, Any], state: Dict[str, Any]) -> Dict[str
                 (scores.get("kills", 0) + scores.get("assists", 0)) /
                 max(scores.get("deaths", 1), 1), 2
             ),
-            "gold_earned": int(scores.get("goldEarned", 0)),
-            "gold_spent": int(scores.get("goldSpent", 0)),
-            "items_purchased": scores.get("itemsPurchased", 0),
-            "minions_killed": scores.get("minionsKilled", 0),
-            "neutral_minions": scores.get("neutralMinionsKilled", 0),
-            "turrets_killed": scores.get("turretsKilled", 0),
-            "ward_placed": scores.get("wardPlaced", 0),
-            "ward_killed": scores.get("wardKilled", 0),
-            "total_damage_champs": int(scores.get("totalDamageDealtToChampions", 0)),
-            "total_damage_taken": int(scores.get("totalDamageTaken", 0)),
-            "largest_multi_kill": scores.get("largestMultiKill", 0),
-            "largest_killing_spree": scores.get("largestKillingSpree", 0),
+            "cs": scores.get("creepScore", 0),
+            "ward_score": round(scores.get("wardScore", 0), 1),
             "items": items,
             "item_count": len([i for i in items if i.get("name")]),
-            "is_me": name == my_summoner,
+            "item_gold": int(item_gold),
+            "is_me": idx == me_idx,
         }
+        if entry["is_me"]:
+            entry["gold"] = (result.get("active") or {}).get("gold", 0)
         if team not in team_map:
             team_map[team] = []
         team_map[team].append(entry)
@@ -671,27 +669,12 @@ def state_to_md(state: Dict[str, Any]) -> str:
             lines.append(f"**技能等级**: {' | '.join(ab_parts)}")
             lines.append("")
 
-    team_map = lcd.get("team_map") or {}
-    order = team_map.get("ORDER", [])
-    chaos = team_map.get("CHAOS", [])
+    my_team, enemy_team = resolve_my_enemy_teams(lcd.get("team_map") or {})
 
-    my_team_key = None
-    for tkey in ("ORDER", "CHAOS"):
-        for p in team_map.get(tkey, []):
-            if p.get("is_me"):
-                my_team_key = tkey
-                break
-        if my_team_key:
-            break
-    if my_team_key == "CHAOS":
-        my_team, enemy_team = chaos, order
-    else:
-        my_team, enemy_team = order, chaos
-
-    my_total = sum(int(p.get("gold", 0)) for p in my_team)
-    enemy_total = sum(int(p.get("gold", 0)) for p in enemy_team)
+    my_total = sum(p.get("item_gold", 0) for p in my_team)
+    enemy_total = sum(p.get("item_gold", 0) for p in enemy_team)
     diff = my_total - enemy_total
-    lines.append(f"## 💰 团队金币差")
+    lines.append(f"## 💰 团队装备总价")
     lines.append("")
     lines.append(f"| 我方 | 差值 | 敌方 |")
     lines.append(f"|------|------|------|")
@@ -708,20 +691,19 @@ def state_to_md(state: Dict[str, Any]) -> str:
             k = p.get("kills", 0)
             d = p.get("deaths", 0)
             a = p.get("assists", 0)
-            gold = int(p.get("gold", 0))
             dead = p.get("is_dead", False)
             respawn = p.get("respawn_timer", 0)
-            dmg = int(p.get("total_damage_champs", 0))
             items = [it.get("name", "") for it in p.get("items", []) if it.get("name")]
             items_str = ", ".join(items) if items else "—"
             me = " 👉 **(你)**" if p.get("is_me") else ""
             dead_tag = f" 💀复活{respawn}s" if dead else ""
-            rows.append(f"| {emoji} {name}{me} | {champ} | Lv.{lv} | {k}/{d}/{a} | {gold}G | {dmg} | {items_str}{dead_tag} |")
+            rows.append(f"| {emoji} {name}{me} | {champ} | Lv.{lv} | {k}/{d}/{a} | {p.get('cs', 0)} "
+                        f"| {p.get('item_gold', 0)}G | {items_str}{dead_tag} |")
 
         lines.append(f"## {label}")
         lines.append("")
-        lines.append("| 玩家 | 英雄 | 等级 | KDA | 金币 | 对英雄伤害 | 装备 |")
-        lines.append("|------|------|------|-----|------|-----------|------|")
+        lines.append("| 玩家 | 英雄 | 等级 | KDA | 补刀 | 装备总价 | 装备 |")
+        lines.append("|------|------|------|-----|------|----------|------|")
         lines.extend(rows)
         lines.append("")
 
@@ -825,29 +807,14 @@ def generate_quick_html(state: Dict[str, Any]) -> str:
     level = active.get("level", "?")
     game_time = lcd.get("game_time", 0)
 
-    team_map = lcd.get("team_map") or {}
-    order = team_map.get("ORDER", [])
-    chaos = team_map.get("CHAOS", [])
-
-    my_team_key = None
-    for tkey in ("ORDER", "CHAOS"):
-        for p in team_map.get(tkey, []):
-            if p.get("is_me"):
-                my_team_key = tkey
-                break
-        if my_team_key:
-            break
-    if my_team_key == "CHAOS":
-        my_team, enemy_team = chaos, order
-    else:
-        my_team, enemy_team = order, chaos
+    my_team, enemy_team = resolve_my_enemy_teams(lcd.get("team_map") or {})
 
     my_alive = sum(1 for p in my_team if not p.get("is_dead"))
     enemy_alive = sum(1 for p in enemy_team if not p.get("is_dead"))
     alive_diff = my_alive - enemy_alive
 
-    my_total_gold = sum(int(p.get("gold", 0)) for p in my_team)
-    enemy_total_gold = sum(int(p.get("gold", 0)) for p in enemy_team)
+    my_total_gold = sum(p.get("item_gold", 0) for p in my_team)
+    enemy_total_gold = sum(p.get("item_gold", 0) for p in enemy_team)
     gold_diff = my_total_gold - enemy_total_gold
 
     me = None
@@ -863,7 +830,8 @@ def generate_quick_html(state: Dict[str, Any]) -> str:
     coach = state.get("my_coach") or {}
     build = coach.get("build") or []
 
-    owned_items = [it.get("name","") for it in (active.get("items") or []) if it.get("name")]
+    me_items = me.get("items") if me and me.get("is_me") else []
+    owned_items = [it.get("name", "") for it in me_items or [] if it.get("name")]
     next_item = None
     for b in build:
         if b not in owned_items:
@@ -1377,8 +1345,9 @@ def analyze_item_status(recommended_build: list, owned_item_ids: list) -> Dict[s
 
     owned_names = []
     for iid in owned_item_ids:
-        info = ITEM_MAP.get(str(iid), {})
-        owned_names.append(info.get("name", ""))
+        name = ITEM_MAP.get(str(iid), {}).get("name")
+        if name:  # 空名会让下面的 `owned in rec_item` 恒为真
+            owned_names.append(name)
 
     owned_in_build = []
     for rec_item in recommended_build:
@@ -1392,10 +1361,10 @@ def analyze_item_status(recommended_build: list, owned_item_ids: list) -> Dict[s
 
     next_item_cost = 0
     if next_item:
-        for iid, info in ITEM_MAP.items():
-            if info["name"] == next_item:
-                next_item_cost = info["gold_total"]
-                break
+        # 同名的还有斗魂竞技场版本（22xxxx，价格不同），取 ID 最短的常规版本
+        matches = [(len(iid), iid) for iid, info in ITEM_MAP.items() if info["name"] == next_item]
+        if matches:
+            next_item_cost = ITEM_MAP[min(matches)[1]]["gold_total"]
 
     return {
         "owned_in_build": owned_in_build,
@@ -1522,9 +1491,9 @@ def compute_composite_advice(state: Dict[str, Any]) -> Dict[str, Any]:
                 suggestions.append(f"🔴 敌方多 {enemy_alive - my_alive} 人存活，避战等队友复活")
 
             owned_ids = []
-            for p in lcd.get("all_players", []):
-                if p.get("summonerName") == state.get("summoner_name", ""):
-                    owned_ids = [it.get("itemID") for it in p.get("items", []) if it.get("itemID")]
+            for p in my_list:
+                if p.get("is_me"):
+                    owned_ids = [it.get("item_id") for it in p.get("items", []) if it.get("item_id")]
                     break
 
             if my_coach:
@@ -1777,13 +1746,13 @@ def _deep_analysis(state: Dict[str, Any]) -> str:
     my_role = (state.get("my_coach") or {}).get("role", "")
     game_time = lcd.get("game_time", 0)
     m, s = int(game_time // 60), int(game_time % 60)
-    gold = int(my_info.get("gold", 0)) if my_info else 0
-    level = my_info.get("level", "?") if my_info else "?"
+    gold = int(active.get("gold", 0))
+    level = active.get("level") or (my_info.get("level", "?") if my_info else "?")
     phase = state.get("phase", "Unknown")
     hp_pct = stats.get("hp_pct", 0)
 
-    my_team_gold = sum(int(p.get("gold", 0)) for p in my_team)
-    enemy_team_gold = sum(int(p.get("gold", 0)) for p in enemy_team)
+    my_team_gold = sum(p.get("item_gold", 0) for p in my_team)
+    enemy_team_gold = sum(p.get("item_gold", 0) for p in enemy_team)
     gold_diff = my_team_gold - enemy_team_gold
     my_alive = sum(1 for p in my_team if not p.get("is_dead", False))
     enemy_alive = sum(1 for p in enemy_team if not p.get("is_dead", False))
@@ -1810,7 +1779,7 @@ def _deep_analysis(state: Dict[str, Any]) -> str:
         lines.append(f"⭐ 英雄定位: {my_tier} {my_role}")
     else:
         lines.append(f"⭐ 英雄定位: {my_role}")
-    lines.append(f"📊 团队金币: 我方 {my_team_gold}G vs 敌方 {enemy_team_gold}G (差 {gold_diff:+d})")
+    lines.append(f"📊 团队装备总价: 我方 {my_team_gold}G vs 敌方 {enemy_team_gold}G (差 {gold_diff:+d})")
     lines.append("=" * 50)
     lines.append("")
 
