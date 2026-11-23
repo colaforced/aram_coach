@@ -1,0 +1,47 @@
+app/data_sync.py
+  s_71ca9d00bfdd1c::t_b7140904964b67 1-239,242-269,273-359
+  s_71ca9d00bfdd1c::t_2b5f11827d4f68 270-272
+  s_71ca9d00bfdd1c::t_c7eb115bccb91f 240-241
+app/main.py
+  s_71ca9d00bfdd1c::t_d8b45137f09c08 52-62
+  s_71ca9d00bfdd1c::t_4fe1fdad087f88 106-129,134-135
+  s_71ca9d00bfdd1c::t_ce07def6d118f8 230-231,237-239,241-244,249-258
+  s_71ca9d00bfdd1c::t_da51fc29ec35bf 1669-1689
+  s_71ca9d00bfdd1c::t_784cdb110849b9 741-748
+  s_71ca9d00bfdd1c::t_9ca32810144905 18
+  s_71ca9d00bfdd1c::t_2797103645d72c 197-199
+  s_71ca9d00bfdd1c::t_4bf05d9e460fce 183-196,200-201
+frontend/index.html
+  s_71ca9d00bfdd1c::t_008e244eebb7d2 1904-1922,1931-1932,1935,1943,1949
+app/llm_client.py
+  s_71ca9d00bfdd1c::t_879354a1d13e94 137-144
+update_data.py
+  s_71ca9d00bfdd1c::t_fb8a8cb940b86d 1-21
+README.md
+  s_71ca9d00bfdd1c::t_f6a77d0d0694b0 206,211-213
+  s_71ca9d00bfdd1c::t_eb7dcd35f640cc 140-141
+  s_71ca9d00bfdd1c::t_e261f1ca896a77 302-304,306
+  s_71ca9d00bfdd1c::t_413b30ac45c8f0 191
+  s_71ca9d00bfdd1c::t_e3be597eac4e03 48-56
+  s_71ca9d00bfdd1c::t_f1161cd4f67220 237-238
+  s_71ca9d00bfdd1c::t_d87195b4d1a3b5 7
+  s_71ca9d00bfdd1c::t_34670e0c8a4932 174-175,177,180-181
+.gitignore
+  s_71ca9d00bfdd1c::t_dd9dfbfb952dbc 18-21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "fb969c4ad0be57bc22243d2dd3da71cd39d415fe",
+  "prompts": {},
+  "sessions": {
+    "s_71ca9d00bfdd1c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e8dbbbc7-1596-44aa-a98a-482619dd431f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "pengyong <pengyong@trip.com>"
+    }
+  }
+}
