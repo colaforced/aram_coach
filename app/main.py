@@ -16,7 +16,7 @@ from fastapi.responses import FileResponse, RedirectResponse, StreamingResponse
 from pydantic import BaseModel
 
 from app.lcu_client import LCUClient
-from app import advice, ai, augments, data_sync, economy, items, lcd_client, runes
+from app import advice, ai, augments, data_sync, economy, game_log, items, lcd_client, runes
 from app.lcd_client import resolve_my_enemy_teams
 from app.llm_client import LLMClient, LLMError
 
@@ -227,6 +227,10 @@ AI_DEPS = ai.Deps(items=ITEM_DB, kb=KNOWLEDGE_BASE, kb_specific_for=lambda name:
 
 ws_clients: list[WebSocket] = []
 LAST_STATE: Dict[str, Any] = {}
+# 最近一次 LCD 原始数据（和 LAST_STATE 同一轮采集）；记录 AI 调用时原样存下，复盘时能查到解析前的数据
+LAST_LCD_RAW: Dict[str, Any] = {"data": None}
+# 每局的 AI 问答、经济快照和赛后战绩，打完生成复盘（见 app/game_log.py）
+RECORDER = game_log.GameRecorder(BASE_DIR / "game_logs")
 
 GAMEFLOW_PHASES = [
     "None",
@@ -524,6 +528,7 @@ async def collect_game_state() -> Dict[str, Any]:
 
             gf_session = await lcu.get("/lol-gameflow/v1/session")
             if gf_session:
+                state["game_id"] = gf_session.get("gameData", {}).get("gameId")
                 if my_puuid:
                     selections = gf_session.get("gameData", {}).get("playerChampionSelections", [])
                     for sel in selections:
@@ -569,6 +574,7 @@ async def collect_game_state() -> Dict[str, Any]:
 
         # urllib 是同步阻塞的（超时 5 秒），放到线程里跑，避免卡住事件循环
         lcd_raw = await asyncio.to_thread(lcd_client.fetch_allgamedata)
+        LAST_LCD_RAW["data"] = lcd_raw
         if lcd_raw:
             state["lcd"] = extract_lcd_data(lcd_raw, state)
             lcd = state["lcd"]
@@ -997,6 +1003,12 @@ async def poll_lcu():
         try:
             await lcu.wait_for_connection(poll_interval=3.0)
             state = await collect_game_state()
+            try:
+                ended = RECORDER.observe(state)
+                if ended:
+                    spawn(RECORDER.finalize(ended, lcu.get))
+            except Exception as rec_err:
+                log.warning(f"写对局记录失败: {rec_err}")
 
             if state["phase"] != last_phase:
                 log.info(f"Phase changed: {last_phase} -> {state['phase']}")
@@ -1232,10 +1244,13 @@ async def api_augments_ai(body: AugmentOptions):
     opts = [o.strip() for o in body.options if o.strip()][:3]
     state = await current_state()
     ranking = _augment_ranking(state, opts)
+    messages = ai.augment_messages(state, AI_DEPS, opts, ranking["ranked"])
     try:
-        text = await llm_client.chat(ai.augment_messages(state, AI_DEPS, opts, ranking["ranked"]), "augment")
+        text = await llm_client.chat(messages, "augment")
     except LLMError as e:
+        _log_ai(state, task="augment", mode="llm", question=" / ".join(opts), messages=messages, error=str(e))
         return {"text": str(e), "ok": False}
+    _log_ai(state, task="augment", mode="llm", question=" / ".join(opts), messages=messages, answer=text)
     return {"text": text.replace("**", ""), "ok": True}
 
 
@@ -1251,9 +1266,21 @@ def _sse(event: Dict[str, Any]) -> str:
     return f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
 
 
-async def _relay(messages: List[Dict[str, str]], task: str):
+def _log_ai(state: Dict[str, Any], **entry: Any) -> None:
+    """把这次 AI 调用（完整消息、回答、当时的对局数据）记进本局的复盘记录。"""
+    if entry.get("mode") == "llm":
+        entry.setdefault("model", llm_client.model)
+    try:
+        RECORDER.log_ai(state, LAST_LCD_RAW["data"], **entry)
+    except Exception as e:
+        log.warning(f"记录 AI 调用失败: {e}")
+
+
+async def _relay(messages: List[Dict[str, str]], task: str, state: Dict[str, Any], question: Optional[str] = None):
     yield _sse({"type": "start", "mode": "llm", "model": llm_client.model})
     thinking = False
+    parts: List[str] = []
+    error: Optional[str] = "中断（页面关闭或取消）"
     try:
         async for kind, text in llm_client.stream(messages, task):
             if kind == "reasoning":
@@ -1261,13 +1288,19 @@ async def _relay(messages: List[Dict[str, str]], task: str):
                     thinking = True
                     yield _sse({"type": "thinking"})
             else:
+                parts.append(text)
                 yield _sse({"type": "delta", "text": text})
+        error = None
         yield _sse({"type": "done"})
     except LLMError as e:
-        yield _sse({"type": "error", "text": str(e)})
+        error = str(e)
+        yield _sse({"type": "error", "text": error})
     except Exception as e:  # 别让一个异常把连接挂住
         log.exception("AI 流式输出出错")
-        yield _sse({"type": "error", "text": f"❌ 内部错误：{str(e)[:160]}"})
+        error = f"❌ 内部错误：{str(e)[:160]}"
+        yield _sse({"type": "error", "text": error})
+    finally:
+        _log_ai(state, task=task, mode="llm", question=question, messages=messages, answer="".join(parts), error=error)
 
 
 def _sse_response(gen) -> StreamingResponse:
@@ -1289,7 +1322,7 @@ async def api_ai_ask(body: AskBody):
         return _sse_response(fail("⚠️ 未配置 LLM API Key：在 config.local.json 或环境变量 "
                                   f"{LLM_KEY_ENV} 里配置后重启"))
     state = await current_state()
-    return _sse_response(_relay(ai.ask_messages(state, AI_DEPS, question, body.history), "ask"))
+    return _sse_response(_relay(ai.ask_messages(state, AI_DEPS, question, body.history), "ask", state, question))
 
 
 @app.post("/api/ai/deep")
@@ -1297,12 +1330,14 @@ async def api_ai_deep():
     """整局分析：配置了 Key 走 LLM（流式），否则走本地规则引擎（一次给完）。"""
     state = await current_state()
     if llm_client.enabled:
-        return _sse_response(_relay(ai.deep_messages(state, AI_DEPS), "deep"))
+        return _sse_response(_relay(ai.deep_messages(state, AI_DEPS), "deep", state))
 
     async def rules():
         yield _sse({"type": "start", "mode": "rules"})
         try:
-            yield _sse({"type": "delta", "text": _deep_analysis(state)})
+            text = _deep_analysis(state)
+            _log_ai(state, task="deep", mode="rules", answer=text)
+            yield _sse({"type": "delta", "text": text})
             yield _sse({"type": "done"})
         except Exception as e:
             log.exception("规则引擎深度分析失败")

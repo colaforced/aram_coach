@@ -45,6 +45,7 @@ until curl -sf -o /dev/null http://127.0.0.1:8799/api/lcu/status; do sleep 0.5; 
 curl -X POST http://127.0.0.1:8799/mock/phase/ChampSelect   # 选人
 curl -X POST http://127.0.0.1:8799/mock/phase/InProgress    # 对局中（我方阵亡，复活前购物卡）
 curl -X POST http://127.0.0.1:8799/mock/phase/None          # 空闲
+curl -X POST http://127.0.0.1:8799/mock/phase/EndOfGame     # 结算：从对局切过来会生成 game_logs/<时间>/review.md（战绩是假数据）
 ```
 
 页面每 2 秒推送一次状态，切换后最多等 2 秒生效。

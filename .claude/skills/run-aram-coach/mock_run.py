@@ -2,7 +2,8 @@
 
 运行: python .claude/skills/run-aram-coach/mock_run.py
 环境变量: MOCK_PORT（默认 8799，避开正式端口 8765）、MOCK_PHASE（初始阶段，默认 ChampSelect）
-切换场景: POST /mock/phase/{None|ChampSelect|InProgress}
+切换场景: POST /mock/phase/{None|ChampSelect|InProgress|EndOfGame}
+（InProgress → EndOfGame 会触发对局记录拉战绩、生成 game_logs/<时间>/review.md；战绩接口返回的也是假数据）
 
 只替换 main.lcu 和 lcd_client.fetch_allgamedata，其余（规则引擎、数据同步、LLM）都是真的。
 """
@@ -50,8 +51,10 @@ CHAMP_SELECT = {
 MY_TEAM = [("p-me", 63, ME), ("p2", 412, "锤石不空大"), ("p3", 201, "门神布隆"), ("p4", 99, "光辉之子"), ("p5", 122, "诺手五杀")]
 ENEMY = [("e1", 16, "奶妈在此"), ("e2", 516, "山隐之焰"), ("e3", 14, "赛恩冲冲冲"), ("e4", 110, "韦鲁斯"), ("e5", 55, "卡特琳娜")]
 
+GAME_ID = 8800001234
 GAMEFLOW = {
     "gameData": {
+        "gameId": GAME_ID,
         "teamOne": [{"puuid": p, "championId": c} for p, c, _ in MY_TEAM],
         "teamTwo": [{"puuid": p, "championId": c} for p, c, _ in ENEMY],
         "playerChampionSelections": [{"puuid": p, "championId": c} for p, c, _ in MY_TEAM + ENEMY],
@@ -79,6 +82,35 @@ def player(name, champ, team, lvl, k, d, a, cs, its, dead=False, timer=0.0):
         "scores": {"kills": k, "deaths": d, "assists": a, "creepScore": cs, "wardScore": 0},
         "items": its,
     }
+
+
+# 赛后战绩：每人最终真实经济（自己的 = 装备 5350 + 现金 1730；敌方攒着不少没花的钱）
+GAME_LEN = 742.5
+REAL_GOLD = {63: 7080, 412: 4700, 201: 6900, 99: 7400, 122: 8200,
+             16: 5200, 516: 7600, 14: 5600, 110: 8300, 55: 7900}
+PIDS = [c for _, c, _ in MY_TEAM + ENEMY]   # participantId = 下标 + 1，前 5 个是 100 队
+
+
+def match_data():
+    return {
+        "gameId": GAME_ID, "gameMode": "KIWI", "gameDuration": int(GAME_LEN),
+        "participants": [{"participantId": i + 1, "teamId": 100 if i < 5 else 200, "championId": c,
+                          "stats": {"goldEarned": REAL_GOLD[c], "win": i < 5}} for i, c in enumerate(PIDS)],
+        "participantIdentities": [{"participantId": i + 1, "player": {"gameName": n, "puuid": p}}
+                                  for i, (p, _, n) in enumerate(MY_TEAM + ENEMY)],
+    }
+
+
+def timeline_data():
+    # 从 1400 线性涨到最终经济；身上的钱按 30% 算
+    frames = []
+    for t in list(range(0, int(GAME_LEN), 60)) + [GAME_LEN]:
+        f = {}
+        for i, c in enumerate(PIDS):
+            total = 1400 + (REAL_GOLD[c] - 1400) * t / GAME_LEN
+            f[str(i + 1)] = {"participantId": i + 1, "totalGold": int(total), "currentGold": int(total * 0.3)}
+        frames.append({"timestamp": int(t * 1000), "participantFrames": f})
+    return {"frames": frames}
 
 
 def lcd_data():
@@ -147,6 +179,12 @@ class FakeLCU:
             return CHAMP_SELECT
         if path == "/lol-gameflow/v1/session":
             return GAMEFLOW
+        if path == "/lol-end-of-game/v1/eog-stats-block" and phase == "EndOfGame":
+            return {"gameId": GAME_ID, "gameLength": int(GAME_LEN)}
+        if path == f"/lol-match-history/v1/games/{GAME_ID}":
+            return match_data()
+        if path == f"/lol-match-history/v1/game-timelines/{GAME_ID}":
+            return timeline_data()
         return None
 
     async def request(self, method, path, json=None):
