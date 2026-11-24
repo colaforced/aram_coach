@@ -23,5 +23,4 @@ data/aram_meta.tmp
 # 本地私人配置（LLM Key 等），覆盖 config.json
 config.local.json
 
-# 每局的 AI 问答记录、经济快照、赛后战绩和复盘（本地数据）
-game_logs/
+
