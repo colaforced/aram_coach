@@ -16,7 +16,7 @@ from fastapi.responses import FileResponse, RedirectResponse, StreamingResponse
 from pydantic import BaseModel
 
 from app.lcu_client import LCUClient
-from app import advice, ai, augments, data_sync, items, lcd_client, runes
+from app import advice, ai, augments, data_sync, economy, items, lcd_client, runes
 from app.lcd_client import resolve_my_enemy_teams
 from app.llm_client import LLMClient, LLMError
 
@@ -584,6 +584,25 @@ async def collect_game_state() -> Dict[str, Any]:
     return state
 
 
+# LCD 的 championName 是本地化名字（本名或称号都可能），反查 championId
+CHAMPION_ID_BY_NAME: Dict[str, int] = {
+    name: int(cid)
+    for src in (CHAMPION_MAP, CHAMPION_ALIAS, {k: v.get("name") for k, v in CHAMPIONS_DB.items()})
+    for cid, name in src.items() if name
+}
+
+
+def _find_me_by_champion(players: List[Dict[str, Any]], champion_id: Any) -> Optional[int]:
+    """名字对不上时按 LCU 里自己的英雄找：大乱斗一局里英雄不重复。
+
+    认不出自己会把 ORDER 当我方，在红方时敌我整个颠倒（经济差也跟着反号），所以多一道兜底。
+    """
+    if not champion_id:
+        return None
+    hits = [i for i, p in enumerate(players) if CHAMPION_ID_BY_NAME.get(p.get("championName")) == int(champion_id)]
+    return hits[0] if len(hits) == 1 else None
+
+
 def extract_lcd_data(lcd_raw: Dict[str, Any], state: Dict[str, Any]) -> Dict[str, Any]:
     result: Dict[str, Any] = {"available": True}
 
@@ -639,11 +658,13 @@ def extract_lcd_data(lcd_raw: Dict[str, Any], state: Dict[str, Any]) -> Dict[str
                 "rawDescription": ab.get("rawDescription", ""),
             }
 
-    # LCD 的 allPlayers 只给 KDA / 补刀 / 视野分和装备，拿不到别人的金币和伤害，
-    # 所以团队经济用"装备总价"衡量；当前金币只有自己的（activePlayer）。
+    # LCD 的 allPlayers 只给 KDA / 补刀 / 视野分和装备，拿不到别人的金币和伤害；
+    # 当前金币只有自己的（activePlayer）。团队经济见 economy.annotate。
     all_p = lcd_raw.get("allPlayers", [])
     team_map: Dict[str, Dict[str, Any]] = {}
     me_idx = lcd_client.find_me_index(all_p, ap, state.get("summoner_name") or "")
+    if me_idx is None:
+        me_idx = _find_me_by_champion(all_p, state.get("my_champion_id"))
     for idx, p in enumerate(all_p):
         team = p.get("team", "")
         scores = p.get("scores", {})
@@ -664,6 +685,7 @@ def extract_lcd_data(lcd_raw: Dict[str, Any], state: Dict[str, Any]) -> Dict[str
             "name": p.get("riotIdGameName") or p.get("summonerName", ""),
             "team": team,
             "champion": p.get("championName", ""),
+            "champion_id": CHAMPION_ID_BY_NAME.get(p.get("championName")),
             "is_dead": p.get("isDead", False),
             "respawn_timer": round(p.get("respawnTimer", 0), 1),
             "level": p.get("level"),
@@ -688,6 +710,7 @@ def extract_lcd_data(lcd_raw: Dict[str, Any], state: Dict[str, Any]) -> Dict[str
         team_map[team].append(entry)
 
     result["team_map"] = team_map
+    economy.annotate(team_map, (result.get("active") or {}).get("gold"), result["game_time"])
 
     events_raw = lcd_raw.get("events", {}).get("Events", [])
     result["events"] = events_raw[-20:] if events_raw else []
@@ -760,15 +783,16 @@ def state_to_md(state: Dict[str, Any]) -> str:
 
     my_team, enemy_team = resolve_my_enemy_teams(lcd.get("team_map") or {})
 
-    my_total = sum(p.get("item_gold", 0) for p in my_team)
-    enemy_total = sum(p.get("item_gold", 0) for p in enemy_team)
-    diff = my_total - enemy_total
-    lines.append(f"## 💰 团队装备总价")
+    lines.append(f"## 💰 团队经济")
     lines.append("")
-    lines.append(f"| 我方 | 差值 | 敌方 |")
-    lines.append(f"|------|------|------|")
-    sign = "+" if diff >= 0 else ""
-    lines.append(f"| **{my_total}G** | **{sign}{diff}G** | **{enemy_total}G** |")
+    lines.append(f"| | 我方 | 差值 | 敌方 |")
+    lines.append(f"|---|------|------|------|")
+    for label, key in (("估算经济", "est_gold"), ("装备总价（已花掉）", "item_gold")):
+        mine = sum(p.get(key, 0) for p in my_team)
+        theirs = sum(p.get(key, 0) for p in enemy_team)
+        lines.append(f"| {label} | **{mine}G** | **{mine - theirs:+d}G** | **{theirs}G** |")
+    lines.append("")
+    lines.append("> 估算经济按人头 / 助攻 / 补刀推算，用自己的真实金币校准；装备总价不含身上没花的钱。")
     lines.append("")
 
     def _fmt_team(team, label, emoji):
@@ -787,12 +811,12 @@ def state_to_md(state: Dict[str, Any]) -> str:
             me = " 👉 **(你)**" if p.get("is_me") else ""
             dead_tag = f" 💀复活{respawn}s" if dead else ""
             rows.append(f"| {emoji} {name}{me} | {champ} | Lv.{lv} | {k}/{d}/{a} | {p.get('cs', 0)} "
-                        f"| {p.get('item_gold', 0)}G | {items_str}{dead_tag} |")
+                        f"| {p.get('est_gold', 0)}G | {p.get('item_gold', 0)}G | {items_str}{dead_tag} |")
 
         lines.append(f"## {label}")
         lines.append("")
-        lines.append("| 玩家 | 英雄 | 等级 | KDA | 补刀 | 装备总价 | 装备 |")
-        lines.append("|------|------|------|-----|------|----------|------|")
+        lines.append("| 玩家 | 英雄 | 等级 | KDA | 补刀 | 估算经济 | 装备总价 | 装备 |")
+        lines.append("|------|------|------|-----|------|----------|----------|------|")
         lines.extend(rows)
         lines.append("")
 
@@ -1312,9 +1336,11 @@ def _deep_analysis(state: Dict[str, Any]) -> str:
     me_dead = bool(my_info and my_info.get("is_dead"))
     respawn = round((my_info or {}).get("respawn_timer") or 0)
 
-    my_team_gold = sum(p.get("item_gold", 0) for p in my_team)
-    enemy_team_gold = sum(p.get("item_gold", 0) for p in enemy_team)
+    # 局势按估算经济判断：装备总价只是花掉的钱，优势方阵亡少、钱攒在身上，会被低估
+    my_team_gold = sum(p.get("est_gold", 0) for p in my_team)
+    enemy_team_gold = sum(p.get("est_gold", 0) for p in enemy_team)
     gold_diff = my_team_gold - enemy_team_gold
+    item_diff = sum(p.get("item_gold", 0) for p in my_team) - sum(p.get("item_gold", 0) for p in enemy_team)
     my_alive = sum(1 for p in my_team if p.get("is_me") or not p.get("is_dead", False))
     enemy_alive = sum(1 for p in enemy_team if not p.get("is_dead", False))
 
@@ -1341,7 +1367,8 @@ def _deep_analysis(state: Dict[str, Any]) -> str:
         lines.append(f"⭐ 英雄定位: {my_tier} {my_role}")
     else:
         lines.append(f"⭐ 英雄定位: {my_role}")
-    lines.append(f"📊 团队装备总价: 我方 {my_team_gold}G vs 敌方 {enemy_team_gold}G (差 {gold_diff:+d})")
+    lines.append(f"📊 团队经济（估算）: 我方 {my_team_gold}G vs 敌方 {enemy_team_gold}G (差 {gold_diff:+d})"
+                 f" · 装备总价差 {item_diff:+d}G")
     lines.append("=" * 50)
     lines.append("")
 
@@ -1353,16 +1380,16 @@ def _deep_analysis(state: Dict[str, Any]) -> str:
     reasons = []
     if gold_diff > 1000:
         adv_score += 2
-        reasons.append(f"团队经济领先 {gold_diff}G，装备压制")
+        reasons.append(f"团队经济领先约 {gold_diff}G")
     elif gold_diff > 0:
         adv_score += 1
-        reasons.append(f"团队经济小优 +{gold_diff}G")
+        reasons.append(f"团队经济小优约 +{gold_diff}G")
     elif gold_diff < -1000:
         adv_score -= 2
-        reasons.append(f"团队经济落后 {-gold_diff}G，需要避战")
+        reasons.append(f"团队经济落后约 {-gold_diff}G，需要避战")
     elif gold_diff < 0:
         adv_score -= 1
-        reasons.append(f"团队经济小劣 {gold_diff}G")
+        reasons.append(f"团队经济小劣约 {gold_diff}G")
 
     if my_alive > enemy_alive + 1:
         adv_score += 2

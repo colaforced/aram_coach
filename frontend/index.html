@@ -1560,8 +1560,9 @@ function renderLiveTeamPanel(lcd) {
             }
         }
 
-        // LCD 只提供 KDA/补刀/视野分/装备；当前金币只有自己的
+        // LCD 只提供 KDA/补刀/视野分/装备；当前金币只有自己的，别人的经济是后端估算的
         const itemGold = p.item_gold || 0;
+        const estGold = p.est_gold || 0;
         const cs = p.cs || 0;
         const wardScore = p.ward_score || 0;
 
@@ -1578,7 +1579,7 @@ function renderLiveTeamPanel(lcd) {
                 <span class="kda">KDA <span class="kda-val ${kdaClass(ratio)}">${p.kills || 0}/${p.deaths || 0}/${p.assists || 0}</span> <span style="color:#b0bec5;">(${ratio})</span></span>
             </div>
             <div class="player-stats-row">
-                <span class="gold-earned">💰 装备 ${itemGold}G${p.is_me && p.gold != null ? ` · 现金 ${Math.round(p.gold)}G` : ''}</span>
+                <span class="gold-earned">💰 ${p.is_me ? '' : '≈'}${estGold}G · 装备 ${itemGold}G${p.is_me && p.gold != null ? ` · 现金 ${Math.round(p.gold)}G` : ''}</span>
             </div>
             ${(cs > 0 || wardScore > 0) ? `<div class="player-stats-row">
                 ${cs > 0 ? `<span>🌾 ${cs}补刀</span>` : ''}
@@ -1589,7 +1590,7 @@ function renderLiveTeamPanel(lcd) {
     }
 
     function renderCol(list, isMine) {
-        const totalGold = list.reduce((s, p) => s + (p.item_gold || 0), 0);
+        const totalGold = list.reduce((s, p) => s + (p.est_gold || 0), 0);
         const totalKills = list.reduce((s, p) => s + (p.kills || 0), 0);
         const totalDeaths = list.reduce((s, p) => s + (p.deaths || 0), 0);
         const totalCs = list.reduce((s, p) => s + (p.cs || 0), 0);
@@ -1598,30 +1599,33 @@ function renderLiveTeamPanel(lcd) {
             <div class="team-col-title ${isMine ? 'my' : 'enemy'}">${isMine ? '🟢 我方' : '🔴 敌方'} · ${aliveCount}/5 存活</div>
             ${list.map(p => renderPlayerCard(p, isMine)).join('')}
             <div style="margin-top:6px;padding:6px 10px;background:#0f1923;border-radius:6px;font-size:11px;color:#78909c;">
-                总计: KDA ${totalKills}/${totalDeaths}/${list.reduce((s,p)=>s+(p.assists||0),0)} · 💰装备${totalGold}G · 🌾${totalCs}
+                总计: KDA ${totalKills}/${totalDeaths}/${list.reduce((s,p)=>s+(p.assists||0),0)} · 💰≈${totalGold}G · 🌾${totalCs}
             </div>
         </div>`;
     }
 
-    const myTotalGold = myList.reduce((s, p) => s + (p.item_gold || 0), 0);
-    const enemyTotalGold = enemyList.reduce((s, p) => s + (p.item_gold || 0), 0);
+    // 按估算经济比：大乱斗只能阵亡时买装备，装备总价会低估阵亡少（通常是优势）的一方
+    const sum = (list, key) => list.reduce((s, p) => s + (p[key] || 0), 0);
+    const myTotalGold = sum(myList, 'est_gold');
+    const enemyTotalGold = sum(enemyList, 'est_gold');
     const goldDiff = myTotalGold - enemyTotalGold;
     const diffAbs = Math.abs(goldDiff);
+    const itemDiff = sum(myList, 'item_gold') - sum(enemyList, 'item_gold');
 
     return `<div class="panel">
         <h2>👥 实时对局状态</h2>
         <div class="gold-summary">
             <div class="gs-item">
                 <div class="gs-val" style="color:#66bb6a;">${myTotalGold}G</div>
-                <div class="gs-label">我方装备总价</div>
+                <div class="gs-label">我方经济（估算）</div>
             </div>
             <div class="gs-item ${goldDiff >= 0 ? 'diff-pos' : 'diff-neg'}">
                 <div class="gs-val">${goldDiff >= 0 ? '+' : '-'}${diffAbs}G</div>
-                <div class="gs-label">装备差</div>
+                <div class="gs-label" title="按人头/助攻/补刀估算，用你自己的真实金币校准；装备总价不含身上没花的钱">经济差 · 装备差 ${itemDiff >= 0 ? '+' : '-'}${Math.abs(itemDiff)}G</div>
             </div>
             <div class="gs-item">
                 <div class="gs-val" style="color:#ef5350;">${enemyTotalGold}G</div>
-                <div class="gs-label">敌方装备总价</div>
+                <div class="gs-label">敌方经济（估算）</div>
             </div>
         </div>
         <div class="team-panel">

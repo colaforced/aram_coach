@@ -22,7 +22,8 @@ MAX_PRICE_ITEMS = 16
 SYSTEM_BASE = """你是英雄联盟「海克斯大乱斗」（ARAM: Mayhem）教练。
 规则：
 - 大乱斗不能回城：只有开局在泉水、或阵亡后才能买装备，不要建议"回城"。
-- 数值只用【对局数据】里给出的：价格、属性、胜率、梯度、装备总价都以它为准；数据里没有的数字不要报，也不要凭记忆补。
+- 数值只用【对局数据】里给出的：价格、属性、胜率、梯度、经济都以它为准；数据里没有的数字不要报，也不要凭记忆补。
+- 看不到别人身上的现金，团队经济是按人头 / 助攻 / 补刀估算的，说经济差时说"约"，不要说成精确值。
 - 【本地规则结论】（选人建议、购物计划、针对性出装）是按当前版本数据和装备合成树算出来的，默认照它说；你有不同意见时要讲清理由。
 - 不要建议【本模式禁用装备】里的装备。
 - 用中文，口语化，结论先行；不用 Markdown 标题和表格，可以用 emoji 开头分点，重点可以用 **加粗**。"""
@@ -30,7 +31,7 @@ SYSTEM_BASE = """你是英雄联盟「海克斯大乱斗」（ARAM: Mayhem）教
 TASK_ASK = """玩家在对局中向你提问。直接回答这个问题：3～6 行，先给结论；不要套固定的分析结构，和问题无关的内容不要说。"""
 
 TASK_DEEP_GAME = """给出这一局的分析，按下面四段输出，每段 2～4 行：
-🎯 局势：优势 / 均势 / 劣势，依据（装备总价差、存活、双方关键英雄）
+🎯 局势：优势 / 均势 / 劣势，依据（估算经济差、人头、存活、双方关键英雄）
 🛒 出装：照【本地规则结论】说接下来买什么、为什么；对面有回复、坦克多或伤害偏 AP/AD 时怎么应对
 ⚔️ 打法：团战站位、先打谁、雪球和关键技能怎么用（结合双方具体英雄）
 🎲 强化符文：适合这个英雄和本局的方向（参考知识库）"""
@@ -130,11 +131,15 @@ def _game_facts(state: Dict[str, Any], lcd: Dict[str, Any]) -> List[str]:
                  + "，".join(f"{k} {v}" for k, v in stats if v not in (None, 0, "0%")))
 
     my_team, enemy_team = resolve_my_enemy_teams(lcd.get("team_map") or {})
-    mine = sum(p.get("item_gold", 0) for p in my_team)
-    theirs = sum(p.get("item_gold", 0) for p in enemy_team)
+    total = lambda team, key: sum(p.get(key, 0) for p in team)  # noqa: E731
     alive = lambda team: sum(not p.get("is_dead") for p in team)  # noqa: E731
-    lines.append(f"【装备总价】我方 {mine}G vs 敌方 {theirs}G（差 {mine - theirs:+d}）；"
+    est_diff = total(my_team, "est_gold") - total(enemy_team, "est_gold")
+    lines.append(f"【团队经济·估算】我方 {total(my_team, 'est_gold')}G vs 敌方 {total(enemy_team, 'est_gold')}G"
+                 f"（差 {est_diff:+d}）；人头 {total(my_team, 'kills')} vs {total(enemy_team, 'kills')}；"
                  f"存活 {alive(my_team)} vs {alive(enemy_team)}")
+    lines.append(f"【装备总价】我方 {total(my_team, 'item_gold')}G vs 敌方 {total(enemy_team, 'item_gold')}G"
+                 f"——只算已经买成装备的钱。大乱斗只能阵亡时买，阵亡少的一方钱攒在身上，"
+                 f"这个数会低估它，判断局势看上面的估算经济")
 
     roles = {m.get("champion_id"): (m.get("coach") or {}).get("role", "")
              for m in (state.get("my_team") or []) + (state.get("enemy_team") or [])}
@@ -146,7 +151,8 @@ def _game_facts(state: Dict[str, Any], lcd: Dict[str, Any]) -> List[str]:
         role = names.get(_champ(p), "")
         dead = f"，阵亡 {round(p.get('respawn_timer') or 0)}s" if p.get("is_dead") else ""
         return (f"  - {_champ(p)}{'（我）' if p.get('is_me') else ''}{f'[{role}]' if role else ''} Lv{p.get('level', '?')} "
-                f"{p.get('kills', 0)}/{p.get('deaths', 0)}/{p.get('assists', 0)} 装备 {p.get('item_gold', 0)}G"
+                f"{p.get('kills', 0)}/{p.get('deaths', 0)}/{p.get('assists', 0)} "
+                f"估算经济 {p.get('est_gold', 0)}G 装备 {p.get('item_gold', 0)}G"
                 f"{f'：{items}' if items else ''}{dead}")
 
     lines.append("【我方】")
