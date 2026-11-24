@@ -1,0 +1,39 @@
+app/economy.py
+  s_3eddaae5d15dad::t_b5ba892d7b8ba4 1-25,28-47
+  s_3eddaae5d15dad::t_2f697215aa83f7 26-27
+app/main.py
+  s_3eddaae5d15dad::t_764173b27ed9a2 814,818-819
+  s_3eddaae5d15dad::t_3c9ca5053e9ecf 587-594,602
+  s_3eddaae5d15dad::t_5ac57bb3056bfb 688
+  s_3eddaae5d15dad::t_abb2f8e4a33dd5 713
+  s_3eddaae5d15dad::t_a16e0f13bb30ca 19
+  s_3eddaae5d15dad::t_b1fd0de4b4f4db 661-662,666-667
+  s_3eddaae5d15dad::t_1ea9231d251ecf 786-793,795
+  s_3eddaae5d15dad::t_371651abc0fb16 595-601,603-605
+frontend/index.html
+  s_3eddaae5d15dad::t_27403cf7757b35 1563,1565,1582,1593,1602,1607-1610,1613,1620,1624,1628
+README.md
+  s_3eddaae5d15dad::t_2e735d72bdb4ea 224
+  s_3eddaae5d15dad::t_f2bdf2f932e987 28,73-74
+app/ai.py
+  s_3eddaae5d15dad::t_c2c953b1bca89d 25-26
+  s_3eddaae5d15dad::t_8975f215f7945c 154-155
+  s_3eddaae5d15dad::t_cfed5769e403b9 134,136-138,140-142
+  s_3eddaae5d15dad::t_17f7023d441212 34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "600a208fe489664f39a3918ab672b28de4d125e8",
+  "prompts": {},
+  "sessions": {
+    "s_3eddaae5d15dad": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "364fba92-8e8d-4ec9-9b24-fa4d65315a5a",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "pengyong <pengyong@trip.com>"
+    }
+  }
+}
