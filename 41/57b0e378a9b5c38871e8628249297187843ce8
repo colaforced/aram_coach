@@ -1,0 +1,37 @@
+app/game_log.py
+  s_3eddaae5d15dad::t_d77ff16217a566 286-287,305-306
+  s_3eddaae5d15dad::t_b3690c20b23cef 231,272-274,276
+  s_3eddaae5d15dad::t_7884ad0dffdbc5 1-230,232-271,275,277-285,288-304,307-325
+.claude/skills/run-aram-coach/SKILL.md
+  s_3eddaae5d15dad::t_2e735d72bdb4ea 48
+.claude/skills/run-aram-coach/mock_run.py
+  s_3eddaae5d15dad::t_803a48a4cb876b 5-6,54,57,87-115,182-187
+app/main.py
+  s_3eddaae5d15dad::t_a16e0f13bb30ca 19
+  s_3eddaae5d15dad::t_fc454ea18dc89f 230-233
+  s_3eddaae5d15dad::t_9201571025978c 531
+  s_3eddaae5d15dad::t_e388927fa1aac2 1247,1249,1251,1253,1269-1279,1282-1283,1291,1293,1296-1297,1300-1303,1325,1333,1338-1340
+  s_3eddaae5d15dad::t_10aae245dbc028 1006-1011
+  s_3eddaae5d15dad::t_4582e9c277ded7 577
+README.md
+  s_3eddaae5d15dad::t_33e5d2ffc275d2 110
+  s_3eddaae5d15dad::t_2e735d72bdb4ea 97-109,111,240
+.gitignore
+  s_3eddaae5d15dad::t_e388927fa1aac2 25-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "4157b0e378a9b5c38871e8628249297187843ce8",
+  "prompts": {},
+  "sessions": {
+    "s_3eddaae5d15dad": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "364fba92-8e8d-4ec9-9b24-fa4d65315a5a",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "pengyong <pengyong@trip.com>"
+    }
+  }
+}
