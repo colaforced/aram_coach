@@ -1,0 +1,43 @@
+README.md
+  s_3eddaae5d15dad::t_cedab1a46b5395 35,217
+app/ai.py
+  s_3eddaae5d15dad::t_96047ce584f7a3 313-349
+  s_3eddaae5d15dad::t_07da187f41a582 249-252
+  s_3eddaae5d15dad::t_e1a2b7a11ff052 185
+  s_3eddaae5d15dad::t_a886feec4e4676 34-41,44-46,52-58
+  s_3eddaae5d15dad::t_a993a9c4c2c88a 8
+  s_3eddaae5d15dad::t_59f6df402e34c4 125
+  s_3eddaae5d15dad::t_65b133a0487c40 20
+  s_3eddaae5d15dad::t_8c2c24c1783f5f 282
+  s_3eddaae5d15dad::t_136def56ddb4ef 157-169
+  s_3eddaae5d15dad::t_48270dde6c0838 134
+  s_3eddaae5d15dad::t_e2ee9592e36794 42-43,48-51
+app/main.py
+  s_3eddaae5d15dad::t_95c4b89564b243 1317-1319
+  s_3eddaae5d15dad::t_41916d9c1686ad 1375-1383
+  s_3eddaae5d15dad::t_235f4719a0cad4 1334-1335
+  s_3eddaae5d15dad::t_78db2f6b44e68f 85-88
+  s_3eddaae5d15dad::t_8b0a2a95bcbffa 12
+  s_3eddaae5d15dad::t_f257acd2e701b1 239-240
+  s_3eddaae5d15dad::t_affe0473106eba 2
+app/items.py
+  s_3eddaae5d15dad::t_8075107eb2abcb 72,78
+app/game_log.py
+  s_3eddaae5d15dad::t_ac515597b4ce9e 295-299
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "8396492c5abbe5ed85e07d3faccd4bab6a623e00",
+  "prompts": {},
+  "sessions": {
+    "s_3eddaae5d15dad": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "364fba92-8e8d-4ec9-9b24-fa4d65315a5a",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "pengyong <pengyong@trip.com>"
+    }
+  }
+}
