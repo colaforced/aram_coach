@@ -1,0 +1,52 @@
+app/main.py
+  s_3eddaae5d15dad::t_ef60817953453f 203-204
+  s_3eddaae5d15dad::t_d9fc0eecfbb793 110,112-120
+  s_3eddaae5d15dad::t_d7c054904c03c6 1046-1073
+  s_3eddaae5d15dad::t_26e4363794471f 1312-1314,1318-1328
+  s_3eddaae5d15dad::t_a58d910e5e1611 225
+  s_3eddaae5d15dad::t_f51a618231929f 551
+frontend/coach-card.js
+  s_3eddaae5d15dad::t_a9df1da95c709d 256,259,265-266
+  s_3eddaae5d15dad::t_83a7d76df9718c 197-198,205-206,211-226
+app/augment_ocr.py
+  s_3eddaae5d15dad::t_bad54657ceee37 1-20,22-420,422-423,428-438,447-526
+  s_3eddaae5d15dad::t_96c8b8c0cd8046 21
+  s_3eddaae5d15dad::t_bac9727328b659 439-446
+  s_3eddaae5d15dad::t_d6a59236b3d3c1 421,424-427
+.claude/skills/run-aram-coach/mock_run.py
+  s_3eddaae5d15dad::t_ef4c273f85085a 7
+  s_3eddaae5d15dad::t_cd104fa3cb9311 211-219
+.claude/skills/run-aram-coach/shots.py
+  s_3eddaae5d15dad::t_d7d20968cf49f4 15
+  s_3eddaae5d15dad::t_b64a3dbe01e983 78-79
+requirements.txt
+  s_3eddaae5d15dad::t_f5d4d996d452a4 4-6
+data/hextech-model/b1.f32
+  s_3eddaae5d15dad::t_ec5cd3e9aa2e7c 1-5
+frontend/index.html
+  s_3eddaae5d15dad::t_d30df44fab52e1 1250-1253
+  s_3eddaae5d15dad::t_06e1c36c8683e5 1298,1300-1303
+README.md
+  s_3eddaae5d15dad::t_3aff3b9eb52555 79-83,199-201,250,324-325,417-418
+  s_3eddaae5d15dad::t_b47a5256c659ca 263
+.claude/skills/run-aram-coach/SKILL.md
+  s_3eddaae5d15dad::t_b47a5256c659ca 49,66
+data/hextech-model/README.md
+  s_3eddaae5d15dad::t_f5d4d996d452a4 1-17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "bd3c208f1cc87f49ea09f8c52a2292499f31c555",
+  "prompts": {},
+  "sessions": {
+    "s_3eddaae5d15dad": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "364fba92-8e8d-4ec9-9b24-fa4d65315a5a",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "pengyong <pengyong@trip.com>"
+    }
+  }
+}
