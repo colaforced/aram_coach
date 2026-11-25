@@ -134,14 +134,20 @@ def _game_facts(state: Dict[str, Any], lcd: Dict[str, Any]) -> List[str]:
     total = lambda team, key: sum(p.get(key, 0) for p in team)  # noqa: E731
     alive = lambda team: sum(not p.get("is_dead") for p in team)  # noqa: E731
     est_diff = total(my_team, "est_gold") - total(enemy_team, "est_gold")
+    towers = lcd.get("towers") or {}
+    side = lambda team: (team[0].get("team") if team else None)  # noqa: E731
+    tower_text = (f"；推塔 {towers.get(side(my_team), 0)} vs {towers.get(side(enemy_team), 0)}"
+                  if any(towers.values()) else "")
     lines.append(f"【团队经济·估算】我方 {total(my_team, 'est_gold')}G vs 敌方 {total(enemy_team, 'est_gold')}G"
                  f"（差 {est_diff:+d}）；人头 {total(my_team, 'kills')} vs {total(enemy_team, 'kills')}；"
-                 f"存活 {alive(my_team)} vs {alive(enemy_team)}")
+                 f"存活 {alive(my_team)} vs {alive(enemy_team)}{tower_text}")
     lines.append(f"【装备总价】我方 {total(my_team, 'item_gold')}G vs 敌方 {total(enemy_team, 'item_gold')}G"
                  f"——只算已经买成装备的钱。大乱斗只能阵亡时买，阵亡少的一方钱攒在身上，"
                  f"这个数会低估它，判断局势看上面的估算经济")
 
-    roles = {m.get("champion_id"): (m.get("coach") or {}).get("role", "")
+    # 本地数据里没有的新英雄没有定位，标出来，免得 AI 把它当成不存在
+    roles = {m.get("champion_id"): (m.get("coach") or {}).get("role")
+             or (f"新英雄，装备偏{m['dmg'].upper()}" if m.get("dmg") else "新英雄")
              for m in (state.get("my_team") or []) + (state.get("enemy_team") or [])}
     names = {m.get("champion_name"): roles.get(m.get("champion_id"), "")
              for m in (state.get("my_team") or []) + (state.get("enemy_team") or [])}
@@ -166,7 +172,12 @@ def _game_facts(state: Dict[str, Any], lcd: Dict[str, Any]) -> List[str]:
     if th["tanks"]:
         notes.append(f"坦克：{'、'.join(th['tanks'])}")
     if th["ap"] + th["ad"]:
-        notes.append(f"伤害构成 AP {th['ap']} / AD {th['ad']}")
+        dmg = f"伤害构成 AP {th['ap']} / AD {th['ad']}"
+        if th["by_items"]:
+            dmg += f"（{'、'.join(th['by_items'])} 是新英雄，按身上装备判断）"
+        if th["unknown"]:
+            dmg += f"，另有 {'、'.join(th['unknown'])} 是新英雄、还看不出输出类型"
+        notes.append(dmg)
     if notes:
         lines.append(f"【敌方特点】{'；'.join(notes)}")
     return lines

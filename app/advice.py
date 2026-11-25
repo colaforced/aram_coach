@@ -38,13 +38,21 @@ def counter_item(kind: str, role: str, dmg: str) -> Optional[str]:
 
 
 def enemy_threats(enemy_team: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """敌方阵容里需要出装应对的东西：回复型英雄、坦克数、AP/AD 构成。"""
+    """敌方阵容里需要出装应对的东西：回复型英雄、坦克数、AP/AD 构成。
+
+    本地数据里没有的新英雄没有定位，按对局中他身上的装备判断（dmg，见 main._fill_unknown_champions），
+    列在 by_items；还没装备、看不出来的列在 unknown，两者都不能悄悄漏掉。
+    """
     roles = [(m.get("coach") or {}).get("role", "") for m in enemy_team]
+    dmgs = [r and ("ap" if r in AP_ROLES else "ad") or m.get("dmg") for m, r in zip(enemy_team, roles)]
+    name = lambda m: m.get("champion_name") or "?"  # noqa: E731
     return {
-        "healers": [m.get("champion_name") or "?" for m in enemy_team if m.get("champion_id") in HEALER_CHAMPION_IDS],
-        "tanks": [m.get("champion_name") or "?" for m, r in zip(enemy_team, roles) if r == "坦克"],
-        "ap": sum(r in AP_ROLES for r in roles),
-        "ad": sum(bool(r) and r not in AP_ROLES for r in roles),
+        "healers": [name(m) for m in enemy_team if m.get("champion_id") in HEALER_CHAMPION_IDS],
+        "tanks": [name(m) for m, r in zip(enemy_team, roles) if r == "坦克"],
+        "ap": dmgs.count("ap"),
+        "ad": dmgs.count("ad"),
+        "by_items": [name(m) for m, r, d in zip(enemy_team, roles, dmgs) if not r and d],
+        "unknown": [name(m) for m, d in zip(enemy_team, dmgs) if not d],
     }
 
 

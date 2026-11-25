@@ -577,6 +577,7 @@ async def collect_game_state() -> Dict[str, Any]:
         LAST_LCD_RAW["data"] = lcd_raw
         if lcd_raw:
             state["lcd"] = extract_lcd_data(lcd_raw, state)
+            _fill_unknown_champions(state)
             lcd = state["lcd"]
             me = next((p for team in (lcd.get("team_map") or {}).values() for p in team if p.get("is_me")), None)
             state["moment"] = advice.in_game_moment(
@@ -596,6 +597,31 @@ CHAMPION_ID_BY_NAME: Dict[str, int] = {
     for src in (CHAMPION_MAP, CHAMPION_ALIAS, {k: v.get("name") for k, v in CHAMPIONS_DB.items()})
     for cid, name in src.items() if name
 }
+
+
+# 卖装备等让自己"装备总价 + 现金"变少的钱，跨轮询累计（见 economy.SellLoss）
+SELL_LOSS = economy.SellLoss()
+
+
+def _fill_unknown_champions(state: Dict[str, Any]) -> None:
+    """本地数据里还没有的新英雄（没有定位）：名字用 LCD 里的，输出类型按他身上的装备判断。
+
+    LCU 只给 championId、LCD 只给本地化名字，新英雄两边都对不上，按"两边都没认出来的"逐个配对；
+    一队里只有一个时名字才可靠，多个时只用来数 AP/AD。不处理的话敌方伤害构成会漏掉他。
+    """
+    lcd_my, lcd_enemy = resolve_my_enemy_teams((state.get("lcd") or {}).get("team_map") or {})
+    for key, lcd_team in (("my_team", lcd_my), ("enemy_team", lcd_enemy)):
+        members = state.get(key) or []
+        unknown = [m for m in members if not (m.get("coach") or {}).get("role")]
+        known_ids = {m.get("champion_id") for m in members if (m.get("coach") or {}).get("role")}
+        unmatched = [p for p in lcd_team if p.get("champion_id") not in known_ids]
+        if not unknown or len(unknown) != len(unmatched):
+            continue
+        for m, p in zip(unknown, unmatched):
+            ids = [str(it["item_id"]) for it in p.get("items") or [] if it.get("item_id") and it.get("slot") != 6]
+            m["dmg"] = ITEM_DB.damage_type(ids, default=None)
+            if len(unknown) == 1:
+                m["champion_name"] = p.get("champion") or m.get("champion_name")
 
 
 def _find_me_by_champion(players: List[Dict[str, Any]], champion_id: Any) -> Optional[int]:
@@ -716,9 +742,14 @@ def extract_lcd_data(lcd_raw: Dict[str, Any], state: Dict[str, Any]) -> Dict[str
         team_map[team].append(entry)
 
     result["team_map"] = team_map
-    economy.annotate(team_map, (result.get("active") or {}).get("gold"), result["game_time"])
-
     events_raw = lcd_raw.get("events", {}).get("Events", [])
+    my_gold = (result.get("active") or {}).get("gold")
+    me = next((p for ps in team_map.values() for p in ps if p["is_me"]), None)
+    if me is not None and my_gold is not None:
+        result["my_lost"] = round(SELL_LOSS.update(state.get("game_id"), result["game_time"], me["item_gold"] + my_gold))
+    result["towers"] = economy.structures_destroyed(events_raw)
+    economy.annotate(team_map, my_gold, result["game_time"], result["towers"], result.get("my_lost", 0))
+
     result["events"] = events_raw[-20:] if events_raw else []
 
     return result

@@ -37,6 +37,8 @@ def snapshot(lcd: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
     return {
         "game_time": lcd.get("game_time", 0),
         "my_gold": (lcd.get("active") or {}).get("gold"),
+        "my_lost": lcd.get("my_lost", 0),   # 卖装备等看不到的钱（economy.SellLoss），校准时补回
+        "towers": lcd.get("towers"),
         "players": [{k: p.get(k) for k in _SNAP_KEYS} for ps in lcd["team_map"].values() for p in ps],
     }
 
