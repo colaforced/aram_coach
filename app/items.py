@@ -69,13 +69,13 @@ class ItemDB:
         return int(info.get("gold_base") or 0) + sum(self.remaining_cost(str(c), pool) for c in parts)
 
     def damage_type(self, ids: Iterable[str], default: Optional[str] = "ad") -> Optional[str]:
-        """一套出装偏 AD 还是 AP（'ad' / 'ap'）：按装备分类计数；一件输出装都没有时返回 default。"""
+        """一套出装偏 AD 还是 AP（'ad' / 'ap'）：按装备分类计数；分不出（打平或没有输出装）时返回 default。"""
         ad = ap = 0
         for iid in ids:
             cats = set((self.items.get(str(iid)) or {}).get("cats") or [])
             ap += bool(cats & _AP_CATS)
             ad += bool(cats & _AD_CATS)
-        if not ap and not ad:
+        if ap == ad:
             return default
         return "ap" if ap > ad else "ad"
 

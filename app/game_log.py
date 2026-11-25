@@ -292,6 +292,11 @@ def build_review(d: Path) -> str:
         if c.get("question"):
             out.append(f"**问**：{c['question']}")
             out.append("")
+        elif c.get("task") == "deep":   # 深度分析的提问里带着死活和上次的分析
+            asked = next((m.get("content", "") for m in reversed(c.get("messages") or []) if m.get("role") == "user"), "")
+            if "\n" in asked:
+                out.append("**问**：" + asked.replace("\n", "  \n"))
+                out.append("")
         out.append("**答**：" + (f"（出错：{c['error']}）" if c.get("error") else ""))
         out.append("")
         out.append(c.get("answer") or "（无）")

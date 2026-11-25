@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import asyncio
 import sys
@@ -8,7 +9,7 @@ if sys.platform == "win32":
 
 import logging
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Callable, Dict, Any, List, Optional
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
@@ -81,6 +82,10 @@ _item_map_path = BASE_DIR / "data" / "item_map.json"
 if _item_map_path.exists():
     with open(_item_map_path, "r", encoding="utf-8") as f:
         ITEM_MAP = json.load(f)
+    # 少数名字带客户端富文本（"狂妄<br>"），会原样进 AI 上下文、按名字也对不上 LCD；只留 <br> 前的正文
+    for _it in ITEM_MAP.values():
+        if "<" in (_it.get("name") or ""):
+            _it["name"] = re.sub(r"<[^>]*>", "", _it["name"].split("<br>")[0]).strip()
 
 # OP.GG / Meraki 同步来的大乱斗数据（运行时缓存，可能不存在）
 DATA_DIR = BASE_DIR / "data"
@@ -231,6 +236,8 @@ LAST_STATE: Dict[str, Any] = {}
 LAST_LCD_RAW: Dict[str, Any] = {"data": None}
 # 每局的 AI 问答、经济快照和赛后战绩，打完生成复盘（见 app/game_log.py）
 RECORDER = game_log.GameRecorder(BASE_DIR / "game_logs")
+# 本局上一次对局中深度分析（ai.deep_digest + answer），下次分析时带上，让它只讲变化
+LAST_DEEP: Dict[str, Any] = {}
 
 GAMEFLOW_PHASES = [
     "None",
@@ -1307,7 +1314,9 @@ def _log_ai(state: Dict[str, Any], **entry: Any) -> None:
         log.warning(f"记录 AI 调用失败: {e}")
 
 
-async def _relay(messages: List[Dict[str, str]], task: str, state: Dict[str, Any], question: Optional[str] = None):
+async def _relay(messages: List[Dict[str, str]], task: str, state: Dict[str, Any], question: Optional[str] = None,
+                 on_done: Optional[Callable[[str], None]] = None):
+    """把模型的流式输出转成 SSE；完整输出完时把全文交给 on_done。"""
     yield _sse({"type": "start", "mode": "llm", "model": llm_client.model})
     thinking = False
     parts: List[str] = []
@@ -1322,6 +1331,8 @@ async def _relay(messages: List[Dict[str, str]], task: str, state: Dict[str, Any
                 parts.append(text)
                 yield _sse({"type": "delta", "text": text})
         error = None
+        if on_done and parts:
+            on_done("".join(parts))
         yield _sse({"type": "done"})
     except LLMError as e:
         error = str(e)
@@ -1361,7 +1372,15 @@ async def api_ai_deep():
     """整局分析：配置了 Key 走 LLM（流式），否则走本地规则引擎（一次给完）。"""
     state = await current_state()
     if llm_client.enabled:
-        return _sse_response(_relay(ai.deep_messages(state, AI_DEPS), "deep", state))
+        if state.get("phase") == "ChampSelect" or not state.get("lcd"):
+            return _sse_response(_relay(ai.deep_messages(state, AI_DEPS), "deep", state))
+        # 对局中：带上本局上一次的分析让它只讲变化，这次的完整输出完再记下来
+        digest = ai.deep_digest(state)
+        prev = LAST_DEEP.get("data")
+        if not (prev and prev.get("game_id") == digest["game_id"] and prev["game_time"] < digest["game_time"]):
+            prev = None
+        return _sse_response(_relay(ai.deep_messages(state, AI_DEPS, prev), "deep", state,
+                                    on_done=lambda answer: LAST_DEEP.update(data={**digest, "answer": answer})))
 
     async def rules():
         yield _sse({"type": "start", "mode": "rules"})

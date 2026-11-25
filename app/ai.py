@@ -5,7 +5,7 @@
 
 三个任务各有提示词：
 - ask：玩家随口问，直接回答，几行以内；带最近几轮问答，追问不丢上下文
-- deep：整局分析，固定四段；选人阶段换一套四段
+- deep：整局分析，一句结论 + 最多三条行动；对局中带上上次的分析，只讲变化；选人阶段换一套
 - augment：强化符文三选一，只要三行
 """
 from dataclasses import dataclass, field
@@ -17,6 +17,7 @@ from app.lcd_client import resolve_my_enemy_teams
 
 HISTORY_TURNS = 4          # 追问时带上最近几轮
 HISTORY_ANSWER_CHARS = 1200
+PREVIOUS_ANSWER_CHARS = 400   # 深度分析带上上次的结论
 MAX_PRICE_ITEMS = 16
 
 SYSTEM_BASE = """你是英雄联盟「海克斯大乱斗」（ARAM: Mayhem）教练。
@@ -30,17 +31,31 @@ SYSTEM_BASE = """你是英雄联盟「海克斯大乱斗」（ARAM: Mayhem）教
 
 TASK_ASK = """玩家在对局中向你提问。直接回答这个问题：3～6 行，先给结论；不要套固定的分析结构，和问题无关的内容不要说。"""
 
-TASK_DEEP_GAME = """给出这一局的分析，按下面四段输出，每段 2～4 行：
-🎯 局势：优势 / 均势 / 劣势，依据（估算经济差、人头、存活、双方关键英雄）
-🛒 出装：照【本地规则结论】说接下来买什么、为什么；对面有回复、坦克多或伤害偏 AP/AD 时怎么应对
-⚔️ 打法：团战站位、先打谁、雪球和关键技能怎么用（结合双方具体英雄）
-🎲 强化符文：适合这个英雄和本局的方向（参考知识库）"""
+TASK_DEEP_GAME = """玩家在对局中点了"深度分析"。他只有阵亡读秒或团战间隙的几秒能看，所以要短、要有取舍。
+输出：
+- 第一行：🎯 局势一句话（优势 / 均势 / 劣势，约多少经济）+ 最关键的一个原因；有【上次分析】时先说跟上次比变了什么
+- 然后 1～3 条行动，每条一行、不超过 30 字、emoji 开头，按对这局胜负的影响排序
+- 全部加起来不超过 150 字；宁可少写一条，也不要凑数
+每条行动都要落到具体的英雄、装备或时机上。不要写：
+- 放到哪一局都成立的话（"别乱送""抱团""别第一个进场""雪球留着收残血"）
+- 屏幕上已经有的人头、存活数
+- 【本地规则结论·出装】里已经写了的购买计划，以及现金够不够买什么（购物卡会讲）；只有你不同意它、
+  或敌方阵容要求调整时才提出装，并说理由，装备名只用【对局数据】里出现过的
+- 强化符文（三选一时有单独的分析）
+玩家阵亡中：购物卡已经告诉他现在买什么，重点说复活后第一波怎么打。
+上次分析说过、现在仍然成立的行动不再重复，除非它仍是最重要的一条。
 
-TASK_DEEP_SELECT = """现在是选人阶段（看不到敌方），按下面四段输出，每段 2～4 行：
-🎯 定位：这个英雄在本队阵容里负责什么
-🔁 换不换：照【本地规则结论】的选人建议说，补充理由
-🛒 出装与符文：核心思路，和推荐的不同时说明原因
-🎲 强化符文：适合的方向（参考知识库）"""
+示例（只参考格式和长度，内容按本局数据来；这个示例只有两条行动，说明不必凑满三条）：
+🎯 小劣约 800G，对面金克丝 9 杀没死过，是他们的核心
+⚔️ 下波团等锤石钩到人再进，先切金克丝，别追坦克
+⏳ 对面 3 人 20 秒后才活，趁现在推掉二塔"""
+
+TASK_DEEP_SELECT = """现在是选人阶段（看不到敌方），玩家要在几秒内做决定，所以要短、要有取舍。
+输出：
+- 第一行：🎯 换 / 骰 / 留 + 一句理由（照【本地规则结论·选人】说，不同意时讲清理由）
+- 然后最多 3 条，每条一行、不超过 30 字、emoji 开头，只写这局用这个英雄最该知道的：在本队阵容里负责什么、
+  出装或符文和推荐不同的地方、适合的强化符文方向
+- 全部加起来不超过 150 字；没有值得说的就少写，不要写对任何英雄都成立的话"""
 
 TASK_AUGMENT = """玩家正在强化符文三选一。只输出三行，每行不超过 30 字：
 1. 选哪个
@@ -107,7 +122,7 @@ def build_facts(state: Dict[str, Any], deps: Deps) -> str:
         if bench:
             lines.append(f"【备选席】{'、'.join(bench)}")
     else:
-        lines.extend(_game_facts(state, lcd))
+        lines.extend(_game_facts(state, lcd, deps.alias))
 
     lines.extend(_conclusions(state))
     lines.extend(_prices(state, deps))
@@ -116,7 +131,7 @@ def build_facts(state: Dict[str, Any], deps: Deps) -> str:
     return "\n".join(lines)
 
 
-def _game_facts(state: Dict[str, Any], lcd: Dict[str, Any]) -> List[str]:
+def _game_facts(state: Dict[str, Any], lcd: Dict[str, Any], alias: Dict[str, str]) -> List[str]:
     lines = []
     t = lcd.get("game_time", 0)
     a = lcd.get("active") or {}
@@ -139,8 +154,19 @@ def _game_facts(state: Dict[str, Any], lcd: Dict[str, Any]) -> List[str]:
     tower_text = (f"；推塔 {towers.get(side(my_team), 0)} vs {towers.get(side(enemy_team), 0)}"
                   if any(towers.values()) else "")
     lines.append(f"【团队经济·估算】我方 {total(my_team, 'est_gold')}G vs 敌方 {total(enemy_team, 'est_gold')}G"
-                 f"（差 {est_diff:+d}）；人头 {total(my_team, 'kills')} vs {total(enemy_team, 'kills')}；"
-                 f"存活 {alive(my_team)} vs {alive(enemy_team)}{tower_text}")
+                 f"（差 {est_diff:+d}）；人头 {total(my_team, 'kills')} vs {total(enemy_team, 'kills')}{tower_text}")
+
+    def label(p: Dict[str, Any]) -> str:
+        """LCD 给的多是称号（残月之肃），附上本名（厄斐琉斯），免得模型自己对错英雄。"""
+        name, real = _champ(p), alias.get(str(p.get("champion_id")))
+        return f"{name}（{real}）" if real and real != name else name
+
+    def headcount(team: List[Dict[str, Any]], side_name: str) -> str:
+        dead = [f"{label(p)} {round(p.get('respawn_timer') or 0)}s" for p in team if p.get("is_dead")]
+        return f"{side_name}活着 {alive(team)} 个" + (f"（阵亡：{'、'.join(dead)} 后复活）" if dead else "")
+
+    # 人数单独一行写清谁死了：只在经济那行末尾写"存活 3 vs 2"时，模型会说成"5 打 2"
+    lines.append(f"【人数】{headcount(my_team, '我方')}；{headcount(enemy_team, '敌方')}")
     lines.append(f"【装备总价】我方 {total(my_team, 'item_gold')}G vs 敌方 {total(enemy_team, 'item_gold')}G"
                  f"——只算已经买成装备的钱。大乱斗只能阵亡时买，阵亡少的一方钱攒在身上，"
                  f"这个数会低估它，判断局势看上面的估算经济")
@@ -156,7 +182,7 @@ def _game_facts(state: Dict[str, Any], lcd: Dict[str, Any]) -> List[str]:
         items = "、".join(it.get("name", "") for it in p.get("items") or [] if it.get("name") and it.get("slot") != 6)
         role = names.get(_champ(p), "")
         dead = f"，阵亡 {round(p.get('respawn_timer') or 0)}s" if p.get("is_dead") else ""
-        return (f"  - {_champ(p)}{'（我）' if p.get('is_me') else ''}{f'[{role}]' if role else ''} Lv{p.get('level', '?')} "
+        return (f"  - {label(p)}{'（我）' if p.get('is_me') else ''}{f'[{role}]' if role else ''} Lv{p.get('level', '?')} "
                 f"{p.get('kills', 0)}/{p.get('deaths', 0)}/{p.get('assists', 0)} "
                 f"估算经济 {p.get('est_gold', 0)}G 装备 {p.get('item_gold', 0)}G"
                 f"{f'：{items}' if items else ''}{dead}")
@@ -220,7 +246,10 @@ def _prices(state: Dict[str, Any], deps: Deps) -> List[str]:
 
 def kb_slices(state: Dict[str, Any], deps: Deps, task: str) -> str:
     """只给和本局相关的知识库内容：本局英雄的梯度、我这个英雄的专属数据、我这个定位的出装公式；
-    整局分析再加装备误区、雪球技巧和强化符文梯度。"""
+    三选一和选人阶段的整局分析再加强化符文梯度。
+
+    对局中的整局分析不给强化符文、装备误区和雪球技巧：给了模型就会每次都拿来凑一段。
+    """
     kb = deps.kb or {}
     if not kb:
         return ""
@@ -250,17 +279,12 @@ def kb_slices(state: Dict[str, Any], deps: Deps, task: str) -> str:
             seq = " → ".join("/".join(r.get(k) or []) for k in ("first", "second", "third", "late") if r.get(k))
             lines.append(f"{rname}：{seq}。{r.get('note', '')}")
 
-    if task in ("deep", "augment"):
+    if task in ("deep_select", "augment"):
         aug = kb.get("hextech_augments") or {}
         for group, label in (("prismatic_s_tier", "棱彩S级"), ("gold_key", "金色核心"), ("situational", "看情况")):
             for a in aug.get(group) or []:
                 if isinstance(a, dict):
                     lines.append(f"强化符文[{label}] {a.get('name')}：{a.get('effect', '')}（适合 {a.get('best_for', '')}）")
-    if task == "deep":
-        for m in kb.get("item_myths") or []:
-            if isinstance(m, dict):
-                lines.append(f"装备误区：{m.get('myth')} → {m.get('truth')}")
-        lines.extend(f"雪球技巧：{t}" for t in (kb.get("snowball_tips") or [])[:3])
     return "\n".join(lines)
 
 
@@ -286,9 +310,43 @@ def ask_messages(state: Dict[str, Any], deps: Deps, question: str,
     return msgs
 
 
-def deep_messages(state: Dict[str, Any], deps: Deps) -> List[Dict[str, str]]:
-    task = TASK_DEEP_SELECT if state.get("phase") == "ChampSelect" else TASK_DEEP_GAME
-    return [_system(task, state, deps, "deep"), {"role": "user", "content": "分析一下这一局。"}]
+def _clock(t: float) -> str:
+    return f"{int(t // 60)}分{int(t % 60)}秒"
+
+
+def deep_digest(state: Dict[str, Any]) -> Dict[str, Any]:
+    """这一刻的局势摘要，和这次的分析一起存下来，下次分析时对比。"""
+    lcd = state.get("lcd") or {}
+    my_team, enemy_team = resolve_my_enemy_teams(lcd.get("team_map") or {})
+    total = lambda team, key: sum(p.get(key) or 0 for p in team)  # noqa: E731
+    return {"game_id": state.get("game_id"), "game_time": lcd.get("game_time", 0),
+            "est_diff": total(my_team, "est_gold") - total(enemy_team, "est_gold"),
+            "kills": [total(my_team, "kills"), total(enemy_team, "kills")]}
+
+
+def deep_request(state: Dict[str, Any], previous: Optional[Dict[str, Any]] = None) -> str:
+    """对局中深度分析的提问：我此刻是死是活（决定重点讲什么），以及上次分析说了什么（只讲变化）。"""
+    lcd = state.get("lcd") or {}
+    me = next((p for ps in (lcd.get("team_map") or {}).values() for p in ps if p.get("is_me")), None)
+    lines = []
+    if me and me.get("is_dead"):
+        lines.append(f"我现在阵亡，{round(me.get('respawn_timer') or 0)} 秒后复活。")
+    elif me:
+        lines.append("我现在活着。")
+    if previous and previous.get("answer"):
+        kills = previous.get("kills") or [0, 0]
+        lines.append(f"【上次分析】{_clock(previous.get('game_time') or 0)}（当时估算经济差 {previous.get('est_diff', 0):+d}，"
+                     f"人头 {kills[0]} vs {kills[1]}）：\n{previous['answer'][:PREVIOUS_ANSWER_CHARS]}")
+    lines.append("分析一下现在的局势。")
+    return "\n".join(lines)
+
+
+def deep_messages(state: Dict[str, Any], deps: Deps,
+                  previous: Optional[Dict[str, Any]] = None) -> List[Dict[str, str]]:
+    """previous：本局上一次对局中深度分析的 deep_digest + answer，没有就不带。"""
+    if state.get("phase") == "ChampSelect":
+        return [_system(TASK_DEEP_SELECT, state, deps, "deep_select"), {"role": "user", "content": "分析一下这一局。"}]
+    return [_system(TASK_DEEP_GAME, state, deps, "deep"), {"role": "user", "content": deep_request(state, previous)}]
 
 
 def augment_messages(state: Dict[str, Any], deps: Deps, options: List[str],
