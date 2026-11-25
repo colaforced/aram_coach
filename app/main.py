@@ -1050,6 +1050,7 @@ async def augment_scan_loop():
         return
     watcher = augment_ocr.Watcher(AUGMENT_CFG["levels"])
     interval = float(AUGMENT_SCAN_CFG.get("interval") or 1.0)
+    last_where = None
     while True:
         await asyncio.sleep(interval)
         try:
@@ -1063,6 +1064,9 @@ async def augment_scan_loop():
             if not watcher.want_scan(now):
                 continue
             result = await asyncio.to_thread(AUGMENT_SCANNER.scan)
+            if result.get("where") and result["where"] != last_where:
+                last_where = result["where"]
+                log.info(f"强化符文识别截屏位置：{last_where}")
             names = watcher.observe(result, now)
             if names:
                 log.info(f"🎲 识别到强化符文：{names}（{[s.get('score') for s in result.get('slots') or []]}）")
@@ -1322,10 +1326,11 @@ async def api_augments_scan():
         return {"ok": False, "reason": "截屏识别不可用：没装 numpy（pip install -r requirements.txt）"}
     result = await asyncio.to_thread(AUGMENT_SCANNER.scan)
     if result.get("ok") and not result.get("cards"):
-        result["reason"] = "屏幕上没找到三选一的卡片（确认卡片正显示着，游戏用无边框或窗口模式）"
+        result["reason"] = (f"在{result.get('where') or '屏幕'}上没找到三选一的卡片"
+                            "（确认卡片正显示着，游戏用无边框或窗口模式）")
     elif result.get("ok") and not any(result.get("names") or []):
         result["reason"] = "找到了卡片，但名字没认出来"
-    return {k: result.get(k) for k in ("ok", "cards", "names", "reason", "ms")}
+    return {k: result.get(k) for k in ("ok", "cards", "names", "reason", "where", "ms")}
 
 
 @app.post("/api/augments/rank")

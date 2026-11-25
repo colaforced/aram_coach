@@ -13,6 +13,8 @@ LCU / LCD 都不提供三选一的选项，只能读屏幕。识别算法和模�
 6. 分数不够、也不明显领先第二名就不认——宁可不填，也不填错
 
 截屏只在 Windows 上可用（mss，GDI）。独占全屏模式下截到的是黑屏，闸门会判成"没卡"。
+抓取区按游戏窗口（类名 RiotWindowClass）的画面区域算，游戏在副屏、窗口模式都能对上；
+找不到游戏窗口时退回主显示器。
 """
 import json
 import logging
@@ -44,7 +46,7 @@ FRAME_COVER = 0.9     # 某一列 90% 的行都有墨 = 卡框的竖边，不是
 # 名字里的标点和空格：切字时占位，打分时跳过（模型对窄笔画字符判别力弱）
 SKIP_CHARS = set("，。！？、；：…—·「」『』（）《》 -_")
 
-# 三张卡标题的抓取区（占屏幕宽高的比例，16:9 全屏/无边框）
+# 三张卡标题的抓取区（占游戏画面宽高的比例，16:9）
 STRIP_X0, STRIP_X1, STRIP_Y0, STRIP_Y1 = 0.246, 0.755, 0.370, 0.430
 SLOT_X = ((0.246, 0.376), (0.438, 0.568), (0.625, 0.755))
 
@@ -389,24 +391,69 @@ def _cursor_in(rect: Tuple[int, int, int, int]) -> bool:
     return x <= pt.x < x + w and y <= pt.y < y + h
 
 
-def grab_slots() -> Tuple[Optional[List[np.ndarray]], str]:
-    """截主显示器上三张卡标题那一条，切成三个卡位的灰度图。→ (卡位图, 不可用的原因)"""
+GAME_WINDOW_CLASS = "RiotWindowClass"   # 游戏本体窗口；客户端大厅是 RCLIENT
+
+
+def _game_rect() -> Optional[Tuple[int, int, int, int]]:
+    """游戏画面（窗口客户区）在虚拟桌面上的位置 (x, y, w, h)。没在跑 / 最小化 / 读不到 → None。
+
+    要在 mss.mss() 之后调：mss 把进程设成 DPI 感知，这里拿到的才和截屏一样是物理像素
+    （双屏常见笔记本 150% 缩放、外接屏 100%，不感知 DPI 时坐标会被缩放错位）。
+    """
+    try:
+        import ctypes
+        from ctypes import wintypes
+        user32 = ctypes.WinDLL("user32")   # 自己的实例，不改全局 windll.user32 的函数签名
+        user32.FindWindowW.argtypes = (wintypes.LPCWSTR, wintypes.LPCWSTR)
+        user32.FindWindowW.restype = wintypes.HWND
+        for fn in (user32.IsWindowVisible, user32.IsIconic):
+            fn.argtypes = (wintypes.HWND,)
+        user32.GetClientRect.argtypes = (wintypes.HWND, ctypes.POINTER(wintypes.RECT))
+        user32.ClientToScreen.argtypes = (wintypes.HWND, ctypes.POINTER(wintypes.POINT))
+        hwnd = user32.FindWindowW(GAME_WINDOW_CLASS, None)
+        if not hwnd or not user32.IsWindowVisible(hwnd) or user32.IsIconic(hwnd):
+            return None
+        rc, pt = wintypes.RECT(), wintypes.POINT(0, 0)
+        if not user32.GetClientRect(hwnd, ctypes.byref(rc)) or not user32.ClientToScreen(hwnd, ctypes.byref(pt)):
+            return None
+    except Exception:
+        return None
+    w, h = rc.right - rc.left, rc.bottom - rc.top
+    if w < 400 or h < 300:
+        return None
+    return pt.x, pt.y, w, h
+
+
+def strip_rect(area: Tuple[int, int, int, int]) -> Tuple[int, int, int, int]:
+    """游戏画面区域 (x, y, w, h) → 三张卡标题那一条在虚拟桌面上的 (x, y, w, h)。"""
+    ax, ay, aw, ah = area
+    x, y = ax + _jround(STRIP_X0 * aw), ay + _jround(STRIP_Y0 * ah)
+    w = max(8, _jround((STRIP_X1 - STRIP_X0) * aw))
+    h = max(8, _jround((STRIP_Y1 - STRIP_Y0) * ah))
+    return x, y, w, h
+
+
+def grab_slots() -> Tuple[Optional[List[np.ndarray]], str, str]:
+    """截游戏画面上三张卡标题那一条，切成三个卡位的灰度图。→ (卡位图, 不可用的原因, 截的是哪里)"""
     if not capture_supported():
-        return None, "只支持 Windows（需要安装 mss）"
+        return None, "只支持 Windows（需要安装 mss）", ""
     import mss
     with mss.mss() as sct:   # mss 会把进程设成 DPI 感知，拿到的是物理像素
-        mon = sct.monitors[1]
-        sw, sh = mon["width"], mon["height"]
-        x, y = mon["left"] + _jround(STRIP_X0 * sw), mon["top"] + _jround(STRIP_Y0 * sh)
-        w = max(8, _jround((STRIP_X1 - STRIP_X0) * sw))
-        h = max(8, _jround((STRIP_Y1 - STRIP_Y0) * sh))
+        area = _game_rect()
+        if area:
+            where = f"游戏窗口 {area[2]}×{area[3]} @({area[0]},{area[1]})"
+        else:
+            mon = sct.monitors[1]
+            area = mon["left"], mon["top"], mon["width"], mon["height"]
+            where = f"主显示器 {area[2]}×{area[3]}（没找到游戏窗口）"
+        x, y, w, h = strip_rect(area)
         if _cursor_in((x, y, w, h)):
-            return None, "鼠标停在卡片上，这一帧跳过"
+            return None, "鼠标停在卡片上，这一帧跳过", where
         shot = sct.grab({"left": x, "top": y, "width": w, "height": h})
     # BGRA，白字三个通道都满；取 R 通道（和 RankPeek 实时链路的 RGBA 取第一个通道一致）
     gray = np.frombuffer(shot.raw, dtype=np.uint8).reshape(shot.height, shot.width, 4)[:, :, 2]
     to_local = lambda rel: _jround((rel - STRIP_X0) / (STRIP_X1 - STRIP_X0) * w)  # noqa: E731
-    return [np.ascontiguousarray(gray[:, to_local(a):to_local(b)]) for a, b in SLOT_X], ""
+    return [np.ascontiguousarray(gray[:, to_local(a):to_local(b)]) for a, b in SLOT_X], "", where
 
 
 class Scanner:
@@ -449,18 +496,18 @@ class Scanner:
         if model is None:
             return {"ok": False, "reason": self.error}
         try:
-            slots, reason = grab_slots()
+            slots, reason, where = grab_slots()
         except Exception as e:
             return {"ok": False, "reason": f"截屏失败：{e}"}
         if slots is None:
-            return {"ok": False, "reason": reason}
+            return {"ok": False, "reason": reason, "where": where}
         sig = signature(slots)
         if sig == self._sig and self._result is not None:
             result = self._result
         else:
             result = recognize(model, slots)
             self._sig, self._result = sig, result
-        return {"ok": True, **result, "ms": round((time.perf_counter() - t0) * 1000)}
+        return {"ok": True, **result, "where": where, "ms": round((time.perf_counter() - t0) * 1000)}
 
 
 class Watcher:
