@@ -1,0 +1,36 @@
+app/ai.py
+  s_3eddaae5d15dad::t_12c4165df06ce1 148-150
+  s_3eddaae5d15dad::t_6f3dff1dcd11ee 175-180
+  s_3eddaae5d15dad::t_967d57fc947407 137-140,143
+app/game_log.py
+  s_3eddaae5d15dad::t_2613c830266d8e 40-41
+README.md
+  s_3eddaae5d15dad::t_3aa8b38c65a130 74-75
+app/main.py
+  s_3eddaae5d15dad::t_84a27c23e54ac0 602-615,617-626
+  s_3eddaae5d15dad::t_926de8a9407b44 746-752
+  s_3eddaae5d15dad::t_4626c20d2379fe 580
+  s_3eddaae5d15dad::t_5e80d8b6467c62 616
+app/items.py
+  s_3eddaae5d15dad::t_3fbd6a6075e223 71-72,78-79
+app/advice.py
+  s_3eddaae5d15dad::t_b138d8ea1391e4 41-45,47-48,50-55
+app/economy.py
+  s_3eddaae5d15dad::t_c826f45bc95b00 9-10,12-14,16-17,19-20,22-63,70-83,89,94-95,97,102,104
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "8d9a54e15f5507205e70be23704881a5b8c7e6ea",
+  "prompts": {},
+  "sessions": {
+    "s_3eddaae5d15dad": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "364fba92-8e8d-4ec9-9b24-fa4d65315a5a",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "pengyong <pengyong@trip.com>"
+    }
+  }
+}
