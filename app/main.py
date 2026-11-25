@@ -107,8 +107,17 @@ RUNE_TREE: Dict[str, Any] = json.loads((DATA_DIR / "runes.json").read_text(encod
 AUGMENTS_STATIC = DATA_DIR / "augments.json"
 AUGMENT_POOL: list = augments.load_pool((ARAM_META.get("cdragon") or {}).get("augments"), AUGMENTS_STATIC)
 RUNES_CFG: Dict[str, Any] = {"auto_apply": False, **CONFIG.get("runes", {})}
-# 哪些等级会弹强化符文三选一（未在实机确认，可在 config.json 的 augments.levels 改）
+# 哪些等级会弹强化符文三选一（RankPeek 实测 3/7/11/15，可在 config.json 的 augments.levels 改）
 AUGMENT_CFG: Dict[str, Any] = {"levels": [3, 7, 11, 15], **CONFIG.get("augments", {})}
+# 截屏识别三选一的选项（只在 Windows 上可用，见 app/augment_ocr.py）：auto 关掉就只能手动点"识别屏幕"
+AUGMENT_SCAN_CFG: Dict[str, Any] = {"auto": True, "interval": 1.0, **CONFIG.get("augment_scan", {})}
+try:
+    from app import augment_ocr
+    AUGMENT_SCANNER: Optional["augment_ocr.Scanner"] = augment_ocr.Scanner(a["name"] for a in AUGMENT_POOL)
+except ImportError as _e:   # 没装 numpy：其余功能照常，只是不能截屏识别
+    augment_ocr = None  # type: ignore[assignment]
+    AUGMENT_SCANNER = None
+    log.warning(f"  强化符文截屏识别不可用（{_e}），请 pip install -r requirements.txt")
 
 ARAM_BUILD_REPLACEMENTS: Dict[str, str] = {
     "守护天使": "死亡之舞",
@@ -191,6 +200,8 @@ async def refresh_aram_meta(force: bool = False) -> Dict[str, Any]:
             cd = ARAM_META.get("cdragon") or {}
             ITEM_DB.apply_economics(cd.get("items"))
             AUGMENT_POOL[:] = augments.load_pool(cd.get("augments"), AUGMENTS_STATIC)
+            if AUGMENT_SCANNER:
+                AUGMENT_SCANNER.set_names(a["name"] for a in AUGMENT_POOL)
             _mean_strength_cache.clear()
         log.info(f"大乱斗数据同步结束: {report}")
         return {"status": "done", "report": report}
@@ -211,6 +222,7 @@ def spawn(coro) -> asyncio.Task:
 async def lifespan(application: FastAPI):
     log.info("Starting ARAM Coach...")
     spawn(poll_lcu())
+    spawn(augment_scan_loop())
     if DATA_SYNC_CFG.get("auto"):
         spawn(refresh_aram_meta())
     yield
@@ -536,6 +548,7 @@ async def collect_game_state() -> Dict[str, Any]:
             gf_session = await lcu.get("/lol-gameflow/v1/session")
             if gf_session:
                 state["game_id"] = gf_session.get("gameData", {}).get("gameId")
+                state["game_mode"] = (gf_session.get("gameData", {}).get("queue") or {}).get("gameMode")
                 if my_puuid:
                     selections = gf_session.get("gameData", {}).get("playerChampionSelections", [])
                     for sel in selections:
@@ -1030,6 +1043,34 @@ async def apply_rune_page(character_id: Any) -> Dict[str, Any]:
     return result
 
 
+async def augment_scan_loop():
+    """海斗对局中有没选的强化时，每秒截一次屏识别三选一的选项，认出来就推给前端自动填好。"""
+    if not (AUGMENT_SCANNER and AUGMENT_SCAN_CFG.get("auto") and augment_ocr.capture_supported()):
+        log.info("强化符文自动识别未开启（仅 Windows，需要 numpy 和 mss；config.json 的 augment_scan.auto）")
+        return
+    watcher = augment_ocr.Watcher(AUGMENT_CFG["levels"])
+    interval = float(AUGMENT_SCAN_CFG.get("interval") or 1.0)
+    while True:
+        await asyncio.sleep(interval)
+        try:
+            state = LAST_STATE
+            # 只有海斗（KIWI）有强化；拿不到模式时放行，免得字段一缺功能就静默失效
+            if state.get("phase") not in game_log.GAME_PHASES or state.get("game_mode") not in (None, "", "KIWI"):
+                continue
+            level = int(((state.get("lcd") or {}).get("active") or {}).get("level") or 0)
+            now = asyncio.get_running_loop().time()
+            watcher.update(state.get("game_id"), level, now)
+            if not watcher.want_scan(now):
+                continue
+            result = await asyncio.to_thread(AUGMENT_SCANNER.scan)
+            names = watcher.observe(result, now)
+            if names:
+                log.info(f"🎲 识别到强化符文：{names}（{[s.get('score') for s in result.get('slots') or []]}）")
+                await broadcast({"type": "augment_options", "data": {"options": names, "level": level}})
+        except Exception as e:
+            log.warning(f"强化符文识别出错: {e}")
+
+
 async def poll_lcu():
     last_phase = None
     last_champ_id = None
@@ -1268,7 +1309,23 @@ async def api_augments():
         "augments": [{"name": a["name"], "rarity": a.get("rarity", "")} for a in AUGMENT_POOL],
         "levels": AUGMENT_CFG["levels"],
         "llm": llm_client.enabled,
+        # scan：能截屏识别（显示"识别屏幕"按钮）；auto：选项出现时会自动识别并推送
+        "scan": bool(AUGMENT_SCANNER and augment_ocr.capture_supported()),
+        "auto": bool(AUGMENT_SCANNER and augment_ocr.capture_supported() and AUGMENT_SCAN_CFG.get("auto")),
     }
+
+
+@app.post("/api/augments/scan")
+async def api_augments_scan():
+    """手动截一次屏识别三选一的选项。"""
+    if not AUGMENT_SCANNER:
+        return {"ok": False, "reason": "截屏识别不可用：没装 numpy（pip install -r requirements.txt）"}
+    result = await asyncio.to_thread(AUGMENT_SCANNER.scan)
+    if result.get("ok") and not result.get("cards"):
+        result["reason"] = "屏幕上没找到三选一的卡片（确认卡片正显示着，游戏用无边框或窗口模式）"
+    elif result.get("ok") and not any(result.get("names") or []):
+        result["reason"] = "找到了卡片，但名字没认出来"
+    return {k: result.get(k) for k in ("ok", "cards", "names", "reason", "ms")}
 
 
 @app.post("/api/augments/rank")

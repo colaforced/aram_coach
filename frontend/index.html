@@ -1247,6 +1247,10 @@ function connectWS() {
         } else if (msg.type === 'level_up') {
             const d = msg.data;
             showLevelUpToast(d);
+        } else if (msg.type === 'augment_options') {
+            const names = (msg.data.options || []).filter(Boolean);
+            CoachCard.toast(`🎲 识别到强化符文：${names.join(' / ')}`);
+            AugmentPicker.fill(msg.data.options);
         }
     };
     ws.onclose = () => {
@@ -1291,9 +1295,12 @@ function showDiceToast(d) {
     setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 8000);
 }
 
-function showLevelUpToast(d) {
+async function showLevelUpToast(d) {
     if (!d.augment) return;
-    CoachCard.toast(`Lv.${d.new_level}：强化符文三选一，把看到的三个选项填进右下角`);
+    await AugmentPicker.load();
+    CoachCard.toast(AugmentPicker.auto
+        ? `Lv.${d.new_level}：强化符文三选一，打开选项后会自动识别`
+        : `Lv.${d.new_level}：强化符文三选一，把看到的三个选项填进右下角`);
     AugmentPicker.open();
 }
 

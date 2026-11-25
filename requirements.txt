@@ -1,3 +1,6 @@
 fastapi>=0.110.0
 uvicorn[standard]>=0.27.0
 httpx>=0.26.0
+# 强化符文三选一截屏识别（app/augment_ocr.py）
+numpy>=1.24
+mss>=9.0; sys_platform == "win32"

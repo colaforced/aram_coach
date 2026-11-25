@@ -194,15 +194,36 @@ window.CoachActions = {
 const AugmentPicker = {
     pool: null,
     llm: false,
+    scan: false,   // 后端能截屏识别（Windows）：显示"识别屏幕"按钮
+    auto: false,   // 选项出现时后端会自动识别并推过来（augment_options）
     async load() {
         if (this.pool) return;
         try {
             const r = await (await fetch('/api/augments')).json();
             this.pool = r.augments || [];
             this.llm = !!r.llm;
+            this.scan = !!r.scan;
+            this.auto = !!r.auto;
         } catch (e) {
             this.pool = [];
         }
+    },
+    /** 把识别到的三个名字填进去并直接出推荐；没认出的那格留空，可以手动补。 */
+    async fill(names) {
+        await this.open();
+        const inputs = [...document.querySelectorAll('#cc-aug input')];
+        (names || []).slice(0, inputs.length).forEach((n, i) => { inputs[i].value = n || ''; });
+        const res = document.querySelector('#cc-aug .cc-res');
+        const missing = (names || []).filter(n => !n).length;
+        if (missing && res) res.textContent = `有 ${missing} 个没认出来，手动补上再点推荐`;
+        if (!missing) await this.rank();
+    },
+    async scanScreen() {
+        const res = document.querySelector('#cc-aug .cc-res');
+        if (res) res.textContent = '📷 识别中…';
+        const r = await post('/api/augments/scan');
+        if (r.ok && (r.names || []).some(Boolean)) await this.fill(r.names);
+        else if (res) res.textContent = r.reason || '没认出来';
     },
     showLauncher(visible) {
         // 页面里放了 [data-aug-launch] 按钮（比如顶栏）就用它，否则右下角悬浮一个
@@ -232,14 +253,17 @@ const AugmentPicker = {
             ${[1, 2, 3].map(i => `<input list="cc-aug-list" placeholder="选项 ${i}（输入几个字筛选）" autocomplete="off">`).join('')}
             <div class="cc-actions">
                 <button class="cc-btn" data-act="rank">推荐</button>
+                ${this.scan ? '<button class="cc-btn secondary" data-act="scan" title="截一次屏识别三张卡的名字">📷 识别屏幕</button>' : ''}
                 ${this.llm ? '<button class="cc-btn secondary" data-act="ai">问 AI</button>' : ''}
             </div>
-            <div class="cc-res"></div>`;
+            <div class="cc-res">${this.auto ? '选项出现在屏幕上时会自动识别填好' : ''}</div>`;
         document.body.appendChild(el);
         el.querySelector('h3 span').onclick = () => this.close();
         el.querySelector('[data-act="rank"]').onclick = () => this.rank();
         const ai = el.querySelector('[data-act="ai"]');
         if (ai) ai.onclick = () => this.ai();
+        const scan = el.querySelector('[data-act="scan"]');
+        if (scan) scan.onclick = () => this.scanScreen();
         el.querySelectorAll('input').forEach(inp => inp.addEventListener('keydown', e => { if (e.key === 'Enter') this.rank(); }));
         el.querySelector('input').focus();
     },

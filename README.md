@@ -76,10 +76,13 @@
 
 ### 强化符文三选一（海克斯大乱斗）
 
-- 升到强化符文等级时自动弹出选择器（也可随时点右下角按钮打开），把看到的三个选项填进去（输入几个字即可筛选，符文池来自 CommunityDragon 的海克斯大乱斗列表）
+- **自动识别选项（Windows）**：LCU / LCD 都不提供三选一的选项，所以截屏识别。升到 3/7/11/15 级、还有没选的强化时，每秒只截三张卡标题那一条，认出名字就推到主控台、自动填好并给出推荐；选完卡片消失就停止截屏。也可以在选择器里点「📷 识别屏幕」手动识别一次
+  - 识别模型和算法移植自 [RankPeek](https://github.com/wxl11071123/rankpeek)（AGPL-3.0，见 `data/hextech-model/README.md`）：逐字分类 + 在官方强化名字表里约束解码，没把握的那张留空，不会填错
+  - 要求：游戏用**无边框或窗口模式**（独占全屏截到的是黑屏），16:9 分辨率，游戏在主显示器上；鼠标停在卡片上时那一帧会跳过（卡片悬停会放大变形）
+  - 名字里有模型字表外的字的少数强化认不出来，留空手动补
+- 也可以手动填：输入几个字即可筛选，符文池来自 CommunityDragon 的海克斯大乱斗列表
 - 按知识库排序：英雄专属推荐 > 知识库梯度 > 是否适合你的定位；知识库没覆盖的不硬给结论
 - 配置了 LLM 时可以点"问 AI"，只返回三行：选哪个、为什么、拿了之后怎么调整
-- LCD 接口拿不到当前给出的选项，所以需要手动填；弹出的等级默认 3/7/11/15，未经实机确认，可在配置里改
 
 ### 大乱斗数据同步
 
@@ -193,7 +196,9 @@ python run.py
 | `data_sync.auto` | 可选，默认 `true`：启动时数据过期则后台自动同步 |
 | `data_sync.max_age_hours` | 可选，默认 `24`：同步数据的有效期（小时） |
 | `runes.auto_apply` | 可选，默认 `false`：选人阶段换英雄后自动把推荐符文写进客户端（临时符文页，不删任何页） |
-| `augments.levels` | 可选，默认 `[3, 7, 11, 15]`：升到这些等级时弹出强化符文选择器 |
+| `augments.levels` | 可选，默认 `[3, 7, 11, 15]`：升到这些等级时弹出强化符文选择器、开始截屏识别 |
+| `augment_scan.auto` | 可选，默认 `true`：有没选的强化时自动截屏识别三选一（仅 Windows）；关掉后只能手动点「识别屏幕」 |
+| `augment_scan.interval` | 可选，默认 `1.0`：自动识别的截屏间隔（秒） |
 
 ### 接入其他大模型
 
@@ -242,6 +247,7 @@ python run.py
 │   ├── items.py         # 装备：常规装备索引、合成树计价、购物清单
 │   ├── runes.py         # 符文页：OP.GG / 手写数据 → 客户端临时符文页
 │   ├── augments.py      # 海克斯大乱斗强化符文：符文池、三选一排序
+│   ├── augment_ocr.py   # 强化符文三选一截屏识别（移植自 RankPeek）
 │   ├── lcu_client.py    # LCU 连接器：定位 lockfile / 解析日志取认证信息、读写请求
 │   ├── lcd_client.py    # LCD 客户端：读取局内实时数据（https://127.0.0.1:2999）、识别自己、划分我方/敌方
 │   ├── ai.py            # AI 教练：本局事实与知识库切片、三个任务的提示词、追问历史
@@ -254,6 +260,7 @@ python run.py
 │   ├── runes.json           # 符文树（符文名 → 客户端符文页 ID）
 │   ├── augments.json        # 海克斯大乱斗强化符文池（静态快照）
 │   ├── knowledge_base.json  # 版本知识库（梯度/技巧/装备公式/强化符文）
+│   ├── hextech-model/       # 强化符文名字识别模型（来自 RankPeek）
 │   └── aram_meta.json       # 同步生成的运行时缓存（gitignore）
 ├── frontend/
 │   ├── index.html       # 主控台（唯一页面）
@@ -314,7 +321,8 @@ python rebuild_db.py
 | POST | `/api/runes/apply?champion_id=` | 把推荐符文写成客户端临时符文页（不传 ID 则用当前英雄） |
 | POST | `/api/champ-select/swap/{id}` | 和备选席上的英雄交换 |
 | POST | `/api/champ-select/reroll` | 用骰子重随 |
-| GET | `/api/augments` | 强化符文池、弹出等级、是否可问 AI |
+| GET | `/api/augments` | 强化符文池、弹出等级、是否可问 AI、能否截屏识别 |
+| POST | `/api/augments/scan` | 截一次屏识别三选一的选项 |
 | POST | `/api/augments/rank` | 强化符文三选一排序，body `{"options": [...]}` |
 | POST | `/api/augments/ai` | 让 LLM 在三个选项里挑一个（三行结论） |
 | GET | `/api/lcu/status` | LCU 连接状态 |
@@ -406,3 +414,5 @@ A：编辑 `data/champions.json`，字段参考现有条目；改完用 `python 
 ## License
 
 仅供个人学习使用。
+
+`data/hextech-model/` 里的识别模型和 `app/augment_ocr.py` 的识别算法来自 [RankPeek](https://github.com/wxl11071123/rankpeek)，以 AGPL-3.0 发布。

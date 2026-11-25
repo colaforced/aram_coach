@@ -46,6 +46,7 @@ curl -X POST http://127.0.0.1:8799/mock/phase/ChampSelect   # 选人
 curl -X POST http://127.0.0.1:8799/mock/phase/InProgress    # 对局中（我方阵亡，复活前购物卡）
 curl -X POST http://127.0.0.1:8799/mock/phase/None          # 空闲
 curl -X POST http://127.0.0.1:8799/mock/phase/EndOfGame     # 结算：从对局切过来会生成 game_logs/<时间>/review.md（战绩是假数据）
+curl -X POST 'http://127.0.0.1:8799/mock/augments?names=炼狱导管,坦克引擎,冰寒'  # 模拟截屏识别到三选一（真实截屏只在 Windows 上），留空的位置表示没认出
 ```
 
 页面每 2 秒推送一次状态，切换后最多等 2 秒生效。
@@ -62,7 +63,7 @@ curl -X POST http://127.0.0.1:8799/mock/phase/EndOfGame     # 结算：从对局
 | `idle` | `00-idle.png` | 已连接、未进对局的空闲页（模拟的 LCU 一直是已连接，拍不到「等待 LoL 客户端连接」） |
 | `champ` | `01-champ-select.png` | 选人结论（换 / 骰 / 留）、阵容对比、英雄指导，整页 |
 | `game` | `02-in-game.png` | 阵亡购物卡、属性面板（展开）、实时战况、事件流，整页 |
-| | `03-augment.png` | 强化符文三选一（填入 炼狱导管 / 坦克引擎 / 冰寒 后点推荐），右列区域 |
+| | `03-augment.png` | 强化符文三选一（模拟识别到 炼狱导管 / 坦克引擎 / 冰寒，自动填好出推荐），右列区域 |
 | | `04-deep-analysis.png` | 深度分析页签，右列 |
 | | `05-ask-ai.png` | 问 AI 页签（问一个问题），右列；没配 LLM Key 时跳过 |
 

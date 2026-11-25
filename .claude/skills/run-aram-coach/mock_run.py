@@ -4,6 +4,7 @@
 环境变量: MOCK_PORT（默认 8799，避开正式端口 8765）、MOCK_PHASE（初始阶段，默认 ChampSelect）
 切换场景: POST /mock/phase/{None|ChampSelect|InProgress|EndOfGame}
 （InProgress → EndOfGame 会触发对局记录拉战绩、生成 game_logs/<时间>/review.md；战绩接口返回的也是假数据）
+模拟识别到强化符文三选一: POST /mock/augments?names=炼狱导管,坦克引擎,冰寒
 
 只替换 main.lcu 和 lcd_client.fetch_allgamedata，其余（规则引擎、数据同步、LLM）都是真的。
 """
@@ -205,6 +206,15 @@ lcd_client.fetch_allgamedata = lambda: lcd_data() if SCENE["phase"] == "InProgre
 async def mock_phase(name: str):
     SCENE["phase"] = name
     return {"phase": name}
+
+
+@main.app.post("/mock/augments")
+async def mock_augments(names: str = "炼狱导管,坦克引擎,冰寒"):
+    """模拟截屏识别到三选一（真实识别只能在 Windows 上截屏）：推送和自动识别一模一样的消息。
+    names 用逗号分隔，留空的位置表示那张没认出来。"""
+    opts = [n.strip() or None for n in names.split(",")][:3]
+    await main.broadcast({"type": "augment_options", "data": {"options": opts, "level": 3}})
+    return {"options": opts}
 
 
 main.log.info(f"MOCK Web UI: http://127.0.0.1:{PORT}/")

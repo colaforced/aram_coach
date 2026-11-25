@@ -12,6 +12,7 @@ import argparse
 import json
 import urllib.request
 from pathlib import Path
+from urllib.parse import quote
 
 from playwright.sync_api import sync_playwright
 
@@ -74,12 +75,8 @@ class Shooter:
         page.wait_for_timeout(300)
         self.save("02-in-game.png", page, full_page=True)
 
-        # 强化符文：右列 + 弹出的选择器
-        page.evaluate("AugmentPicker.open()")
-        page.wait_for_selector("#cc-aug input")
-        for inp, val in zip(page.query_selector_all("#cc-aug input"), ["炼狱导管", "坦克引擎", "冰寒"]):
-            inp.fill(val)
-        page.click('#cc-aug [data-act="rank"]')
+        # 强化符文：模拟截屏识别到三个选项（和自动识别推送的消息一样），面板自动填好并出推荐
+        api(self.base, "/mock/augments?names=" + quote("炼狱导管,坦克引擎,冰寒"), method="POST")
         page.wait_for_selector("#cc-aug .cc-rank")
         page.wait_for_timeout(300)
         aug = page.locator("#cc-aug").bounding_box()
