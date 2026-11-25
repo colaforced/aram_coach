@@ -1,0 +1,2 @@
+# 识别模型权重是二进制：防止 Windows 上 core.autocrlf 改掉里面的换行字节
+data/hextech-model/*.f32 binary
