@@ -103,9 +103,10 @@ ITEM_DB = items.ItemDB(ITEM_MAP)
 ITEM_DB.apply_economics((ARAM_META.get("cdragon") or {}).get("items"))
 # 符文树：把手写数据里的符文名还原成客户端符文页 ID
 RUNE_TREE: Dict[str, Any] = json.loads((DATA_DIR / "runes.json").read_text(encoding="utf-8"))
-# 海克斯大乱斗强化符文池
+# 海克斯大乱斗强化符文池（含效果描述、国服胜率；快照由 update_augments.py 生成）
 AUGMENTS_STATIC = DATA_DIR / "augments.json"
-AUGMENT_POOL: list = augments.load_pool((ARAM_META.get("cdragon") or {}).get("augments"), AUGMENTS_STATIC)
+AUGMENT_POOL: list = augments.load_pool((ARAM_META.get("cdragon") or {}).get("augments"), AUGMENTS_STATIC,
+                                        ARAM_META.get("augment_stats"))
 RUNES_CFG: Dict[str, Any] = {"auto_apply": False, **CONFIG.get("runes", {})}
 # 哪些等级会弹强化符文三选一（RankPeek 实测 3/7/11/15，可在 config.json 的 augments.levels 改）
 AUGMENT_CFG: Dict[str, Any] = {"levels": [3, 7, 11, 15], **CONFIG.get("augments", {})}
@@ -199,7 +200,7 @@ async def refresh_aram_meta(force: bool = False) -> Dict[str, Any]:
             ARAM_META.update(fresh)
             cd = ARAM_META.get("cdragon") or {}
             ITEM_DB.apply_economics(cd.get("items"))
-            AUGMENT_POOL[:] = augments.load_pool(cd.get("augments"), AUGMENTS_STATIC)
+            AUGMENT_POOL[:] = augments.load_pool(cd.get("augments"), AUGMENTS_STATIC, ARAM_META.get("augment_stats"))
             if AUGMENT_SCANNER:
                 AUGMENT_SCANNER.set_names(a["name"] for a in AUGMENT_POOL)
             _mean_strength_cache.clear()
@@ -240,7 +241,8 @@ llm_client = LLMClient(CONFIG.get("llm", {}))
 log.info(f"  LLM: {llm_client.model if llm_client.enabled else '未配置 Key（深度分析走本地规则）'}"
          + (f"，Key 来自 {LLM_KEY_FROM}" if llm_client.enabled else ""))
 AI_DEPS = ai.Deps(items=ITEM_DB, kb=KNOWLEDGE_BASE, kb_specific_for=lambda name: kb_specific_for(name),
-                  banned=ARAM_BUILD_REPLACEMENTS, alias=CHAMPION_ALIAS)
+                  banned=ARAM_BUILD_REPLACEMENTS, alias=CHAMPION_ALIAS,
+                  augments=AUGMENT_POOL, augment_levels=AUGMENT_CFG["levels"])
 
 ws_clients: list[WebSocket] = []
 LAST_STATE: Dict[str, Any] = {}
@@ -1304,13 +1306,16 @@ class AugmentOptions(BaseModel):
 
 def _augment_ranking(state: Dict[str, Any], options: List[str]) -> Dict[str, Any]:
     coach = state.get("my_coach") or {}
-    return augments.rank(options, coach, kb_specific_for(coach.get("name", "")), KNOWLEDGE_BASE, AUGMENT_POOL)
+    return augments.rank(options, coach, kb_specific_for(coach.get("name", "")), KNOWLEDGE_BASE, AUGMENT_POOL,
+                         champion_id=state.get("my_champion_id"), champion_names=CHAMPION_ALIAS)
 
 
 @app.get("/api/augments")
 async def api_augments():
     return {
-        "augments": [{"name": a["name"], "rarity": a.get("rarity", "")} for a in AUGMENT_POOL],
+        # desc 截短给手动输入时的下拉提示用；完整描述在排序结果里
+        "augments": [{"name": a["name"], "rarity": a.get("rarity", ""), "desc": (a.get("desc") or "")[:40]}
+                     for a in AUGMENT_POOL],
         "levels": AUGMENT_CFG["levels"],
         "llm": llm_client.enabled,
         # scan：能截屏识别（显示"识别屏幕"按钮）；auto：选项出现时会自动识别并推送

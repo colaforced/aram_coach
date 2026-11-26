@@ -1,1463 +1,244 @@
-{
- "mode": "KIWI",
- "augments": [
-  {
-   "id": 1180,
-   "key": "ARAM_BigBrain",
-   "name": "超强大脑",
-   "rarity": "gold"
-  },
-  {
-   "id": 1141,
-   "key": "ARAM_AllForYou",
-   "name": "全心为你",
-   "rarity": "gold"
-  },
-  {
-   "id": 1002,
-   "key": "ARAM_ApexInventor",
-   "name": "尖端发明家",
-   "rarity": "gold"
-  },
-  {
-   "id": 1004,
-   "key": "ARAM_BacktoBasics",
-   "name": "回归基本功",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 1007,
-   "key": "ARAM_BluntForce",
-   "name": "大力",
-   "rarity": "silver"
-  },
-  {
-   "id": 1103,
-   "key": "ARAM_BreadAndButter",
-   "name": "面包和黄油",
-   "rarity": "gold"
-  },
-  {
-   "id": 1151,
-   "key": "ARAM_BreadAndCheese",
-   "name": "面包和奶酪",
-   "rarity": "gold"
-  },
-  {
-   "id": 1150,
-   "key": "ARAM_BreadAndJam",
-   "name": "面包和果酱",
-   "rarity": "gold"
-  },
-  {
-   "id": 1011,
-   "key": "ARAM_CantTouchThis",
-   "name": "你摸不到",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 1013,
-   "key": "ARAM_CelestialBody",
-   "name": "星界躯体",
-   "rarity": "gold"
-  },
-  {
-   "id": 1015,
-   "key": "ARAM_CircleofDeath",
-   "name": "死亡之环",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 1018,
-   "key": "ARAM_CourageoftheColossus",
-   "name": "巨像的勇气",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 1118,
-   "key": "ARAM_CriticalHealing",
-   "name": "会心治疗",
-   "rarity": "gold"
-  },
-  {
-   "id": 1019,
-   "key": "ARAM_Dashing",
-   "name": "全凭身法",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 1020,
-   "key": "ARAM_DawnbringersResolve",
-   "name": "黎明使者的坚决",
-   "rarity": "gold"
-  },
-  {
-   "id": 1022,
-   "key": "ARAM_Deft",
-   "name": "灵巧",
-   "rarity": "silver"
-  },
-  {
-   "id": 1025,
-   "key": "ARAM_DiveBomber",
-   "name": "俯冲轰炸",
-   "rarity": "silver"
-  },
-  {
-   "id": 1026,
-   "key": "ARAM_DontBlink",
-   "name": "唯快不破",
-   "rarity": "silver"
-  },
-  {
-   "id": 1029,
-   "key": "ARAM_EtherealWeapon",
-   "name": "虚幻武器",
-   "rarity": "gold"
-  },
-  {
-   "id": 1030,
-   "key": "ARAM_Eureka",
-   "name": "尤里卡",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 1036,
-   "key": "ARAM_Firebrand",
-   "name": "火上浇油",
-   "rarity": "gold"
-  },
-  {
-   "id": 1037,
-   "key": "ARAM_FirstAidKit",
-   "name": "急救用具",
-   "rarity": "silver"
-  },
-  {
-   "id": 1116,
-   "key": "ARAM_Flashy",
-   "name": "闪现向前",
-   "rarity": "gold"
-  },
-  {
-   "id": 1322,
-   "key": "ARAM_GetExcited",
-   "name": "罪恶快感",
-   "rarity": "gold"
-  },
-  {
-   "id": 1041,
-   "key": "ARAM_Goliath",
-   "name": "歌利亚巨人",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 1138,
-   "key": "ARAM_Goredrink",
-   "name": "渴血",
-   "rarity": "silver"
-  },
-  {
-   "id": 1181,
-   "key": "ARAM_HeavyHitter",
-   "name": "重量级打击手",
-   "rarity": "silver"
-  },
-  {
-   "id": 1044,
-   "key": "ARAM_IceCold",
-   "name": "冰寒",
-   "rarity": "silver"
-  },
-  {
-   "id": 1045,
-   "key": "ARAM_InfernalConduit",
-   "name": "炼狱导管",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 1046,
-   "key": "ARAM_InfernalSoul",
-   "name": "炼狱龙魂",
-   "rarity": "silver"
-  },
-  {
-   "id": 1047,
-   "key": "ARAM_ItsCritical",
-   "name": "关键暴击",
-   "rarity": "gold"
-  },
-  {
-   "id": 1048,
-   "key": "ARAM_JeweledGauntlet",
-   "name": "珠光护手",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 1305,
-   "key": "ARAM_LegDay",
-   "name": "练腿日",
-   "rarity": "silver"
-  },
-  {
-   "id": 1053,
-   "key": "ARAM_MadScientist",
-   "name": "科学狂人",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 1129,
-   "key": "ARAM_Marksmage",
-   "name": "神射法师",
-   "rarity": "gold"
-  },
-  {
-   "id": 1054,
-   "key": "ARAM_MasterofDuality",
-   "name": "物法皆修",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 1056,
-   "key": "ARAM_MindtoMatter",
-   "name": "由心及物",
-   "rarity": "silver"
-  },
-  {
-   "id": 1104,
-   "key": "ARAM_Minionmancer",
-   "name": "仆从大师",
-   "rarity": "gold"
-  },
-  {
-   "id": 1057,
-   "key": "ARAM_MountainSoul",
-   "name": "山脉龙魂",
-   "rarity": "silver"
-  },
-  {
-   "id": 1058,
-   "key": "ARAM_MysticPunch",
-   "name": "秘术冲拳",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 1060,
-   "key": "ARAM_OceanSoul",
-   "name": "海洋龙魂",
-   "rarity": "silver"
-  },
-  {
-   "id": 1062,
-   "key": "ARAM_OmniSoul",
-   "name": "全能龙魂",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 1063,
-   "key": "ARAM_OutlawsGrit",
-   "name": "狂徒豪气",
-   "rarity": "gold"
-  },
-  {
-   "id": 1311,
-   "key": "ARAM_Overflow",
-   "name": "溢流",
-   "rarity": "gold"
-  },
-  {
-   "id": 1324,
-   "key": "ARAM_ProteinShake",
-   "name": "蛋白粉奶昔",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 1154,
-   "key": "ARAM_Quest_UrfsChampion",
-   "name": "海牛阿福的勇士",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 1156,
-   "key": "ARAM_Quest_WoogletsWitchcap",
-   "name": "沃格勒特的巫师帽",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 1067,
-   "key": "ARAM_RabbleRousing",
-   "name": "活力焕发",
-   "rarity": "gold"
-  },
-  {
-   "id": 1068,
-   "key": "ARAM_Recursion",
-   "name": "循环往复",
-   "rarity": "gold"
-  },
-  {
-   "id": 1170,
-   "key": "ARAM_ScopedWeapons",
-   "name": "万用瞄准镜",
-   "rarity": "silver"
-  },
-  {
-   "id": 1071,
-   "key": "ARAM_ScopierWeapons",
-   "name": "更万用的瞄准镜",
-   "rarity": "gold"
-  },
-  {
-   "id": 1115,
-   "key": "ARAM_ScopiestWeapons",
-   "name": "最万用的瞄准镜",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 1113,
-   "key": "ARAM_SkilledSniper",
-   "name": "老练狙神",
-   "rarity": "gold"
-  },
-  {
-   "id": 1136,
-   "key": "ARAM_SlapAround",
-   "name": "扇巴掌",
-   "rarity": "silver"
-  },
-  {
-   "id": 1076,
-   "key": "ARAM_SonicBoom",
-   "name": "天音爆",
-   "rarity": "silver"
-  },
-  {
-   "id": 1077,
-   "key": "ARAM_SoulSiphon",
-   "name": "灵魂虹吸",
-   "rarity": "gold"
-  },
-  {
-   "id": 1214,
-   "key": "ARAM_SpinToWin",
-   "name": "旋转至胜",
-   "rarity": "silver"
-  },
-  {
-   "id": 1353,
-   "key": "ARAM_TankEngine",
-   "name": "坦克引擎",
-   "rarity": "gold"
-  },
-  {
-   "id": 1080,
-   "key": "ARAM_TankItOrLeaveIt",
-   "name": "会心防御",
-   "rarity": "silver"
-  },
-  {
-   "id": 1081,
-   "key": "ARAM_TapDancer",
-   "name": "踢踏舞",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 1084,
-   "key": "ARAM_ThreadtheNeedle",
-   "name": "穿针引线",
-   "rarity": "gold"
-  },
-  {
-   "id": 1320,
-   "key": "ARAM_Upgrade_Collector",
-   "name": "升级：收集者",
-   "rarity": "silver"
-  },
-  {
-   "id": 1336,
-   "key": "ARAM_Upgrade_IE",
-   "name": "升级：无尽之刃",
-   "rarity": "gold"
-  },
-  {
-   "id": 1319,
-   "key": "ARAM_Upgrade_Immolate",
-   "name": "升级：献祭",
-   "rarity": "silver"
-  },
-  {
-   "id": 1318,
-   "key": "ARAM_Upgrade_ZH",
-   "name": "升级：中娅",
-   "rarity": "silver"
-  },
-  {
-   "id": 1092,
-   "key": "ARAM_Vulnerability",
-   "name": "易损",
-   "rarity": "gold"
-  },
-  {
-   "id": 1097,
-   "key": "ARAM_WitchfulThinking",
-   "name": "巫师式思考",
-   "rarity": "silver"
-  },
-  {
-   "id": 1098,
-   "key": "ARAM_WithHaste",
-   "name": "急急小子",
-   "rarity": "gold"
-  },
-  {
-   "id": 1326,
-   "key": "Nightstalking",
-   "name": "夜狩",
-   "rarity": "gold"
-  },
-  {
-   "id": 1028,
-   "key": "ARAM_Erosion",
-   "name": "侵蚀",
-   "rarity": "silver"
-  },
-  {
-   "id": 1034,
-   "key": "VeilOfWarding",
-   "name": "防护面纱",
-   "rarity": "silver"
-  },
-  {
-   "id": 1211,
-   "key": "ARAM_ItsKillingTime",
-   "name": "杀戮时间到了",
-   "rarity": "gold"
-  },
-  {
-   "id": 1105,
-   "key": "ARAM_Homeguard",
-   "name": "家园卫士",
-   "rarity": "silver"
-  },
-  {
-   "id": 1051,
-   "key": "ARAM_LightemUp",
-   "name": "点亮他们！",
-   "rarity": "silver"
-  },
-  {
-   "id": 1072,
-   "key": "ARAM_SearingDawn",
-   "name": "炽烈黎明",
-   "rarity": "gold"
-  },
-  {
-   "id": 1073,
-   "key": "ARAM_ShadowRunner",
-   "name": "暗影疾奔",
-   "rarity": "silver"
-  },
-  {
-   "id": 1087,
-   "key": "ARAM_Typhoon",
-   "name": "台风",
-   "rarity": "silver"
-  },
-  {
-   "id": 1095,
-   "key": "ARAM_WindspeakersBlessing",
-   "name": "风语者的祝福",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 1112,
-   "key": "ARAM_UltimateUnstoppable",
-   "name": "终极不可阻挡",
-   "rarity": "silver"
-  },
-  {
-   "id": 1301,
-   "key": "ARAM_DivineIntervention",
-   "name": "神圣干预",
-   "rarity": "gold"
-  },
-  {
-   "id": 1134,
-   "key": "ARAM_DrawYourSword",
-   "name": "亮出你的剑",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 1225,
-   "key": "ARAM_DualWield",
-   "name": "双刀流",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 1194,
-   "key": "ARAM_FeyMagic",
-   "name": "精怪魔法",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 1187,
-   "key": "ARAM_Flashbang",
-   "name": "闪光弹",
-   "rarity": "silver"
-  },
-  {
-   "id": 1088,
-   "key": "ARAM_UltimateRevolution",
-   "name": "终极刷新",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 1133,
-   "key": "ARAM_MagicMissile",
-   "name": "魔法飞弹",
-   "rarity": "gold"
-  },
-  {
-   "id": 1061,
-   "key": "ARAM_OkBoomerang",
-   "name": "回力OK镖",
-   "rarity": "gold"
-  },
-  {
-   "id": 1038,
-   "key": "ARAM_FromBeginningToEnd",
-   "name": "有始有终",
-   "rarity": "gold"
-  },
-  {
-   "id": 1149,
-   "key": "ARAM_Impassable",
-   "name": "不动如山",
-   "rarity": "gold"
-  },
-  {
-   "id": 1079,
-   "key": "ARAM_SymphonyofWar",
-   "name": "战争交响乐",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 1332,
-   "key": "OminousPact",
-   "name": "不祥契约",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 1328,
-   "key": "CriticalRhythm",
-   "name": "暴击律动",
-   "rarity": "gold"
-  },
-  {
-   "id": 1333,
-   "key": "EscapePlan",
-   "name": "逃跑计划",
-   "rarity": "silver"
-  },
-  {
-   "id": 1325,
-   "key": "GlassCannon",
-   "name": "玻璃大炮",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 1152,
-   "key": "ARAM_Quest_SteelYourHeart",
-   "name": "钢化你心",
-   "rarity": "gold"
-  },
-  {
-   "id": 1329,
-   "key": "BiggestSnowballEver",
-   "name": "史上最大雪球",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 1337,
-   "key": "KingMe",
-   "name": "尊我为王",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 1335,
-   "key": "Goldrend",
-   "name": "夺金",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 1205,
-   "key": "ARAM_ADAPt",
-   "name": "物理转魔法",
-   "rarity": "silver"
-  },
-  {
-   "id": 1206,
-   "key": "ARAM_escAPADe",
-   "name": "魔法转物理",
-   "rarity": "silver"
-  },
-  {
-   "id": 1331,
-   "key": "EmpyreanPromise",
-   "name": "至高天诺言",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 1195,
-   "key": "ARAM_GiantSlayer",
-   "name": "巨人杀手",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 1323,
-   "key": "ARAM_Cruelty",
-   "name": "残忍",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 1343,
-   "key": "Quest_Sneakerhead",
-   "name": "王中王，靴中靴",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 1238,
-   "key": "ARAM_TransmutePrismatic",
-   "name": "质变：棱彩阶",
-   "rarity": "gold"
-  },
-  {
-   "id": 1243,
-   "key": "ARAM_TransmuteChaos",
-   "name": "质变：混沌",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 1344,
-   "key": "FinalForm",
-   "name": "最终形态",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 1347,
-   "key": "Poltergeist",
-   "name": "吵闹鬼",
-   "rarity": "silver"
-  },
-  {
-   "id": 1348,
-   "key": "Flash2",
-   "name": "闪闪现现",
-   "rarity": "silver"
-  },
-  {
-   "id": 1996,
-   "key": "ARAM_Upgrade_Sheen",
-   "name": "升级：耀光",
-   "rarity": "gold"
-  },
-  {
-   "id": 1349,
-   "key": "UltimateAwakening",
-   "name": "终极唤醒",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 1314,
-   "key": "MightyShield",
-   "name": "强力护盾",
-   "rarity": "silver"
-  },
-  {
-   "id": 1315,
-   "key": "SwiftAndSafe",
-   "name": "快中求稳",
-   "rarity": "silver"
-  },
-  {
-   "id": 1027,
-   "key": "ARAM_Earthwake",
-   "name": "大地苏醒",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 1074,
-   "key": "ARAM_ShrinkRay",
-   "name": "缩小射线",
-   "rarity": "gold"
-  },
-  {
-   "id": 1402,
-   "key": "ARAM_StatsOnStatsOnStats",
-   "name": "属性叠属性叠属性！",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 12317,
-   "key": "ARAM_PandorasBox",
-   "name": "潘朵拉的盒子",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 1358,
-   "key": "PinballSnowball",
-   "name": "弹球",
-   "rarity": "gold"
-  },
-  {
-   "id": 1361,
-   "key": "ARAM_Quest_VoidImmolation",
-   "name": "艾卡西亚的陷落",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 1403,
-   "key": "ARAM_StatsOnStats",
-   "name": "属性叠属性！",
-   "rarity": "gold"
-  },
-  {
-   "id": 1388,
-   "key": "InfiniteRecursion",
-   "name": "无限循环往复",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 1404,
-   "key": "ARAM_Stats",
-   "name": "属性！",
-   "rarity": "silver"
-  },
-  {
-   "id": 1384,
-   "key": "Donation",
-   "name": "捐赠",
-   "rarity": "gold"
-  },
-  {
-   "id": 1373,
-   "key": "ShrinkEngine",
-   "name": "缩小引擎",
-   "rarity": "gold"
-  },
-  {
-   "id": 1006,
-   "key": "ARAM_BladeWaltz",
-   "name": "利刃华尔兹",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 1386,
-   "key": "YouSpinMeRightRound",
-   "name": "转得我眩晕了",
-   "rarity": "silver"
-  },
-  {
-   "id": 1375,
-   "key": "SoulEater",
-   "name": "吞噬灵魂",
-   "rarity": "gold"
-  },
-  {
-   "id": 1401,
-   "key": "GrowthSpurt",
-   "name": "生机迸发",
-   "rarity": "gold"
-  },
-  {
-   "id": 1390,
-   "key": "ARAM_PhenomenalEvil",
-   "name": "超凡邪恶",
-   "rarity": "gold"
-  },
-  {
-   "id": 1392,
-   "key": "GoldenSnowball",
-   "name": "神圣雪球",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 1413,
-   "key": "ARAM_StuckInHereWithMe",
-   "name": "和我一起困在这里",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 2004,
-   "key": "ARAM_EmpoweredByTheFaithful",
-   "name": "信念者的强化",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 1415,
-   "key": "Twinfire",
-   "name": "双生火焰",
-   "rarity": "silver"
-  },
-  {
-   "id": 1416,
-   "key": "HextechSoul",
-   "name": "海克斯科技龙魂",
-   "rarity": "silver"
-  },
-  {
-   "id": 2005,
-   "key": "ARAM_InfernoTriggered",
-   "name": "扳机炼狱",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 1237,
-   "key": "ARAM_TransmuteGold",
-   "name": "质变：黄金阶",
-   "rarity": "silver"
-  },
-  {
-   "id": 1389,
-   "key": "HandOfBaron",
-   "name": "男爵之手",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 1420,
-   "key": "Sonata",
-   "name": "咏叹奏鸣",
-   "rarity": "gold"
-  },
-  {
-   "id": 1421,
-   "key": "PromQueen",
-   "name": "舞会女王",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 2026,
-   "key": "KillSecured",
-   "name": "杀意翻涌",
-   "rarity": "silver"
-  },
-  {
-   "id": 1308,
-   "key": "ARAM_Firefox",
-   "name": "火狐",
-   "rarity": "silver"
-  },
-  {
-   "id": 2009,
-   "key": "ARAM_Zealot",
-   "name": "狂热者",
-   "rarity": "silver"
-  },
-  {
-   "id": 2018,
-   "key": "ARAM_Purist_Caster",
-   "name": "纯粹主义者 - 术师",
-   "rarity": "silver"
-  },
-  {
-   "id": 2010,
-   "key": "ARAM_DoubleTap",
-   "name": "双发快射",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 2016,
-   "key": "ARAM_Juiced",
-   "name": "注魔",
-   "rarity": "silver"
-  },
-  {
-   "id": 1379,
-   "key": "Upgrade_SwordOfBlossom",
-   "name": "升级：花晓之剑",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 2032,
-   "key": "FishBait",
-   "name": "鲨鱼诱饵",
-   "rarity": "gold"
-  },
-  {
-   "id": 2043,
-   "key": "NatureIsHealing",
-   "name": "自然即是治愈",
-   "rarity": "gold"
-  },
-  {
-   "id": 2054,
-   "key": "SpellVolley",
-   "name": "三重射击",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 2055,
-   "key": "ARAM_Multishot",
-   "name": "多重射击",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 2065,
-   "key": "ARAM_Terror",
-   "name": "惊惧",
-   "rarity": "gold"
-  },
-  {
-   "id": 2064,
-   "key": "ARAM_Quickstep",
-   "name": "快步",
-   "rarity": "gold"
-  },
-  {
-   "id": 2072,
-   "key": "Missile_Split",
-   "name": "咒语裂变",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 2073,
-   "key": "ARAM_SustainingStrike",
-   "name": "虹吸",
-   "rarity": "silver"
-  },
-  {
-   "id": 2076,
-   "key": "TitansPulse",
-   "name": "保持坚定",
-   "rarity": "silver"
-  },
-  {
-   "id": 2078,
-   "key": "ChainReaction",
-   "name": "连锁反应",
-   "rarity": "gold"
-  },
-  {
-   "id": 2077,
-   "key": "DarkWind",
-   "name": "贪欲束缚",
-   "rarity": "gold"
-  },
-  {
-   "id": 1001,
-   "key": "ARAM_ImTheJuggernaut",
-   "name": "泰坦的坚决",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 2088,
-   "key": "ARAM_Snowday",
-   "name": "下雪天",
-   "rarity": "silver"
-  },
-  {
-   "id": 2062,
-   "key": "Ability_SelfAOE_DoubleCast",
-   "name": "回响施放",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 2091,
-   "key": "EndlessDecimation",
-   "name": "无尽大杀四方",
-   "rarity": "gold"
-  },
-  {
-   "id": 1005,
-   "key": "ARAM_WeeWooWeeWoo",
-   "name": "喂呜喂呜",
-   "rarity": "gold"
-  },
-  {
-   "id": 2087,
-   "key": "ARAM_Archmage",
-   "name": "大法师",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 1204,
-   "key": "ARAM_StackosaurusRex",
-   "name": "叠角龙",
-   "rarity": "silver"
-  },
-  {
-   "id": 2096,
-   "key": "LittleExtraHelp",
-   "name": "小小的额外帮助",
-   "rarity": "gold"
-  },
-  {
-   "id": 2100,
-   "key": "ARAM_SpecializedRecursion",
-   "name": "急速之追求",
-   "rarity": "gold"
-  },
-  {
-   "id": 2099,
-   "key": "ARAM_DivineDomain",
-   "name": "飞升仪式",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 2103,
-   "key": "ARAM_BangBang",
-   "name": "狙神飞星",
-   "rarity": "gold"
-  },
-  {
-   "id": 2104,
-   "key": "ARAM_SpiritBomb",
-   "name": "灵魄炸弹",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 2107,
-   "key": "ARAM_Hellbent",
-   "name": "濒死悟道",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 2098,
-   "key": "ARAM_EndlessHunt",
-   "name": "吃过路兵",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 2080,
-   "key": "Snowbomb",
-   "name": "冰雪爆裂",
-   "rarity": "gold"
-  },
-  {
-   "id": 2102,
-   "key": "PressureCooker",
-   "name": "高压锅",
-   "rarity": "gold"
-  },
-  {
-   "id": 2109,
-   "key": "SnapBack",
-   "name": "复位",
-   "rarity": "gold"
-  },
-  {
-   "id": 2116,
-   "key": "SpecializedEmpowerment",
-   "name": "威能之追求",
-   "rarity": "gold"
-  },
-  {
-   "id": 2119,
-   "key": "Overextender",
-   "name": "过量延伸者",
-   "rarity": "gold"
-  },
-  {
-   "id": 2115,
-   "key": "SquishySlappyGrab",
-   "name": "软弹啪叽抓",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 2111,
-   "key": "Bonk",
-   "name": "邦！",
-   "rarity": "gold"
-  },
-  {
-   "id": 2123,
-   "key": "Overloaded",
-   "name": "超负荷",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 2125,
-   "key": "ItsGoTime",
-   "name": "前进时间到",
-   "rarity": "silver"
-  },
-  {
-   "id": 2126,
-   "key": "KeepGoing",
-   "name": "装填",
-   "rarity": "gold"
-  },
-  {
-   "id": 2129,
-   "key": "Terraind",
-   "name": "地形专家",
-   "rarity": "gold"
-  },
-  {
-   "id": 2131,
-   "key": "DontChangeTheChannel",
-   "name": "别停止引导",
-   "rarity": "silver"
-  },
-  {
-   "id": 2133,
-   "key": "MercysStrike",
-   "name": "仁慈打击",
-   "rarity": "gold"
-  },
-  {
-   "id": 2127,
-   "key": "ForgedByTheMaster",
-   "name": "大师铸就",
-   "rarity": "silver"
-  },
-  {
-   "id": 2136,
-   "key": "TrustyWeapon",
-   "name": "可靠武器",
-   "rarity": "silver"
-  },
-  {
-   "id": 2132,
-   "key": "WarlockJuicebox",
-   "name": "术士果汁盒",
-   "rarity": "gold"
-  },
-  {
-   "id": 2135,
-   "key": "Overkill",
-   "name": "针插垫",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 2139,
-   "key": "PinCushion",
-   "name": "豪猪",
-   "rarity": "gold"
-  },
-  {
-   "id": 2144,
-   "key": "DoubleDefense",
-   "name": "加固护盾",
-   "rarity": "silver"
-  },
-  {
-   "id": 2138,
-   "key": "WardingWeapon",
-   "name": "自适应防护",
-   "rarity": "silver"
-  },
-  {
-   "id": 2143,
-   "key": "Upgrade_SunderedSky",
-   "name": "升级：焚天",
-   "rarity": "gold"
-  },
-  {
-   "id": 2140,
-   "key": "Upgrade_Ravenous",
-   "name": "升级：贪欲九头蛇",
-   "rarity": "gold"
-  },
-  {
-   "id": 3025,
-   "key": "Sound_Barrier",
-   "name": "音之屏障",
-   "rarity": "silver"
-  },
-  {
-   "id": 3039,
-   "key": "Salvation",
-   "name": "拯救",
-   "rarity": "gold"
-  },
-  {
-   "id": 3071,
-   "key": "BrassBlast",
-   "name": "黄铜爆音",
-   "rarity": "gold"
-  },
-  {
-   "id": 3053,
-   "key": "MoshMonster",
-   "name": "热舞怪兽",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 3075,
-   "key": "Recoil",
-   "name": "反冲",
-   "rarity": "gold"
-  },
-  {
-   "id": 3079,
-   "key": "Totentanz",
-   "name": "死之舞",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 2141,
-   "key": "Quest_UltraHydra",
-   "name": "终极九头蛇",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 3058,
-   "key": "TickleMonster",
-   "name": "嗡嗡怪兽",
-   "rarity": "gold"
-  },
-  {
-   "id": 3059,
-   "key": "NoManaNoProblem",
-   "name": "没法力，没问题",
-   "rarity": "silver"
-  },
-  {
-   "id": 3063,
-   "key": "GiftoftheDrowned",
-   "name": "溺水之赠礼",
-   "rarity": "silver"
-  },
-  {
-   "id": 3094,
-   "key": "LichBrain",
-   "name": "巫妖大脑",
-   "rarity": "silver"
-  },
-  {
-   "id": 3018,
-   "key": "BigShot",
-   "name": "大腕",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 3048,
-   "key": "BouncingBees",
-   "name": "弹跳蜜蜂",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 3036,
-   "key": "DoubleTime",
-   "name": "翻倍时间",
-   "rarity": "gold"
-  },
-  {
-   "id": 3016,
-   "key": "ThirdTimesTheHarm",
-   "name": "伤不过三",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 2157,
-   "key": "Upgrade_DeathDance",
-   "name": "升级：死亡之舞",
-   "rarity": "silver"
-  },
-  {
-   "id": 3086,
-   "key": "BEES",
-   "name": "小蜜蜂！！！",
-   "rarity": "gold"
-  },
-  {
-   "id": 1310,
-   "key": "ARAM_ClownCollege",
-   "name": "小丑学院",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 3078,
-   "key": "TheBoomAndTheBass",
-   "name": "鼓声暴起 低音轰鸣",
-   "rarity": "gold"
-  },
-  {
-   "id": 3116,
-   "key": "TakeemDownDownDown",
-   "name": "将他们放倒倒倒",
-   "rarity": "gold"
-  },
-  {
-   "id": 3049,
-   "key": "ArmoredImpact",
-   "name": "装甲冲击",
-   "rarity": "gold"
-  },
-  {
-   "id": 3121,
-   "key": "Fruitify",
-   "name": "水果化",
-   "rarity": "silver"
-  },
-  {
-   "id": 3123,
-   "key": "JeweledBracelet",
-   "name": "珠光手镯",
-   "rarity": "gold"
-  },
-  {
-   "id": 3004,
-   "key": "GetJinxed",
-   "name": "罪恶快感！",
-   "rarity": "gold"
-  },
-  {
-   "id": 3131,
-   "key": "StillHere",
-   "name": "屹立不倒",
-   "rarity": "gold"
-  },
-  {
-   "id": 3129,
-   "key": "SapMagic",
-   "name": "吸元秘术",
-   "rarity": "gold"
-  },
-  {
-   "id": 3132,
-   "key": "HeavyIsTheCrown",
-   "name": "王冠之重",
-   "rarity": "gold"
-  },
-  {
-   "id": 3051,
-   "key": "BlueBarrier",
-   "name": "蓝色屏障",
-   "rarity": "silver"
-  },
-  {
-   "id": 3088,
-   "key": "CrimsonCobalt",
-   "name": "深红钴蓝闪光",
-   "rarity": "gold"
-  },
-  {
-   "id": 3081,
-   "key": "WeaponOfDestiny",
-   "name": "命运之武器",
-   "rarity": "gold"
-  },
-  {
-   "id": 3085,
-   "key": "FlowOfSpirit",
-   "name": "灵魂乐流",
-   "rarity": "silver"
-  },
-  {
-   "id": 3149,
-   "key": "GroupHug",
-   "name": "一起抱抱",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 3163,
-   "key": "EnchantingButterflies",
-   "name": "迷人蝴蝶",
-   "rarity": "gold"
-  },
-  {
-   "id": 3055,
-   "key": "UltimateRecursion",
-   "name": "终极循环往复",
-   "rarity": "silver"
-  },
-  {
-   "id": 3052,
-   "key": "HandsOffTheTalent",
-   "name": "远射天资",
-   "rarity": "silver"
-  },
-  {
-   "id": 3134,
-   "key": "LonelyWarrior",
-   "name": "孤勇者",
-   "rarity": "silver"
-  },
-  {
-   "id": 3170,
-   "key": "GoH_PentakillAug_Q",
-   "name": "重型",
-   "rarity": "gold"
-  },
-  {
-   "id": 3171,
-   "key": "GoH_PentakillAug_W",
-   "name": "力量",
-   "rarity": "gold"
-  },
-  {
-   "id": 3172,
-   "key": "GoH_PentakillAug_E",
-   "name": "鞭挞",
-   "rarity": "gold"
-  },
-  {
-   "id": 3173,
-   "key": "GoH_PentakillAug_R",
-   "name": "厄运",
-   "rarity": "gold"
-  },
-  {
-   "id": 3118,
-   "key": "ArcaneAxiom",
-   "name": "奥术公理",
-   "rarity": "gold"
-  },
-  {
-   "id": 3176,
-   "key": "GoH_PentakillAug_Generic",
-   "name": "   ",
-   "rarity": "gold"
-  },
-  {
-   "id": 3150,
-   "key": "Upgrade_Stormsurge",
-   "name": "升级：风暴狂涌",
-   "rarity": "gold"
-  },
-  {
-   "id": 3159,
-   "key": "RISE",
-   "name": "登峰造极境",
-   "rarity": "prismatic"
-  },
-  {
-   "id": 3060,
-   "key": "OneHitWonder",
-   "name": "单曲红人",
-   "rarity": "gold"
-  },
-  {
-   "id": 3265,
-   "key": "Fortified",
-   "name": "坚不可破",
-   "rarity": "silver"
-  },
-  {
-   "id": 3263,
-   "key": "SteadfastPresence",
-   "name": "超坚定风采",
-   "rarity": "gold"
-  },
-  {
-   "id": 3262,
-   "key": "ARAM_SlimeTime",
-   "name": "史莱姆时间",
-   "rarity": "silver"
-  },
-  {
-   "id": 3264,
-   "key": "MysticGuard",
-   "name": "秘术卫士",
-   "rarity": "silver"
-  },
-  {
-   "id": 2083,
-   "key": "BurstingTeeth",
-   "name": "牙仙子",
-   "rarity": "gold"
-  }
- ]
-}
+{"mode": "KIWI", "generated_at": 1795676623, "stats_date": "20261125", "augments": [
+ {"id": 1180, "key": "ARAM_BigBrain", "name": "超强大脑", "rarity": "gold", "desc": "每拥有1法术强度就会获得3护盾值。阵亡时或耗尽后70秒重置。", "tags": ["AP"], "stats": {"pick_rate": 0.0869, "pick_rank": 157, "win_rate": 0.5199, "win_rank": 116, "champions": [45, 13, 136, 63, 25, 4]}},
+ {"id": 1141, "key": "ARAM_AllForYou", "name": "全心为你", "rarity": "gold", "desc": "你的治疗和护盾在用在一个友军身上时会变强。", "tags": [], "stats": {"pick_rate": 0.0307, "pick_rank": 215, "win_rate": 0.5096, "win_rank": 138, "champions": [350, 37, 16, 117, 43, 40]}},
+ {"id": 1002, "key": "ARAM_ApexInventor", "name": "尖端发明家", "rarity": "gold", "desc": "获得100装备急速(相当于50%装备冷却缩减)。 装备急速可缩减所有装备技能的冷却时间。", "tags": [], "stats": {"pick_rate": 0.0972, "pick_rank": 142, "win_rate": 0.4914, "win_rank": 193, "champions": [223, 36, 50, 875, 22, 412]}},
+ {"id": 1004, "key": "ARAM_BacktoBasics", "name": "回归基本功", "rarity": "prismatic", "desc": "获得提升过的技能伤害、治疗效果、护盾和技能急速，但你不能使用你的终极技能。", "tags": [], "stats": {"pick_rate": 0.3095, "pick_rank": 30, "win_rate": 0.5889, "win_rank": 11, "champions": [13, 4, 145, 223, 41, 80]}},
+ {"id": 1007, "key": "ARAM_BluntForce", "name": "大力", "rarity": "silver", "desc": "获得20%攻击力。", "tags": ["攻击"], "stats": {"pick_rate": 0.4776, "pick_rank": 7, "win_rate": 0.5935, "win_rank": 8, "champions": [202, 51, 104, 126, 236, 238]}},
+ {"id": 1103, "key": "ARAM_BreadAndButter", "name": "面包和黄油", "rarity": "gold", "desc": "你的指定技能获得100技能急速。", "tags": [], "stats": {"pick_rate": 0.2534, "pick_rank": 49, "win_rate": 0.5195, "win_rank": 117, "champions": [4, 120, 11, 141, 126, 901]}},
+ {"id": 1151, "key": "ARAM_BreadAndCheese", "name": "面包和奶酪", "rarity": "gold", "desc": "你的指定技能获得100技能急速。", "tags": [], "stats": {"pick_rate": 0.1864, "pick_rank": 81, "win_rate": 0.5093, "win_rank": 140, "champions": [136, 21, 105, 876, 41, 13]}},
+ {"id": 1150, "key": "ARAM_BreadAndJam", "name": "面包和果酱", "rarity": "gold", "desc": "你的指定技能获得100技能急速。", "tags": [], "stats": {"pick_rate": 0.154, "pick_rank": 104, "win_rate": 0.4952, "win_rank": 183, "champions": [145, 25, 121, 875, 8, 35]}},
+ {"id": 1011, "key": "ARAM_CantTouchThis", "name": "你摸不到", "rarity": "prismatic", "desc": "施放你的终极技能会使你进入短时间的免疫伤害状态。", "tags": [], "stats": {"pick_rate": 0.1297, "pick_rank": 121, "win_rate": 0.49, "win_rank": 199, "champions": [55, 126, 360, 38, 234, 42]}},
+ {"id": 1013, "key": "ARAM_CelestialBody", "name": "星界躯体", "rarity": "gold", "desc": "获得1500生命值，但你造成的伤害降低10%。", "tags": [], "stats": {"pick_rate": 0.1825, "pick_rank": 84, "win_rate": 0.5365, "win_rank": 74, "champions": [223, 36, 875, 412, 31, 50]}},
+ {"id": 1015, "key": "ARAM_CircleofDeath", "name": "死亡之环", "rarity": "prismatic", "desc": "治疗效果和生命回复效果还会对相距最近的那个敌方英雄造成魔法伤害。", "tags": [], "stats": {"pick_rate": 0.0927, "pick_rank": 148, "win_rate": 0.5394, "win_rank": 67, "champions": [36, 50, 8, 48, 16, 350]}},
+ {"id": 1018, "key": "ARAM_CourageoftheColossus", "name": "巨像的勇气", "rarity": "prismatic", "desc": "定身或缚地一个敌方英雄后获得150~450（随等级）（+4%最大生命值）护盾值。", "tags": [], "stats": {"pick_rate": 0.0944, "pick_rank": 145, "win_rate": 0.5124, "win_rank": 129, "champions": [412, 111, 89, 12, 57, 3]}},
+ {"id": 1118, "key": "ARAM_CriticalHealing", "name": "会心治疗", "rarity": "gold", "desc": "你的治疗和护盾可以暴击，造成40%额外数额的效果。获得 25%暴击几率。", "tags": [], "stats": {"pick_rate": 0.0288, "pick_rank": 216, "win_rate": 0.5067, "win_rank": 153, "champions": [235, 37, 350, 16, 43, 40]}},
+ {"id": 1019, "key": "ARAM_Dashing", "name": "全凭身法", "rarity": "prismatic", "desc": "你的冲刺、跳跃、闪烁或传送类技能获得175技能急速。", "tags": [], "stats": {"pick_rate": 0.1724, "pick_rank": 92, "win_rate": 0.5048, "win_rank": 162, "champions": [141, 11, 105, 114, 517, 35]}},
+ {"id": 1020, "key": "ARAM_DawnbringersResolve", "name": "黎明使者的坚决", "rarity": "gold", "desc": "在跌到50%生命值以下时，在3秒里持续回复共35%最大生命值。 阵亡时或每45秒重置。", "tags": [], "stats": {"pick_rate": 0.1085, "pick_rank": 140, "win_rate": 0.5237, "win_rank": 103, "champions": [36, 223, 50, 31, 875, 27]}},
+ {"id": 1022, "key": "ARAM_Deft", "name": "灵巧", "rarity": "silver", "desc": "获得 60%攻击速度。", "tags": ["攻击"], "stats": {"pick_rate": 0.2716, "pick_rank": 44, "win_rate": 0.5462, "win_rank": 56, "champions": [222, 67, 51, 777, 18, 157]}},
+ {"id": 1025, "key": "ARAM_DiveBomber", "name": "俯冲轰炸", "rarity": "silver", "desc": "在你阵亡时爆炸，造成巨量真实伤害。", "tags": [], "stats": {"pick_rate": 0.1978, "pick_rank": 76, "win_rate": 0.511, "win_rank": 134, "champions": [30, 54, 59, 14, 35, 53]}},
+ {"id": 1026, "key": "ARAM_DontBlink", "name": "唯快不破", "rarity": "silver", "desc": "你每比目标多10移动速度，则对其多造成1%额外伤害。", "tags": [], "stats": {"pick_rate": 0.0652, "pick_rank": 183, "win_rate": 0.5223, "win_rank": 109, "champions": [876, 202, 21, 11, 120, 22]}},
+ {"id": 1029, "key": "ARAM_EtherealWeapon", "name": "虚幻武器", "rarity": "gold", "desc": "你的技能可施加攻击特效。每个目标有1秒冷却时间。", "tags": ["攻击"], "stats": {"pick_rate": 0.3941, "pick_rank": 13, "win_rate": 0.5776, "win_rank": 21, "champions": [145, 17, 120, 223, 245, 55]}},
+ {"id": 1030, "key": "ARAM_Eureka", "name": "尤里卡", "rarity": "prismatic", "desc": "获得相当于30%法术强度的技能急速。", "tags": ["AP"], "stats": {"pick_rate": 0.4522, "pick_rank": 8, "win_rate": 0.5869, "win_rank": 13, "champions": [30, 17, 136, 145, 4, 63]}},
+ {"id": 1036, "key": "ARAM_Firebrand", "name": "火上浇油", "rarity": "gold", "desc": "你的攻击会施加一个可无限叠加的灼烧攻击特效，持续造成伤害。", "tags": ["攻击"], "stats": {"pick_rate": 0.0964, "pick_rank": 143, "win_rate": 0.4911, "win_rank": 195, "champions": [22, 17, 55, 222, 10, 29]}},
+ {"id": 1037, "key": "ARAM_FirstAidKit", "name": "急救用具", "rarity": "silver", "desc": "获得20%治疗和护盾强度。", "tags": [], "stats": {"pick_rate": 0.0484, "pick_rank": 197, "win_rate": 0.5293, "win_rank": 88, "champions": [37, 16, 350, 235, 40, 267]}},
+ {"id": 1116, "key": "ARAM_Flashy", "name": "闪现向前", "rarity": "gold", "desc": "你的闪现有3层充能。在120秒后，再次获得所有充能。", "tags": [], "stats": {"pick_rate": 0.1247, "pick_rank": 125, "win_rate": 0.5067, "win_rank": 151, "champions": [875, 64, 122, 35, 54, 236]}},
+ {"id": 1322, "key": "ARAM_GetExcited", "name": "罪恶快感", "rarity": "gold", "desc": "参与击杀后，在4秒内提升移动速度和攻击速度。", "tags": ["攻击"], "stats": {"pick_rate": 0.1487, "pick_rank": 106, "win_rate": 0.5103, "win_rank": 136, "champions": [222, 202, 11, 51, 67, 23]}},
+ {"id": 1041, "key": "ARAM_Goliath", "name": "歌利亚巨人", "rarity": "prismatic", "desc": "体型变大，获得35%生命值和15%适应之力。", "tags": [], "stats": {"pick_rate": 0.3608, "pick_rank": 20, "win_rate": 0.5809, "win_rank": 18, "champions": [223, 36, 875, 50, 412, 31]}},
+ {"id": 1138, "key": "ARAM_Goredrink", "name": "渴血", "rarity": "silver", "desc": "获得15%全能吸血。", "tags": [], "stats": {"pick_rate": 0.3399, "pick_rank": 23, "win_rate": 0.5544, "win_rank": 42, "champions": [104, 236, 50, 141, 13, 517]}},
+ {"id": 1181, "key": "ARAM_HeavyHitter", "name": "重量级打击手", "rarity": "silver", "desc": "你的攻击造成相当于你3.5%最大生命值的额外物理伤害。", "tags": [], "stats": {"pick_rate": 0.247, "pick_rank": 52, "win_rate": 0.5682, "win_rank": 27, "champions": [223, 36, 875, 412, 31, 98]}},
+ {"id": 1044, "key": "ARAM_IceCold", "name": "冰寒", "rarity": "silver", "desc": "你的减速效果可使移动速度降低额外的75。", "tags": [], "stats": {"pick_rate": 0.1983, "pick_rank": 75, "win_rate": 0.5166, "win_rank": 121, "champions": [136, 63, 25, 143, 90, 27]}},
+ {"id": 1045, "key": "ARAM_InfernalConduit", "name": "炼狱导管", "rarity": "prismatic", "desc": "你的技能会施加一层可叠加的灼烧，持续造成魔法伤害。 你的灼烧效果会降低你各基础技能的冷却时间。", "tags": [], "stats": {"pick_rate": 0.2222, "pick_rank": 63, "win_rate": 0.5553, "win_rank": 39, "champions": [63, 136, 25, 876, 17, 90]}},
+ {"id": 1046, "key": "ARAM_InfernalSoul", "name": "炼狱龙魂", "rarity": "silver", "desc": "你获得炼狱龙魂，使用技能或攻击命中敌人时造成额外伤害。", "tags": [], "stats": {"pick_rate": 0.1356, "pick_rank": 115, "win_rate": 0.5019, "win_rank": 168, "champions": [145, 81, 4, 126, 22, 76]}},
+ {"id": 1047, "key": "ARAM_ItsCritical", "name": "关键暴击", "rarity": "gold", "desc": "获得50%暴击几率。", "tags": ["攻击"], "stats": {"pick_rate": 0.1314, "pick_rank": 119, "win_rate": 0.5051, "win_rank": 160, "champions": [202, 51, 104, 157, 236, 777]}},
+ {"id": 1048, "key": "ARAM_JeweledGauntlet", "name": "珠光护手", "rarity": "prismatic", "desc": "你的技能可以造成暴击。 获得25%（+0.04%法强）暴击几率。", "tags": ["AP", "攻击"], "stats": {"pick_rate": 0.5959, "pick_rank": 1, "win_rate": 0.5867, "win_rank": 14, "champions": [126, 236, 901, 81, 51, 41]}},
+ {"id": 1305, "key": "ARAM_LegDay", "name": "练腿日", "rarity": "silver", "desc": "获得50移动速度和50%减速抗性。", "tags": [], "stats": {"pick_rate": 0.218, "pick_rank": 66, "win_rate": 0.5329, "win_rank": 80, "champions": [202, 27, 876, 223, 122, 875]}},
+ {"id": 1053, "key": "ARAM_MadScientist", "name": "科学狂人", "rarity": "prismatic", "desc": "每次重生时，你的体型要么变大(获得适应之力和生命值)，要么变小(获得技能急速和移动速度)。", "tags": [], "stats": {"pick_rate": 0.3646, "pick_rank": 18, "win_rate": 0.5777, "win_rank": 20, "champions": [223, 22, 36, 875, 17, 126]}},
+ {"id": 1129, "key": "ARAM_Marksmage", "name": "神射法师", "rarity": "gold", "desc": "你的攻击造成相当于你75%法术强度的额外物理伤害。", "tags": ["AP"], "stats": {"pick_rate": 0.1783, "pick_rank": 88, "win_rate": 0.5245, "win_rank": 100, "champions": [517, 10, 245, 105, 145, 887]}},
+ {"id": 1054, "key": "ARAM_MasterofDuality", "name": "物法皆修", "rarity": "prismatic", "desc": "你的每次攻击为你提供可叠加的法术强度，并且你的每次技能在伤害敌人时为你提供可叠加的攻击力。", "tags": ["AP", "攻击"], "stats": {"pick_rate": 0.1133, "pick_rank": 136, "win_rate": 0.508, "win_rank": 146, "champions": [5, 10, 55, 106, 145, 110]}},
+ {"id": 1056, "key": "ARAM_MindtoMatter", "name": "由心及物", "rarity": "silver", "desc": "使你的最大生命值提升，数额相当于你一半的法力值。", "tags": [], "stats": {"pick_rate": 0.1588, "pick_rank": 98, "win_rate": 0.5358, "win_rank": 75, "champions": [13, 38, 81, 50, 136, 45]}},
+ {"id": 1104, "key": "ARAM_Minionmancer", "name": "仆从大师", "rarity": "gold", "desc": "你的召唤物获得40%体型提升、生命值和伤害。", "tags": [], "stats": {"pick_rate": 0.0557, "pick_rank": 192, "win_rate": 0.5039, "win_rank": 166, "champions": [143, 74, 90, 35, 57, 950]}},
+ {"id": 1057, "key": "ARAM_MountainSoul", "name": "山脉龙魂", "rarity": "silver", "desc": "你获得山脉龙魂，在脱离战斗之后获得一个持续一小段时间的护盾。", "tags": [], "stats": {"pick_rate": 0.0315, "pick_rank": 212, "win_rate": 0.4877, "win_rank": 204, "champions": [223, 22, 412, 36, 54, 4]}},
+ {"id": 1058, "key": "ARAM_MysticPunch", "name": "秘术冲拳", "rarity": "prismatic", "desc": "攻击特效使你的各个技能的冷却时间缩减1.25秒。", "tags": ["攻击"], "stats": {"pick_rate": 0.3182, "pick_rank": 26, "win_rate": 0.5658, "win_rank": 28, "champions": [157, 11, 777, 120, 114, 5]}},
+ {"id": 1060, "key": "ARAM_OceanSoul", "name": "海洋龙魂", "rarity": "silver", "desc": "获得【海洋龙魂】，在对敌方英雄造成伤害后提供高额的生命和法力回复。", "tags": [], "stats": {"pick_rate": 0.1467, "pick_rank": 108, "win_rate": 0.5298, "win_rank": 86, "champions": [4, 25, 223, 50, 63, 101]}},
+ {"id": 1062, "key": "ARAM_OmniSoul", "name": "全能龙魂", "rarity": "prismatic", "desc": "获得3个随机龙魂。", "tags": [], "stats": {"pick_rate": 0.0928, "pick_rank": 147, "win_rate": 0.5288, "win_rank": 91, "champions": [223, 136, 145, 21, 126, 22]}},
+ {"id": 1063, "key": "ARAM_OutlawsGrit", "name": "狂徒豪气", "rarity": "gold", "desc": "在使用一次冲刺、闪烁或传送之后，你获得12护甲和魔法抗性，这个效果至多可叠加至5层。", "tags": [], "stats": {"pick_rate": 0.075, "pick_rank": 169, "win_rate": 0.5345, "win_rank": 77, "champions": [157, 799, 114, 141, 39, 517]}},
+ {"id": 1311, "key": "ARAM_Overflow", "name": "溢流", "rarity": "gold", "desc": "你的法力消耗翻倍。 你的技能的治疗效果、护盾效果和伤害获得提升，提升幅度基于你的最大法力值。", "tags": [], "stats": {"pick_rate": 0.0961, "pick_rank": 144, "win_rate": 0.516, "win_rank": 124, "champions": [13, 81, 30, 41, 126, 38]}},
+ {"id": 1324, "key": "ARAM_ProteinShake", "name": "蛋白粉奶昔", "rarity": "prismatic", "desc": "获得25%（+35%额外护甲 +35%额外魔抗）治疗和护盾强度，基于额外护甲和魔抗。", "tags": [], "stats": {"pick_rate": 0.0319, "pick_rank": 210, "win_rate": 0.5225, "win_rank": 107, "champions": [37, 16, 350, 235, 98, 43]}},
+ {"id": 1154, "key": "ARAM_Quest_UrfsChampion", "name": "海牛阿福的勇士", "rarity": "prismatic", "desc": "任务：需求：参与击杀次。 奖励：【金铲铲】", "tags": [], "stats": {"pick_rate": 0.1551, "pick_rank": 101, "win_rate": 0.5289, "win_rank": 90, "champions": [202, 145, 126, 81, 157, 21]}},
+ {"id": 1156, "key": "ARAM_Quest_WoogletsWitchcap", "name": "沃格勒特的巫师帽", "rarity": "prismatic", "desc": "立刻获得一个无用大棒。 任务：持有灭世者的死亡之帽和中娅沙漏。 奖励：获得沃格勒特的巫师帽。", "tags": [], "stats": {"pick_rate": 0.1996, "pick_rank": 72, "win_rate": 0.5567, "win_rank": 36, "champions": [145, 4, 136, 30, 13, 101]}},
+ {"id": 1067, "key": "ARAM_RabbleRousing", "name": "活力焕发", "rarity": "gold", "desc": "使用指定技能时回复生命值。", "tags": [], "stats": {"pick_rate": 0.026, "pick_rank": 218, "win_rate": 0.4929, "win_rank": 189, "champions": [16, 223, 64, 82, 143, 68]}},
+ {"id": 1068, "key": "ARAM_Recursion", "name": "循环往复", "rarity": "gold", "desc": "获得60技能急速。", "tags": [], "stats": {"pick_rate": 0.5361, "pick_rank": 4, "win_rate": 0.5883, "win_rank": 12, "champions": [17, 22, 30, 63, 21, 136]}},
+ {"id": 1170, "key": "ARAM_ScopedWeapons", "name": "万用瞄准镜", "rarity": "silver", "desc": "获得攻击距离。", "tags": [], "stats": {"pick_rate": 0.1989, "pick_rank": 73, "win_rate": 0.508, "win_rank": 145, "champions": [51, 202, 222, 901, 235, 67]}},
+ {"id": 1071, "key": "ARAM_ScopierWeapons", "name": "更万用的瞄准镜", "rarity": "gold", "desc": "获得攻击距离。", "tags": [], "stats": {"pick_rate": 0.273, "pick_rank": 42, "win_rate": 0.5392, "win_rank": 68, "champions": [202, 51, 222, 67, 10, 901]}},
+ {"id": 1115, "key": "ARAM_ScopiestWeapons", "name": "最万用的瞄准镜", "rarity": "prismatic", "desc": "获得攻击距离。", "tags": [], "stats": {"pick_rate": 0.2068, "pick_rank": 69, "win_rate": 0.523, "win_rank": 106, "champions": [202, 51, 222, 67, 901, 10]}},
+ {"id": 1113, "key": "ARAM_SkilledSniper", "name": "老练狙神", "rarity": "gold", "desc": "用一个非终极技能狙击一个敌人时，返还该技能80%冷却时间(周期性技能返还65%)。", "tags": [], "stats": {"pick_rate": 0.2279, "pick_rank": 59, "win_rate": 0.524, "win_rank": 102, "champions": [21, 126, 25, 4, 145, 110]}},
+ {"id": 1136, "key": "ARAM_SlapAround", "name": "扇巴掌", "rarity": "silver", "desc": "每当你定身或缚地一个敌人时，获得10适应之力。阵亡时损失50%。", "tags": [], "stats": {"pick_rate": 0.1223, "pick_rank": 128, "win_rate": 0.5232, "win_rank": 105, "champions": [25, 412, 57, 266, 50, 12]}},
+ {"id": 1076, "key": "ARAM_SonicBoom", "name": "天音爆", "rarity": "silver", "desc": "在为你的友军提供增益效果、治疗效果或护盾效果时，会对其附近的敌人们造成伤害和减速。", "tags": [], "stats": {"pick_rate": 0.0397, "pick_rank": 206, "win_rate": 0.5216, "win_rank": 111, "champions": [37, 16, 350, 147, 235, 902]}},
+ {"id": 1077, "key": "ARAM_SoulSiphon", "name": "灵魂虹吸", "rarity": "gold", "desc": "暴击造成伤害的12%会等额治疗你自身。 获得 25%暴击几率。", "tags": ["攻击"], "stats": {"pick_rate": 0.3039, "pick_rank": 32, "win_rate": 0.5617, "win_rank": 31, "champions": [157, 104, 777, 202, 51, 236]}},
+ {"id": 1214, "key": "ARAM_SpinToWin", "name": "旋转至胜", "rarity": "silver", "desc": "你的旋转类技能获得30技能急速并且造成30%额外伤害，对于终极技能，该额外伤害提升至。", "tags": [], "stats": {"pick_rate": 0.1552, "pick_rank": 100, "win_rate": 0.5341, "win_rank": 78, "champions": [119, 141, 120, 55, 876, 86]}},
+ {"id": 1353, "key": "ARAM_TankEngine", "name": "坦克引擎", "rarity": "gold", "desc": "参与击杀时，获得一个层数，使你的体型增大并提升最大生命值。阵亡时损失层数。", "tags": [], "stats": {"pick_rate": 0.3308, "pick_rank": 25, "win_rate": 0.5958, "win_rank": 7, "champions": [223, 36, 50, 875, 412, 31]}},
+ {"id": 1080, "key": "ARAM_TankItOrLeaveIt", "name": "会心防御", "rarity": "silver", "desc": "你可以使用你的暴击几率(最大50%几率)来进行会心防御，使你有一定几率来使所受伤害降低。 获得25%暴击几率。", "tags": ["攻击"], "stats": {"pick_rate": 0.18, "pick_rank": 87, "win_rate": 0.5459, "win_rank": 57, "champions": [777, 157, 104, 202, 236, 51]}},
+ {"id": 1081, "key": "ARAM_TapDancer", "name": "踢踏舞", "rarity": "prismatic", "desc": "你的攻击会为你提供移动速度。基于你的移动速度获得攻击速度。", "tags": ["攻击"], "stats": {"pick_rate": 0.1159, "pick_rank": 131, "win_rate": 0.5077, "win_rank": 149, "champions": [222, 202, 67, 51, 235, 22]}},
+ {"id": 1084, "key": "ARAM_ThreadtheNeedle", "name": "穿针引线", "rarity": "gold", "desc": "获得18%护甲穿透和法术穿透。", "tags": ["AP"], "stats": {"pick_rate": 0.2371, "pick_rank": 55, "win_rate": 0.5061, "win_rank": 157, "champions": [126, 51, 104, 30, 238, 202]}},
+ {"id": 1320, "key": "ARAM_Upgrade_Collector", "name": "升级：收集者", "rarity": "silver", "desc": "在每次使用【收集者】的被动处决敌人时，会提升处决阈值，并且提供额外金币。 获得250金币。", "tags": [], "stats": {"pick_rate": 0.298, "pick_rank": 35, "win_rate": 0.5346, "win_rank": 76, "champions": [202, 51, 104, 236, 41, 126]}},
+ {"id": 1336, "key": "ARAM_Upgrade_IE", "name": "升级：无尽之刃", "rarity": "gold", "desc": "获得500金币。 装备无尽之刃后，可使你的暴击几率在每次攻击都会提供随机的暴击伤害。", "tags": [], "stats": {"pick_rate": 0.3312, "pick_rank": 24, "win_rate": 0.5508, "win_rank": 48, "champions": [202, 51, 104, 236, 157, 119]}},
+ {"id": 1319, "key": "ARAM_Upgrade_Immolate", "name": "升级：献祭", "rarity": "silver", "desc": "【璀璨回响】和【日炎圣盾】每当有目标受到【献祭】效果影响时，提供12 金币 。获得250金币。", "tags": [], "stats": {"pick_rate": 0.1232, "pick_rank": 127, "win_rate": 0.5516, "win_rank": 45, "champions": [223, 36, 412, 89, 98, 3]}},
+ {"id": 1318, "key": "ARAM_Upgrade_ZH", "name": "升级：中娅", "rarity": "silver", "desc": "【中娅沙漏】的冷却时间降低至45秒。你现在可以在【中娅沙漏】、【探索者的护臂】或【沃格勒特的巫师帽】凝滞状态持续期间移动并获得移动速度。 获得250金币。", "tags": [], "stats": {"pick_rate": 0.195, "pick_rank": 78, "win_rate": 0.5252, "win_rank": 97, "champions": [25, 4, 105, 63, 68, 134]}},
+ {"id": 1092, "key": "ARAM_Vulnerability", "name": "易损", "rarity": "gold", "desc": "你的装备效果和持续伤害效果可以暴击。 获得 25%暴击几率。", "tags": ["攻击"], "stats": {"pick_rate": 0.2617, "pick_rank": 47, "win_rate": 0.5421, "win_rank": 65, "champions": [236, 901, 41, 21, 42, 51]}},
+ {"id": 1097, "key": "ARAM_WitchfulThinking", "name": "巫师式思考", "rarity": "silver", "desc": "获得20~80（随等级）法术强度。", "tags": ["AP"], "stats": {"pick_rate": 0.2781, "pick_rank": 39, "win_rate": 0.5326, "win_rank": 81, "champions": [4, 145, 30, 76, 17, 101]}},
+ {"id": 1098, "key": "ARAM_WithHaste", "name": "急急小子", "rarity": "gold", "desc": "获得移动速度，相当于你的70%技能急速。", "tags": [], "stats": {"pick_rate": 0.1543, "pick_rank": 103, "win_rate": 0.5223, "win_rank": 108, "champions": [876, 120, 17, 21, 22, 25]}},
+ {"id": 1326, "key": "Nightstalking", "name": "夜狩", "rarity": "gold", "desc": "在对敌人造成伤害的3秒内参与击杀该敌人会为你提供移动速度并使你进入隐身状态。", "tags": [], "stats": {"pick_rate": 0.1383, "pick_rank": 113, "win_rate": 0.4886, "win_rank": 202, "champions": [35, 121, 555, 238, 11, 107]}},
+ {"id": 1028, "key": "ARAM_Erosion", "name": "侵蚀", "rarity": "silver", "desc": "对敌人造成伤害时会施加一层持续4秒且可叠加的护甲和魔法抗性击碎效果。", "tags": [], "stats": {"pick_rate": 0.1846, "pick_rank": 82, "win_rate": 0.5307, "win_rank": 82, "champions": [63, 25, 17, 21, 90, 136]}},
+ {"id": 1034, "key": "VeilOfWarding", "name": "防护面纱", "rarity": "silver", "desc": "每30秒获得一层法术护盾来格挡下一个敌方技能。", "tags": [], "stats": {"pick_rate": 0.0758, "pick_rank": 167, "win_rate": 0.506, "win_rank": 158, "champions": [145, 35, 236, 126, 238, 104]}},
+ {"id": 1211, "key": "ARAM_ItsKillingTime", "name": "杀戮时间到了", "rarity": "gold", "desc": "在施放你的终极技能后，标记所有敌人并存储你对他们造成的伤害。当它结束时，引爆该伤害。", "tags": [], "stats": {"pick_rate": 0.1821, "pick_rank": 85, "win_rate": 0.4908, "win_rank": 198, "champions": [30, 17, 55, 22, 54, 238]}},
+ {"id": 1105, "key": "ARAM_Homeguard", "name": "家园卫士", "rarity": "silver", "desc": "获得100%移动速度，在受到伤害后失效6秒。", "tags": [], "stats": {"pick_rate": 0.2494, "pick_rank": 51, "win_rate": 0.5545, "win_rank": 41, "champions": [4, 21, 202, 25, 22, 101]}},
+ {"id": 1051, "key": "ARAM_LightemUp", "name": "点亮他们！", "rarity": "silver", "desc": "每第4次攻击发射4个飞弹以造成魔法伤害攻击特效。", "tags": ["攻击"], "stats": {"pick_rate": 0.0683, "pick_rank": 178, "win_rate": 0.4932, "win_rank": 188, "champions": [222, 22, 67, 804, 10, 18]}},
+ {"id": 1072, "key": "ARAM_SearingDawn", "name": "炽烈黎明", "rarity": "gold", "desc": "你的技能会标记敌人，使其在被你的友军的下一个攻击或技能命中时会受到额外魔法伤害。", "tags": [], "stats": {"pick_rate": 0.0313, "pick_rank": 213, "win_rate": 0.4914, "win_rank": 194, "champions": [22, 25, 136, 4, 147, 27]}},
+ {"id": 1073, "key": "ARAM_ShadowRunner", "name": "暗影疾奔", "rarity": "silver", "desc": "在使用一个冲刺、闪烁或传送类技能或离开潜行状态之后，获得移动速度。", "tags": [], "stats": {"pick_rate": 0.2208, "pick_rank": 64, "win_rate": 0.5578, "win_rank": 34, "champions": [35, 67, 105, 157, 245, 555]}},
+ {"id": 1087, "key": "ARAM_Typhoon", "name": "台风", "rarity": "silver", "desc": "你的攻击会对一个额外目标发射一个飞弹，从而造成削减过的伤害并施加攻击特效。", "tags": ["攻击"], "stats": {"pick_rate": 0.146, "pick_rank": 109, "win_rate": 0.5042, "win_rank": 164, "champions": [222, 67, 235, 51, 29, 22]}},
+ {"id": 1095, "key": "ARAM_WindspeakersBlessing", "name": "风语者的祝福", "rarity": "prismatic", "desc": "你的治疗效果和护盾效果还会提升目标的护甲和魔法抗性，这些加成持续3秒。", "tags": [], "stats": {"pick_rate": 0.0207, "pick_rank": 226, "win_rate": 0.5843, "win_rank": 15, "champions": [37, 16, 350, 40, 117, 43]}},
+ {"id": 1112, "key": "ARAM_UltimateUnstoppable", "name": "终极不可阻挡", "rarity": "silver", "desc": "在你使用你的终极技能后，你获得持续3秒的控制免疫。 (8秒冷却时间)。", "tags": [], "stats": {"pick_rate": 0.1726, "pick_rank": 90, "win_rate": 0.4877, "win_rank": 203, "champions": [55, 360, 236, 11, 9, 23]}},
+ {"id": 1301, "key": "ARAM_DivineIntervention", "name": "神圣干预", "rarity": "gold", "desc": "每35秒，自动施放一颗护体星星。在它着陆时，你和附近的友军们进入持续若干秒的免疫伤害状态。", "tags": [], "stats": {"pick_rate": 0.0744, "pick_rank": 172, "win_rate": 0.4843, "win_rank": 209, "champions": [350, 412, 25, 136, 223, 22]}},
+ {"id": 1134, "key": "ARAM_DrawYourSword", "name": "亮出你的剑", "rarity": "prismatic", "desc": "变为近战状态，并且获得攻击力、生命值、攻击速度、生命偷取和移动速度 (每个属性都基于舍弃的攻击距离而进一步提升)。", "tags": ["攻击"], "stats": {"pick_rate": 0.1611, "pick_rank": 96, "win_rate": 0.6093, "win_rank": 5, "champions": [104, 51, 42, 81, 236, 119]}},
+ {"id": 1225, "key": "ARAM_DualWield", "name": "双刀流", "rarity": "prismatic", "desc": "在攻击时，发射一个箭矢，它施加效能削减的攻击特效。获得10%总攻击速度。", "tags": ["攻击"], "stats": {"pick_rate": 0.2605, "pick_rank": 48, "win_rate": 0.556, "win_rank": 37, "champions": [67, 222, 51, 29, 18, 11]}},
+ {"id": 1194, "key": "ARAM_FeyMagic", "name": "精怪魔法", "rarity": "prismatic", "desc": "你的终极技能的伤害会对敌人造成持续若干秒的变形效果。", "tags": [], "stats": {"pick_rate": 0.125, "pick_rank": 123, "win_rate": 0.4822, "win_rank": 212, "champions": [55, 53, 9, 360, 516, 22]}},
+ {"id": 1187, "key": "ARAM_Flashbang", "name": "闪光弹", "rarity": "silver", "desc": "你的【闪现】会引发一次爆炸，造成伤害和减速（阵亡时重置）。", "tags": [], "stats": {"pick_rate": 0.0041, "pick_rank": 233, "win_rate": 0.4717, "win_rank": 220, "champions": [875, 64, 555, 53, 122, 54]}},
+ {"id": 1088, "key": "ARAM_UltimateRevolution", "name": "终极刷新", "rarity": "prismatic", "desc": "在施放终极技能后刷新你的终极技能(75秒冷却时间或阵亡时重置)。", "tags": [], "stats": {"pick_rate": 0.2118, "pick_rank": 67, "win_rate": 0.489, "win_rank": 201, "champions": [30, 54, 22, 236, 41, 31]}},
+ {"id": 1133, "key": "ARAM_MagicMissile", "name": "魔法飞弹", "rarity": "gold", "desc": "造成技能伤害会发射3个飞弹，每个造成基于飞行距离的百分比最大生命值的真实伤害。", "tags": [], "stats": {"pick_rate": 0.2261, "pick_rank": 60, "win_rate": 0.53, "win_rank": 85, "champions": [63, 17, 21, 25, 4, 136]}},
+ {"id": 1061, "key": "ARAM_OkBoomerang", "name": "回力OK镖", "rarity": "gold", "desc": "每7秒朝着一个附近的敌人自动施放投掷一个回力镖，对命中的敌人们造成40~200（随等级）（+30%额外攻击力 +20%法强）自适应伤害。 已造成的伤害：", "tags": ["AP", "攻击"], "stats": {"pick_rate": 0.024, "pick_rank": 223, "win_rate": 0.502, "win_rank": 167, "champions": [22, 4, 25, 76, 21, 15]}},
+ {"id": 1038, "key": "ARAM_FromBeginningToEnd", "name": "有始有终", "rarity": "gold", "desc": "获得先攻和黑暗收割基石符文。", "tags": [], "stats": {"pick_rate": 0.2664, "pick_rank": 46, "win_rate": 0.5571, "win_rank": 35, "champions": [126, 238, 202, 4, 30, 35]}},
+ {"id": 1149, "key": "ARAM_Impassable", "name": "不动如山", "rarity": "gold", "desc": "获得余震和冰川增幅基石符文。", "tags": [], "stats": {"pick_rate": 0.0405, "pick_rank": 205, "win_rate": 0.4911, "win_rank": 196, "champions": [412, 111, 12, 53, 3, 31]}},
+ {"id": 1079, "key": "ARAM_SymphonyofWar", "name": "战争交响乐", "rarity": "prismatic", "desc": "获得致命节奏和征服者基石符文。", "tags": [], "stats": {"pick_rate": 0.1301, "pick_rank": 120, "win_rate": 0.5095, "win_rank": 139, "champions": [157, 777, 222, 67, 5, 51]}},
+ {"id": 1332, "key": "OminousPact", "name": "不祥契约", "rarity": "prismatic", "desc": "基于已损失生命值，获得法术强度、移动速度和全能吸血，每次你施放技能时会对自身造成伤害。", "tags": ["AP"], "stats": {"pick_rate": 0.0909, "pick_rank": 152, "win_rate": 0.5006, "win_rank": 170, "champions": [8, 27, 136, 50, 876, 13]}},
+ {"id": 1328, "key": "CriticalRhythm", "name": "暴击律动", "rarity": "gold", "desc": "你的普攻在暴击时获得可叠加的攻击速度。 获得 25%暴击几率。", "tags": ["攻击"], "stats": {"pick_rate": 0.1969, "pick_rank": 77, "win_rate": 0.5183, "win_rank": 119, "champions": [222, 51, 157, 777, 18, 202]}},
+ {"id": 1333, "key": "EscapePlan", "name": "逃跑计划", "rarity": "silver", "desc": "在降至35%生命值时，获得巨量持续衰减的护盾、持续衰减的移动速度和持续衰减的缩小效果。", "tags": [], "stats": {"pick_rate": 0.3131, "pick_rank": 28, "win_rate": 0.5692, "win_rank": 26, "champions": [223, 36, 777, 11, 875, 236]}},
+ {"id": 1325, "key": "GlassCannon", "name": "玻璃大炮", "rarity": "prismatic", "desc": "减少30%最大生命值。造成额外的伤害作为真实伤害。", "tags": [], "stats": {"pick_rate": 0.0474, "pick_rank": 198, "win_rate": 0.4487, "win_rank": 233, "champions": [30, 145, 22, 126, 21, 17]}},
+ {"id": 1152, "key": "ARAM_Quest_SteelYourHeart", "name": "钢化你心", "rarity": "gold", "desc": "任务：需求：持有【心之钢】且层数在300层或以上。 奖励：将你的心之钢层数乘以3。", "tags": [], "stats": {"pick_rate": 0.2428, "pick_rank": 53, "win_rate": 0.5792, "win_rank": 19, "champions": [223, 36, 875, 50, 412, 31]}},
+ {"id": 1329, "key": "BiggestSnowballEver", "name": "史上最大雪球", "rarity": "prismatic", "desc": "你的雪球获得100技能急速。 你的雪球现在变得非常大，并且可以穿过小兵。它会减速， 击飞英雄，并造成额外伤害。 如果你没有雪球，则获得一个雪球。", "tags": [], "stats": {"pick_rate": 0.2724, "pick_rank": 43, "win_rate": 0.5281, "win_rank": 93, "champions": [223, 157, 412, 54, 875, 64]}},
+ {"id": 1337, "key": "KingMe", "name": "尊我为王", "rarity": "prismatic", "desc": "当你第一次携带一件传说级装备并乘坐敌人的传送门时，你会加冕为王，升级你的装备并获得一个随机棱彩阶强化符文。", "tags": [], "stats": {"pick_rate": 0.0389, "pick_rank": 207, "win_rate": 0.3331, "win_rank": 234, "champions": [223, 22, 145, 41, 136, 126]}},
+ {"id": 1335, "key": "Goldrend", "name": "夺金", "rarity": "prismatic", "desc": "用攻击或技能对一个英雄造成伤害时会造成额外魔法伤害，并为你提供金币和 移动速度。", "tags": [], "stats": {"pick_rate": 0.0729, "pick_rank": 176, "win_rate": 0.5155, "win_rank": 125, "champions": [136, 21, 4, 63, 800, 25]}},
+ {"id": 1205, "key": "ARAM_ADAPt", "name": "物理转魔法", "rarity": "silver", "desc": "将额外攻击力转化为法术强度。获得15%法术强度。", "tags": ["AP", "攻击"], "stats": {"pick_rate": 0.3737, "pick_rank": 16, "win_rate": 0.5493, "win_rank": 50, "champions": [4, 30, 145, 17, 245, 8]}},
+ {"id": 1206, "key": "ARAM_escAPADe", "name": "魔法转物理", "rarity": "silver", "desc": "将法术强度转化为额外攻击力。获得15%攻击力。", "tags": ["AP", "攻击"], "stats": {"pick_rate": 0.2095, "pick_rank": 68, "win_rate": 0.5437, "win_rank": 61, "champions": [202, 104, 126, 51, 236, 81]}},
+ {"id": 1331, "key": "EmpyreanPromise", "name": "至高天诺言", "rarity": "prismatic", "desc": "获得15%治疗和护盾强度。获得至高天诺言作为一个召唤师技能。 警惕 传送至你的友军并在着陆时提供持续3秒的100~250（随等级）（+100%法强 +10%额外生命值）护盾值。", "tags": ["AP"], "stats": {"pick_rate": 0.0148, "pick_rank": 231, "win_rate": 0.5131, "win_rank": 128, "champions": [37, 16, 350, 117, 40, 43]}},
+ {"id": 1195, "key": "ARAM_GiantSlayer", "name": "巨人杀手", "rarity": "prismatic", "desc": "体型变小，获得移动速度，并基于敌方英雄体型大于你的程度获得额外伤害。", "tags": [], "stats": {"pick_rate": 0.288, "pick_rank": 38, "win_rate": 0.558, "win_rank": 33, "champions": [202, 51, 236, 21, 119, 67]}},
+ {"id": 1323, "key": "ARAM_Cruelty", "name": "残忍", "rarity": "prismatic", "desc": "定身或缚地一个英雄时，召唤一颗会在短暂延迟后着陆的彗星，对附近的敌人们造成魔法伤害。", "tags": [], "stats": {"pick_rate": 0.093, "pick_rank": 146, "win_rate": 0.5049, "win_rank": 161, "champions": [12, 412, 111, 526, 3, 57]}},
+ {"id": 1343, "key": "Quest_Sneakerhead", "name": "王中王，靴中靴", "rarity": "prismatic", "desc": "即刻：随机获得一双升级后的靴子。 需求：完成其任务，以更换为另一双。 奖励：嘉文一世之靴", "tags": []},
+ {"id": 1238, "key": "ARAM_TransmutePrismatic", "name": "质变：棱彩阶", "rarity": "gold", "desc": "获得1个随机棱彩阶强化符文。", "tags": [], "stats": {"pick_rate": 0.5773, "pick_rank": 2, "win_rate": 0.6249, "win_rank": 3, "champions": [22, 136, 17, 30, 202, 51]}},
+ {"id": 1243, "key": "ARAM_TransmuteChaos", "name": "质变：混沌", "rarity": "prismatic", "desc": "获得2个随机强化符文。", "tags": [], "stats": {"pick_rate": 0.3009, "pick_rank": 33, "win_rate": 0.5426, "win_rank": 63, "champions": [223, 22, 126, 136, 145, 17]}},
+ {"id": 1344, "key": "FinalForm", "name": "最终形态", "rarity": "prismatic", "desc": "在施放你的终极技能时，获得持续10秒的最大生命值护盾、全能吸血和移动速度。", "tags": [], "stats": {"pick_rate": 0.2239, "pick_rank": 61, "win_rate": 0.5295, "win_rank": 87, "champions": [55, 50, 266, 234, 126, 238]}},
+ {"id": 1347, "key": "Poltergeist", "name": "吵闹鬼", "rarity": "silver", "desc": "获得【吵闹鬼】作为一个召唤师技能。 吵闹鬼会同时施放召唤师技能【屏障】和【幽灵疾步】。", "tags": [], "stats": {"pick_rate": 0.0259, "pick_rank": 220, "win_rate": 0.4742, "win_rank": 218, "champions": [22, 202, 21, 51, 236, 67]}},
+ {"id": 1348, "key": "Flash2", "name": "闪闪现现", "rarity": "silver", "desc": "获得第二个【闪现】召唤师技能和70召唤师技能急速。", "tags": [], "stats": {"pick_rate": 0.0039, "pick_rank": 234, "win_rate": 0.475, "win_rank": 217, "champions": [875, 53, 64, 555, 122, 54]}},
+ {"id": 1996, "key": "ARAM_Upgrade_Sheen", "name": "升级：耀光", "rarity": "gold", "desc": "你的咒刃效果造成额外伤害并治疗你自身，治疗量相当于目标生命值的一定百分比。此外，获得250金币。", "tags": [], "stats": {"pick_rate": 0.1248, "pick_rank": 124, "win_rate": 0.5063, "win_rank": 156, "champions": [81, 901, 5, 41, 245, 42]}},
+ {"id": 1349, "key": "UltimateAwakening", "name": "终极唤醒", "rarity": "prismatic", "desc": "获得30终极技能急速。 在施放你的终极技能后，刷新你的所有基础技能并获得持续15秒的300基础技能急速。(20秒冷却时间)", "tags": [], "stats": {"pick_rate": 0.2304, "pick_rank": 57, "win_rate": 0.5081, "win_rank": 144, "champions": [120, 17, 22, 11, 30, 54]}},
+ {"id": 1314, "key": "MightyShield", "name": "强力护盾", "rarity": "silver", "desc": "当你获得护盾时，获得40~100（随等级）适应之力，持续3秒。(5秒冷却时间)", "tags": [], "stats": {"pick_rate": 0.0286, "pick_rank": 217, "win_rate": 0.5001, "win_rank": 174, "champions": [157, 777, 82, 111, 98, 68]}},
+ {"id": 1315, "key": "SwiftAndSafe", "name": "快中求稳", "rarity": "silver", "desc": "在冲刺或闪烁后，获得护盾值。", "tags": [], "stats": {"pick_rate": 0.1123, "pick_rank": 137, "win_rate": 0.5397, "win_rank": 66, "champions": [157, 114, 517, 105, 799, 64]}},
+ {"id": 1027, "key": "ARAM_Earthwake", "name": "大地苏醒", "rarity": "prismatic", "desc": "你的冲刺、闪烁或传送类技能会留下一条在0.75秒后爆炸的轨迹。", "tags": [], "stats": {"pick_rate": 0.0309, "pick_rank": 214, "win_rate": 0.4978, "win_rank": 178, "champions": [157, 799, 555, 64, 114, 39]}},
+ {"id": 1074, "key": "ARAM_ShrinkRay", "name": "缩小射线", "rarity": "gold", "desc": "你的攻击会将目标的伤害与体型削减15%攻击特效。", "tags": ["攻击"], "stats": {"pick_rate": 0.0854, "pick_rank": 159, "win_rate": 0.4693, "win_rank": 222, "champions": [22, 222, 51, 235, 17, 67]}},
+ {"id": 1402, "key": "ARAM_StatsOnStatsOnStats", "name": "属性叠属性叠属性！", "rarity": "prismatic", "desc": "获得4个【属性锻造器】，有更高几率出现黄金阶和棱彩阶锻造器！ 在你的下一次强化符文选取时，每个栏位获得一次额外的刷新。", "tags": [], "stats": {"pick_rate": 0.0775, "pick_rank": 165, "win_rate": 0.5078, "win_rank": 148, "champions": [22, 223, 145, 136, 126, 17]}},
+ {"id": 12317, "key": "ARAM_PandorasBox", "name": "潘朵拉的盒子", "rarity": "prismatic", "desc": "将你的所有强化符文变为随机的棱彩阶强化符文。", "tags": [], "stats": {"pick_rate": 0.2058, "pick_rank": 70, "win_rate": 0.4923, "win_rank": 190, "champions": [22, 17, 126, 223, 30, 157]}},
+ {"id": 1358, "key": "PinballSnowball", "name": "弹球", "rarity": "gold", "desc": "你的雪球获得技能急速并且造成额外的真实伤害。 当雪球从墙体上反弹时，它的体型和伤害获得提升，并缩短它的冷却时间。", "tags": [], "stats": {"pick_rate": 0.0908, "pick_rank": 153, "win_rate": 0.4819, "win_rank": 213, "champions": [142, 54, 223, 53, 555, 875]}},
+ {"id": 1361, "key": "ARAM_Quest_VoidImmolation", "name": "艾卡西亚的陷落", "rarity": "prismatic", "desc": "即刻：获得1个【斑比的熔渣】。 任务：持有日炎圣盾和璀璨回响。 奖励：将这些装备合成为虚空献祭。", "tags": [], "stats": {"pick_rate": 0.0905, "pick_rank": 154, "win_rate": 0.5707, "win_rank": 24, "champions": [223, 36, 412, 111, 14, 89]}},
+ {"id": 1403, "key": "ARAM_StatsOnStats", "name": "属性叠属性！", "rarity": "gold", "desc": "获得3个【属性锻造器】，有更高几率出现黄金阶和棱彩阶锻造器！", "tags": [], "stats": {"pick_rate": 0.1336, "pick_rank": 117, "win_rate": 0.5243, "win_rank": 101, "champions": [22, 30, 17, 136, 126, 51]}},
+ {"id": 1388, "key": "InfiniteRecursion", "name": "无限循环往复", "rarity": "prismatic", "desc": "获得60技能急速，外加每次参与击杀3技能急速。", "tags": [], "stats": {"pick_rate": 0.3581, "pick_rank": 21, "win_rate": 0.6009, "win_rank": 6, "champions": [30, 17, 136, 21, 126, 63]}},
+ {"id": 1404, "key": "ARAM_Stats", "name": "属性！", "rarity": "silver", "desc": "获得2个【属性锻造器】！", "tags": [], "stats": {"pick_rate": 0.0757, "pick_rank": 168, "win_rate": 0.4974, "win_rank": 179, "champions": [22, 30, 17, 145, 81, 41]}},
+ {"id": 1384, "key": "Donation", "name": "捐赠", "rarity": "gold", "desc": "获得1750金币。无需多问。", "tags": [], "stats": {"pick_rate": 0.2226, "pick_rank": 62, "win_rate": 0.5463, "win_rank": 55, "champions": [119, 22, 11, 136, 30, 126]}},
+ {"id": 1373, "key": "ShrinkEngine", "name": "缩小引擎", "rarity": "gold", "desc": "参与击杀后会让你变小并且获得技能急速和移动速度。 阵亡时损失65%层数。", "tags": [], "stats": {"pick_rate": 0.4886, "pick_rank": 6, "win_rate": 0.5912, "win_rank": 10, "champions": [17, 22, 21, 30, 25, 63]}},
+ {"id": 1006, "key": "ARAM_BladeWaltz", "name": "利刃华尔兹", "rarity": "prismatic", "desc": "获得利刃华尔兹作为一个召唤师技能。", "tags": [], "stats": {"pick_rate": 0.1147, "pick_rank": 132, "win_rate": 0.504, "win_rank": 165, "champions": [86, 114, 11, 238, 59, 157]}},
+ {"id": 1386, "key": "YouSpinMeRightRound", "name": "转得我眩晕了", "rarity": "silver", "desc": "将一个召唤师技能替换为骄行荡寇。 骄行荡寇发射一根钩爪，吸附在地形上，在此之后，你可以再次施放来绕着它摆荡。在摆荡状态下，自动攻击相距最近的那个敌人。在与一个敌方英雄碰撞或再次施放时结束摆荡。", "tags": [], "stats": {"pick_rate": 0.0216, "pick_rank": 225, "win_rate": 0.4532, "win_rank": 232, "champions": [223, 22, 48, 412, 106, 53]}},
+ {"id": 1375, "key": "SoulEater", "name": "吞噬灵魂", "rarity": "gold", "desc": "定身一个敌方英雄时会提供30最大生命值。 如果是你的第二个强化符文，会自带生命值。", "tags": [], "stats": {"pick_rate": 0.0741, "pick_rank": 173, "win_rate": 0.5386, "win_rank": 71, "champions": [412, 111, 50, 12, 89, 31]}},
+ {"id": 1401, "key": "GrowthSpurt", "name": "生机迸发", "rarity": "gold", "desc": "获得生机迸发作为一个召唤师技能。 生机迸发会猛然提升你的体型，击飞附近的敌人们并提供最大生命值。", "tags": [], "stats": {"pick_rate": 0.1145, "pick_rank": 133, "win_rate": 0.5219, "win_rank": 110, "champions": [223, 36, 50, 54, 412, 111]}},
+ {"id": 1390, "key": "ARAM_PhenomenalEvil", "name": "超凡邪恶", "rarity": "gold", "desc": "在你用技能对敌人造成伤害时永久获得1法术强度。 如果是作为你的第二个强化符文，则自带40法术强度。", "tags": ["AP"], "stats": {"pick_rate": 0.2679, "pick_rank": 45, "win_rate": 0.5556, "win_rank": 38, "champions": [136, 63, 30, 4, 25, 13]}},
+ {"id": 1392, "key": "GoldenSnowball", "name": "神圣雪球", "rarity": "prismatic", "desc": "雪球获得100技能急速。 你在用【雪球】冲刺后短暂免疫伤害。 如果你没有雪球，获得一个雪球。", "tags": [], "stats": {"pick_rate": 0.0765, "pick_rank": 166, "win_rate": 0.4706, "win_rank": 221, "champions": [223, 157, 875, 777, 77, 412]}},
+ {"id": 1413, "key": "ARAM_StuckInHereWithMe", "name": "和我一起困在这里", "rarity": "prismatic", "desc": "使用你的终极技能时会嘲讽附近的敌人们并提供给你伤害减免。 获得30终极技能急速。", "tags": [], "stats": {"pick_rate": 0.0576, "pick_rank": 190, "win_rate": 0.4857, "win_rank": 206, "champions": [54, 50, 59, 36, 412, 53]}},
+ {"id": 2004, "key": "ARAM_EmpoweredByTheFaithful", "name": "信念者的强化", "rarity": "prismatic", "desc": "为友军提供治疗或护盾会赐福他们，使其伤害填充你的虔诚。 当你拥有足够的虔诚时，释放一道冲击波来造成魔法伤害并处决低生命值的敌人们。", "tags": [], "stats": {"pick_rate": 0.0317, "pick_rank": 211, "win_rate": 0.5006, "win_rank": 171, "champions": [37, 16, 350, 147, 40, 235]}},
+ {"id": 1415, "key": "Twinfire", "name": "双生火焰", "rarity": "silver", "desc": "造成技能伤害时，发射1+300%暴击几率个飞弹，每个造成10~30（随等级）（+7%额外攻击力 +7%法强）魔法伤害。 此外，获得25%暴击几率。", "tags": ["AP", "攻击"], "stats": {"pick_rate": 0.317, "pick_rank": 27, "win_rate": 0.5376, "win_rank": 72, "champions": [21, 901, 81, 63, 4, 145]}},
+ {"id": 1416, "key": "HextechSoul", "name": "海克斯科技龙魂", "rarity": "silver", "desc": "周期性地使你的下一个伤害型技能或攻击触发一道闪电爆裂，连锁穿过敌人以造成伤害和减速。", "tags": [], "stats": {"pick_rate": 0.1472, "pick_rank": 107, "win_rate": 0.5073, "win_rank": 150, "champions": [4, 145, 21, 76, 22, 17]}},
+ {"id": 2005, "key": "ARAM_InfernoTriggered", "name": "扳机炼狱", "rarity": "prismatic", "desc": "获得悍勇本色。在你达到S评价等级时，自动使用炼狱扳机。", "tags": [], "stats": {"pick_rate": 0.1559, "pick_rank": 99, "win_rate": 0.4939, "win_rank": 184, "champions": [120, 64, 799, 55, 517, 80]}},
+ {"id": 1237, "key": "ARAM_TransmuteGold", "name": "质变：黄金阶", "rarity": "silver", "desc": "获得1个随机黄金阶强化符文。", "tags": [], "stats": {"pick_rate": 0.4213, "pick_rank": 11, "win_rate": 0.5637, "win_rank": 29, "champions": [22, 223, 145, 51, 4, 81]}},
+ {"id": 1389, "key": "HandOfBaron", "name": "男爵之手", "rarity": "prismatic", "desc": "获得25%适应之力。附近友方小兵都获得极大增强。", "tags": ["AP"], "stats": {"pick_rate": 0.0465, "pick_rank": 200, "win_rate": 0.5424, "win_rank": 64, "champions": [136, 126, 4, 202, 21, 13]}},
+ {"id": 1420, "key": "Sonata", "name": "咏叹奏鸣", "rarity": "gold", "desc": "每10秒，以一个不断交替的旋律来自动施放坚毅咏叹调和迅捷奏鸣曲。 坚毅咏叹调治疗附近友军并提供一个临时的护盾光环。 迅捷奏鸣曲提供一个临时光环来提供额外移动速度。", "tags": [], "stats": {"pick_rate": 0.0343, "pick_rank": 209, "win_rate": 0.5481, "win_rank": 53, "champions": [37, 350, 16, 147, 40, 117]}},
+ {"id": 1421, "key": "PromQueen", "name": "舞会女王", "rarity": "prismatic", "desc": "每35秒，自动施放一道闪亮宝冠降临在你头上。当它着陆时，获得洛的终极技能，魅惑你碰到的敌人们。", "tags": [], "stats": {"pick_rate": 0.026, "pick_rank": 219, "win_rate": 0.4832, "win_rank": 210, "champions": [223, 27, 412, 14, 36, 111]}},
+ {"id": 2026, "key": "KillSecured", "name": "杀意翻涌", "rarity": "silver", "desc": "在朝着低生命值的敌人时，获得额外移动速度。", "tags": [], "stats": {"pick_rate": 0.0816, "pick_rank": 161, "win_rate": 0.5001, "win_rank": 173, "champions": [122, 555, 202, 11, 120, 27]}},
+ {"id": 1308, "key": "ARAM_Firefox", "name": "火狐", "rarity": "silver", "desc": "自动施放 获得移动速度并召唤3道烈焰环绕于你，瞄准距离内相距最近的那个可见英雄并造成魔法伤害。", "tags": [], "stats": {"pick_rate": 0.0867, "pick_rank": 158, "win_rate": 0.5059, "win_rank": 159, "champions": [103, 4, 21, 22, 245, 54]}},
+ {"id": 2009, "key": "ARAM_Zealot", "name": "狂热者", "rarity": "silver", "desc": "获得25%（+0.05%法强）暴击几率和35%（+0.05%法强）攻击速度（随法术强度变化）。", "tags": ["AP", "攻击"], "stats": {"pick_rate": 0.2922, "pick_rank": 36, "win_rate": 0.5511, "win_rank": 47, "champions": [145, 10, 22, 5, 17, 4]}},
+ {"id": 2018, "key": "ARAM_Purist_Caster", "name": "纯粹主义者 - 术师", "rarity": "silver", "desc": "获得百分比冷却缩减并将你的所有攻击速度转化为技能急速。", "tags": ["攻击"], "stats": {"pick_rate": 0.3844, "pick_rank": 15, "win_rate": 0.5439, "win_rank": 59, "champions": [17, 30, 126, 21, 22, 81]}},
+ {"id": 2010, "key": "ARAM_DoubleTap", "name": "双发快射", "rarity": "prismatic", "desc": "你的暴击施加一次额外的攻击特效。 获得 25%暴击几率。", "tags": ["攻击"], "stats": {"pick_rate": 0.133, "pick_rank": 118, "win_rate": 0.4918, "win_rank": 192, "champions": [67, 222, 51, 29, 18, 202]}},
+ {"id": 2016, "key": "ARAM_Juiced", "name": "注魔", "rarity": "silver", "desc": "攻击特效造成魔法伤害，这个伤害可以暴击。", "tags": ["攻击"], "stats": {"pick_rate": 0.1255, "pick_rank": 122, "win_rate": 0.4989, "win_rank": 176, "champions": [81, 145, 22, 13, 17, 10]}},
+ {"id": 1379, "key": "Upgrade_SwordOfBlossom", "name": "升级：花晓之剑", "rarity": "prismatic", "desc": "获得100%攻击速度。 你对英雄的攻击会使来自【花晓之剑】的治疗效果提升250%。", "tags": ["攻击"], "stats": {"pick_rate": 0.0129, "pick_rank": 232, "win_rate": 0.4991, "win_rank": 175, "champions": [235, 37, 16, 117, 40, 902]}},
+ {"id": 2032, "key": "FishBait", "name": "鲨鱼诱饵", "rarity": "gold", "desc": "在阵亡之后的若干秒，一头鲨鱼会啃噬所有附近的敌人们。你可以在阵亡后进行移动，以给鲨鱼攻击进行定位。", "tags": [], "stats": {"pick_rate": 0.0456, "pick_rank": 202, "win_rate": 0.4786, "win_rank": 215, "champions": [54, 77, 53, 59, 555, 27]}},
+ {"id": 2043, "key": "NatureIsHealing", "name": "自然即是治愈", "rarity": "gold", "desc": "进入草丛时回复大量生命值。", "tags": [], "stats": {"pick_rate": 0.0558, "pick_rank": 191, "win_rate": 0.4865, "win_rank": 205, "champions": [36, 223, 27, 31, 412, 53]}},
+ {"id": 2054, "key": "SpellVolley", "name": "三重射击", "rarity": "prismatic", "desc": "你的指定技能会瞄准你前方2个额外的敌人。", "tags": [], "stats": {"pick_rate": 0.0519, "pick_rank": 195, "win_rate": 0.497, "win_rank": 180, "champions": [202, 13, 17, 45, 35, 21]}},
+ {"id": 2055, "key": "ARAM_Multishot", "name": "多重射击", "rarity": "prismatic", "desc": "任务：用指定技能命中敌方英雄次。 奖励：发射数量基于任务等级的额外飞弹。", "tags": [], "stats": {"pick_rate": 0.0682, "pick_rank": 179, "win_rate": 0.4597, "win_rank": 229, "champions": [22, 901, 245, 161, 76, 81]}},
+ {"id": 2065, "key": "ARAM_Terror", "name": "惊惧", "rarity": "gold", "desc": "每当你施放指定技能时，恐惧你周围的敌人们.", "tags": [], "stats": {"pick_rate": 0.0178, "pick_rank": 229, "win_rate": 0.469, "win_rank": 223, "champions": [36, 266, 23, 11, 24, 58]}},
+ {"id": 2064, "key": "ARAM_Quickstep", "name": "快步", "rarity": "gold", "desc": "当你使用指定技能时，朝你的鼠标指针进行冲刺。", "tags": [], "stats": {"pick_rate": 0.0654, "pick_rank": 182, "win_rate": 0.4726, "win_rank": 219, "champions": [875, 120, 122, 876, 86, 48]}},
+ {"id": 2072, "key": "Missile_Split", "name": "咒语裂变", "rarity": "prismatic", "desc": "在命中时、最大距离时或再次施放时，你的指定技能的飞弹会分裂为两部分。", "tags": [], "stats": {"pick_rate": 0.0922, "pick_rank": 151, "win_rate": 0.5083, "win_rank": 143, "champions": [25, 76, 22, 53, 81, 245]}},
+ {"id": 2073, "key": "ARAM_SustainingStrike", "name": "虹吸", "rarity": "silver", "desc": "用指定技能伤害敌方英雄时会治疗你。", "tags": [], "stats": {"pick_rate": 0.1455, "pick_rank": 110, "win_rate": 0.5132, "win_rank": 127, "champions": [901, 136, 157, 13, 48, 121]}},
+ {"id": 2076, "key": "TitansPulse", "name": "保持坚定", "rarity": "silver", "desc": "当指定技能对敌方英雄造成伤害时，获得护甲和魔法抗性。", "tags": [], "stats": {"pick_rate": 0.0744, "pick_rank": 171, "win_rate": 0.5285, "win_rank": 92, "champions": [120, 122, 86, 12, 8, 54]}},
+ {"id": 2078, "key": "ChainReaction", "name": "连锁反应", "rarity": "gold", "desc": "如果一个被指定技能击退的目标命中了另一个英雄，则二者都会被击飞并受到伤害。在与地形产生碰撞时，该击飞时长会延长并且他们会受到额外伤害。", "tags": [], "stats": {"pick_rate": 0.0617, "pick_rank": 187, "win_rate": 0.4688, "win_rank": 224, "champions": [79, 64, 134, 412, 12, 150]}},
+ {"id": 2077, "key": "DarkWind", "name": "贪欲束缚", "rarity": "gold", "desc": "用你的指定技能定身或缚地敌方英雄时造成额外伤害并对你进行治疗。", "tags": [], "stats": {"pick_rate": 0.1645, "pick_rank": 95, "win_rate": 0.5252, "win_rank": 98, "champions": [48, 50, 266, 412, 31, 223]}},
+ {"id": 1001, "key": "ARAM_ImTheJuggernaut", "name": "泰坦的坚决", "rarity": "prismatic", "desc": "在承受或造成伤害时获得层数。每7层，获得适应之力、护甲、魔法抗性、体型和韧性。", "tags": [], "stats": {"pick_rate": 0.1929, "pick_rank": 79, "win_rate": 0.5107, "win_rank": 135, "champions": [223, 36, 50, 412, 875, 14]}},
+ {"id": 2088, "key": "ARAM_Snowday", "name": "下雪天", "rarity": "silver", "desc": "你的【雪球】获得100技能急速。在命中一名敌人时造成额外魔法伤害。如果你没有【雪球】，则获得一个【雪球】。", "tags": [], "stats": {"pick_rate": 0.0927, "pick_rank": 149, "win_rate": 0.4825, "win_rank": 211, "champions": [142, 223, 54, 53, 875, 77]}},
+ {"id": 2062, "key": "Ability_SelfAOE_DoubleCast", "name": "回响施放", "rarity": "prismatic", "desc": "施放你的指定技能时会朝你的鼠标位置派出一个复制体并再次施放该技能。", "tags": [], "stats": {"pick_rate": 0.0883, "pick_rank": 156, "win_rate": 0.521, "win_rank": 114, "champions": [4, 120, 99, 875, 53, 122]}},
+ {"id": 2091, "key": "EndlessDecimation", "name": "无尽大杀四方", "rarity": "gold", "desc": "在战斗状态下，自动施放一次环形斧头挥舞从而造成物理伤害。被斧刃命中的敌人们受到额外伤害并治疗你。", "tags": [], "stats": {"pick_rate": 0.1725, "pick_rank": 91, "win_rate": 0.512, "win_rank": 130, "champions": [122, 36, 875, 223, 120, 141]}},
+ {"id": 1005, "key": "ARAM_WeeWooWeeWoo", "name": "喂呜喂呜", "rarity": "gold", "desc": "在朝着低生命值的友军移动时，获得移动速度。你的治疗和护盾获得提升，基于你目标的低生命值程度。", "tags": [], "stats": {"pick_rate": 0.024, "pick_rank": 224, "win_rate": 0.5485, "win_rank": 52, "champions": [37, 16, 350, 117, 43, 40]}},
+ {"id": 2087, "key": "ARAM_Archmage", "name": "大法师", "rarity": "prismatic", "desc": "施放一个技能会返还另一个随机技能的花费，数额相当于30%原技能冷却时间。", "tags": [], "stats": {"pick_rate": 0.3883, "pick_rank": 14, "win_rate": 0.5331, "win_rank": 79, "champions": [17, 21, 22, 26, 126, 81]}},
+ {"id": 1204, "key": "ARAM_StackosaurusRex", "name": "叠角龙", "rarity": "silver", "desc": "在你获得一个技能的永久层数时，多获得100%！", "tags": [], "stats": {"pick_rate": 0.0641, "pick_rank": 185, "win_rate": 0.5519, "win_rank": 44, "champions": [136, 901, 45, 235, 31, 50]}},
+ {"id": 2096, "key": "LittleExtraHelp", "name": "小小的额外帮助", "rarity": "gold", "desc": "在你的指定技能持续期间获得攻击距离和攻击速度。", "tags": ["攻击"], "stats": {"pick_rate": 0.1217, "pick_rank": 129, "win_rate": 0.5064, "win_rank": 154, "champions": [18, 29, 67, 11, 22, 804]}},
+ {"id": 2100, "key": "ARAM_SpecializedRecursion", "name": "急速之追求", "rarity": "gold", "desc": "任务：用指定技能命中敌方英雄次 奖励：指定技能获得技能急速，基于任务等级，至多至160。", "tags": [], "stats": {"pick_rate": 0.2193, "pick_rank": 65, "win_rate": 0.5113, "win_rank": 133, "champions": [11, 114, 21, 25, 53, 110]}},
+ {"id": 2099, "key": "ARAM_DivineDomain", "name": "飞升仪式", "rarity": "prismatic", "desc": "参与击杀敌方英雄后会留下其精华。攻击该精华会提供移动速度并重置基础技能冷却时间。", "tags": [], "stats": {"pick_rate": 0.1389, "pick_rank": 112, "win_rate": 0.4774, "win_rank": 216, "champions": [238, 35, 59, 64, 141, 555]}},
+ {"id": 2103, "key": "ARAM_BangBang", "name": "狙神飞星", "rarity": "gold", "desc": "任务：用技能狙击个敌方英雄 奖励：一颗流星会飞向被狙击的敌方英雄，在其周围的一个区域内造成魔法伤害", "tags": [], "stats": {"pick_rate": 0.1367, "pick_rank": 114, "win_rate": 0.5266, "win_rank": 95, "champions": [21, 4, 25, 30, 147, 101]}},
+ {"id": 2104, "key": "ARAM_SpiritBomb", "name": "灵魄炸弹", "rarity": "prismatic", "desc": "为友方英雄提供治疗和护盾时会为你积攒一颗【灵魄炸弹】。在满层时，投掷该炸弹至生命值最低的那个友军，从而对其和附近友军们提供治疗和护盾。", "tags": [], "stats": {"pick_rate": 0.0407, "pick_rank": 204, "win_rate": 0.5441, "win_rank": 58, "champions": [37, 16, 350, 147, 43, 40]}},
+ {"id": 2107, "key": "ARAM_Hellbent", "name": "濒死悟道", "rarity": "prismatic", "desc": "用攻击或技能伤害敌方英雄时会提供层数。在满层时，你会在阵亡时进行复活强化。", "tags": [], "stats": {"pick_rate": 0.0555, "pick_rank": 193, "win_rate": 0.4988, "win_rank": 177, "champions": [157, 777, 223, 266, 50, 5]}},
+ {"id": 2098, "key": "ARAM_EndlessHunt", "name": "吃过路兵", "rarity": "prismatic", "desc": "周期性地识别出敌方英雄身上的破绽。用攻击或技能命中破绽时，会造成最大生命值真实伤害、回复生命值并提供移动速度。这些效果可以叠加。", "tags": [], "stats": {"pick_rate": 0.0708, "pick_rank": 177, "win_rate": 0.5096, "win_rank": 137, "champions": [114, 157, 27, 120, 777, 104]}},
+ {"id": 2080, "key": "Snowbomb", "name": "冰雪爆裂", "rarity": "gold", "desc": "再次施放雪球会造成提升伤害、击飞该目标、并击退附近的敌人们。", "tags": []},
+ {"id": 2102, "key": "PressureCooker", "name": "高压锅", "rarity": "gold", "desc": "每一秒，对附近的敌方英雄们施加一层可叠加的灼烧，这个效果受益于你的最大生命值。 任务：对敌方英雄造成灼烧伤害。 奖励：每任务等级都会提升体型和伤害。", "tags": [], "stats": {"pick_rate": 0.1165, "pick_rank": 130, "win_rate": 0.5067, "win_rank": 152, "champions": [36, 223, 50, 412, 111, 14]}},
+ {"id": 2109, "key": "SnapBack", "name": "复位", "rarity": "gold", "desc": "再次施放指定技能时会产生爆炸，并回到你的原本位置。", "tags": []},
+ {"id": 2116, "key": "SpecializedEmpowerment", "name": "威能之追求", "rarity": "gold", "desc": "任务：用指定技能命中敌人次。 奖励：永久提升指定技能伤害。", "tags": [], "stats": {"pick_rate": 0.205, "pick_rank": 71, "win_rate": 0.5011, "win_rank": 169, "champions": [136, 81, 76, 110, 145, 901]}},
+ {"id": 2119, "key": "Overextender", "name": "过量延伸者", "rarity": "gold", "desc": "回城并进入到你的加农炮发射器。它的距离、飞行速度和伤害已经得到显著提升。", "tags": [], "stats": {"pick_rate": 0.0245, "pick_rank": 222, "win_rate": 0.509, "win_rank": 141, "champions": [30, 875, 27, 223, 54, 59]}},
+ {"id": 2115, "key": "SquishySlappyGrab", "name": "软弹啪叽抓", "rarity": "prismatic", "desc": "偶尔对所有附近的敌方英雄放出软弹啪叽的手，然后用灵链系住。你的下次攻击将拉拽所有被系住的敌人。", "tags": [], "stats": {"pick_rate": 0.0462, "pick_rank": 201, "win_rate": 0.4921, "win_rank": 191, "champions": [223, 412, 14, 111, 36, 3]}},
+ {"id": 2111, "key": "Bonk", "name": "邦！", "rarity": "gold", "desc": "被指定技能强化的攻击或技能会对目标和附近的敌人们造成额外伤害。", "tags": [], "stats": {"pick_rate": 0.0793, "pick_rank": 163, "win_rate": 0.5195, "win_rank": 118, "champions": [67, 62, 75, 48, 24, 86]}},
+ {"id": 2123, "key": "Overloaded", "name": "超负荷", "rarity": "prismatic", "desc": "使用另一个技能会重置指定技能的冷却时间。", "tags": [], "stats": {"pick_rate": 0.1596, "pick_rank": 97, "win_rate": 0.4969, "win_rank": 181, "champions": [13, 246, 4, 901, 25, 63]}},
+ {"id": 2125, "key": "ItsGoTime", "name": "前进时间到", "rarity": "silver", "desc": "激活指定技能会在其持续期间为你提供移动速度。", "tags": [], "stats": {"pick_rate": 0.0679, "pick_rank": 180, "win_rate": 0.4938, "win_rank": 185, "champions": [875, 18, 266, 22, 11, 36]}},
+ {"id": 2126, "key": "KeepGoing", "name": "装填", "rarity": "gold", "desc": "在指定技能期间的普攻攻击特效会降低其冷却时间。", "tags": ["攻击"]},
+ {"id": 2129, "key": "Terraind", "name": "地形专家", "rarity": "gold", "desc": "你的指定技能会在它周围的一个区域内造成伤害。", "tags": [], "stats": {"pick_rate": 0.0372, "pick_rank": 208, "win_rate": 0.5117, "win_rank": 132, "champions": [48, 59, 34, 516, 268, 163]}},
+ {"id": 2131, "key": "DontChangeTheChannel", "name": "别停止引导", "rarity": "silver", "desc": "你每引导一秒都会获得护盾值。", "tags": [], "stats": {"pick_rate": 0.0589, "pick_rank": 189, "win_rate": 0.5176, "win_rank": 120, "champions": [136, 55, 9, 8, 110, 20]}},
+ {"id": 2133, "key": "MercysStrike", "name": "仁慈打击", "rarity": "gold", "desc": "在使用指定技能为你的友军提供治疗或护盾之后，你的下一次普攻获得攻击距离、攻击速度并造成额外最大生命值魔法伤害。", "tags": ["攻击"], "stats": {"pick_rate": 0.0204, "pick_rank": 228, "win_rate": 0.5079, "win_rank": 147, "champions": [235, 37, 16, 43, 40, 117]}},
+ {"id": 2127, "key": "ForgedByTheMaster", "name": "大师铸就", "rarity": "silver", "desc": "使你的装备和强化符文伤害提升45%。", "tags": [], "stats": {"pick_rate": 0.3084, "pick_rank": 31, "win_rate": 0.5493, "win_rank": 51, "champions": [63, 17, 81, 145, 4, 21]}},
+ {"id": 2136, "key": "TrustyWeapon", "name": "可靠武器", "rarity": "silver", "desc": "用指定技能打击敌方英雄时会铸造一条友谊纽带。 指定技能基于你的友谊等级获得到临时提升伤害", "tags": [], "stats": {"pick_rate": 0.0734, "pick_rank": 175, "win_rate": 0.491, "win_rank": 197, "champions": [4, 81, 120, 13, 115, 45]}},
+ {"id": 2132, "key": "WarlockJuicebox", "name": "术士果汁盒", "rarity": "gold", "desc": "获得10%（+0.03%法强）全能吸血。", "tags": ["AP"], "stats": {"pick_rate": 0.3643, "pick_rank": 19, "win_rate": 0.5739, "win_rank": 22, "champions": [136, 13, 63, 876, 517, 245]}},
+ {"id": 2135, "key": "Overkill", "name": "针插垫", "rarity": "prismatic", "desc": "在指定技能期间进行攻击会对你的目标凿下大钉。大钉会积累伤害、处决、并在到期时提供移动速度。", "tags": [], "stats": {"pick_rate": 0.0503, "pick_rank": 196, "win_rate": 0.4639, "win_rank": 227, "champions": [22, 29, 18, 804, 67, 498]}},
+ {"id": 2139, "key": "PinCushion", "name": "豪猪", "rarity": "gold", "desc": "承受来自英雄的伤害会积攒一次尖针迸发，这些尖针会从你身上飞出，对附近的敌人们造成伤害和减速。", "tags": [], "stats": {"pick_rate": 0.0592, "pick_rank": 188, "win_rate": 0.4898, "win_rank": 200, "champions": [36, 223, 14, 412, 111, 89]}},
+ {"id": 2144, "key": "DoubleDefense", "name": "加固护盾", "rarity": "silver", "desc": "来自指定技能的护盾变得更强并且受益于目标的已损失生命值。", "tags": [], "stats": {"pick_rate": 0.0651, "pick_rank": 184, "win_rate": 0.4967, "win_rank": 182, "champions": [875, 223, 82, 350, 111, 43]}},
+ {"id": 2138, "key": "WardingWeapon", "name": "自适应防护", "rarity": "silver", "desc": "用指定技能打击一个敌方英雄时，为你提供持续6秒的7~12（随等级）护甲或魔法抗性，基于该技能的伤害类型。这个效果可以叠加。", "tags": [], "stats": {"pick_rate": 0.0425, "pick_rank": 203, "win_rate": 0.4791, "win_rank": 214, "champions": [120, 157, 266, 876, 36, 420]}},
+ {"id": 2143, "key": "Upgrade_SunderedSky", "name": "升级：焚天", "rarity": "gold", "desc": "将【焚天】对每个目标的冷却时间缩短至5秒，并且治疗你9%已损失生命值。 获得500金币。", "tags": [], "stats": {"pick_rate": 0.0472, "pick_rank": 199, "win_rate": 0.4587, "win_rank": 230, "champions": [266, 64, 114, 62, 59, 122]}},
+ {"id": 2140, "key": "Upgrade_Ravenous", "name": "升级：贪欲九头蛇", "rarity": "gold", "desc": "你对敌人的技能命中会触发顺劈。提升【贪欲九头蛇】的生命偷取至。 获得500金币.", "tags": [], "stats": {"pick_rate": 0.0738, "pick_rank": 174, "win_rate": 0.5004, "win_rank": 172, "champions": [114, 120, 64, 238, 141, 266]}},
+ {"id": 3025, "key": "Sound_Barrier", "name": "音之屏障", "rarity": "silver", "desc": "为一名友军提供护盾时，会在1.5秒内提供持续衰减的移动速度和幽灵状态。", "tags": [], "stats": {"pick_rate": 0.0206, "pick_rank": 227, "win_rate": 0.5264, "win_rank": 96, "champions": [37, 350, 43, 147, 40, 117]}},
+ {"id": 3039, "key": "Salvation", "name": "拯救", "rarity": "gold", "desc": "受到伤害导致你的生命值低于时，会释放一道冲击波，对附近敌人造成伤害并将其击退，同时为你周围大范围区域内的所有友方英雄回复生命值。", "tags": [], "stats": {"pick_rate": 0.1138, "pick_rank": 135, "win_rate": 0.5388, "win_rank": 70, "champions": [136, 37, 412, 223, 27, 25]}},
+ {"id": 3071, "key": "BrassBlast", "name": "黄铜爆音", "rarity": "gold", "desc": "将一个召唤师技能替换为黄铜爆音。 黄铜爆音：蓄力吹响大喇叭，击退并对敌人造成魔法伤害。", "tags": [], "stats": {"pick_rate": 0.0622, "pick_rank": 186, "win_rate": 0.4599, "win_rank": 228, "champions": [22, 25, 136, 4, 147, 17]}},
+ {"id": 3053, "key": "MoshMonster", "name": "热舞怪兽", "rarity": "prismatic", "desc": "施放指定技能会获得额外生命值，并在持续期间减速附近敌人 每次参与击杀都会永久提升该效果。", "tags": [], "stats": {"pick_rate": 0.0253, "pick_rank": 221, "win_rate": 0.4933, "win_rank": 187, "champions": [36, 266, 27, 9, 75, 420]}},
+ {"id": 3075, "key": "Recoil", "name": "反冲", "rarity": "gold", "desc": "你的指定技能造成额外伤害并且你因反冲力而后退。", "tags": [], "stats": {"pick_rate": 0.0923, "pick_rank": 150, "win_rate": 0.5117, "win_rank": 131, "champions": [4, 145, 101, 45, 875, 115]}},
+ {"id": 3079, "key": "Totentanz", "name": "死之舞", "rarity": "prismatic", "desc": "将一个召唤师技能替换为与死亡共舞一曲。 与死亡共舞一曲：向前闪烁并进入不可被击杀状态。在5秒内参与击杀一个英雄，否则 你会直接阵亡。", "tags": [], "stats": {"pick_rate": 0.0529, "pick_rank": 194, "win_rate": 0.4846, "win_rank": 208, "champions": [777, 238, 59, 157, 23, 11]}},
+ {"id": 2141, "key": "Quest_UltraHydra", "name": "终极九头蛇", "rarity": "prismatic", "desc": "在完成一个【九头蛇】装备时，获得一个提亚马特。 任务：拥有【贪欲九头蛇】，【亵渎九头蛇】和【巨型九头蛇】。 奖励：获得【终极九头蛇】。", "tags": [], "stats": {"pick_rate": 0.18, "pick_rank": 86, "win_rate": 0.5631, "win_rank": 30, "champions": [64, 59, 875, 114, 238, 107]}},
+ {"id": 3058, "key": "TickleMonster", "name": "嗡嗡怪兽", "rarity": "gold", "desc": "攻击力转化 为攻击速度。 普攻附带额外魔法伤害攻击特效。", "tags": ["攻击"], "stats": {"pick_rate": 0.0792, "pick_rank": 164, "win_rate": 0.4674, "win_rank": 226, "champions": [67, 10, 5, 22, 200, 96]}},
+ {"id": 3059, "key": "NoManaNoProblem", "name": "没法力，没问题", "rarity": "silver", "desc": "来自你的装备的法力值转化 为法术强度。 使你的总法术强度提升15%。", "tags": ["AP"], "stats": {"pick_rate": 0.1838, "pick_rank": 83, "win_rate": 0.5209, "win_rank": 115, "champions": [30, 13, 145, 4, 45, 54]}},
+ {"id": 3063, "key": "GiftoftheDrowned", "name": "溺水之赠礼", "rarity": "silver", "desc": "额外生命值转化为 穿甲。 获得穿甲。", "tags": ["AP"], "stats": {"pick_rate": 0.1035, "pick_rank": 141, "win_rate": 0.4848, "win_rank": 207, "champions": [126, 238, 59, 104, 51, 41]}},
+ {"id": 3094, "key": "LichBrain", "name": "巫妖大脑", "rarity": "silver", "desc": "获得法术强度。", "tags": ["AP"], "stats": {"pick_rate": 0.1988, "pick_rank": 74, "win_rate": 0.5388, "win_rank": 69, "champions": [223, 13, 8, 50, 82, 517]}},
+ {"id": 3018, "key": "BigShot", "name": "大腕", "rarity": "prismatic", "desc": "获得暴击伤害和额外攻击力。 你的攻击速度转化为暴击伤害。", "tags": ["攻击"], "stats": {"pick_rate": 0.2738, "pick_rank": 41, "win_rate": 0.5303, "win_rank": 83, "champions": [202, 51, 236, 41, 119, 104]}},
+ {"id": 3048, "key": "BouncingBees", "name": "弹跳蜜蜂", "rarity": "prismatic", "desc": "施放技能后，你的下一次普攻会弹跳至相距最近的那个敌人 任务：将普攻弹跳至敌方英雄 奖励：每任务等级获得+30攻击力和额外一次弹跳", "tags": ["攻击"], "stats": {"pick_rate": 0.1247, "pick_rank": 126, "win_rate": 0.5693, "win_rank": 25, "champions": [202, 157, 81, 119, 901, 777]}},
+ {"id": 3036, "key": "DoubleTime", "name": "翻倍时间", "rarity": "gold", "desc": "在短时间内用2种不同技能对一名敌方英雄造成伤害时，会造成魔法伤害并提供最大法力值。", "tags": [], "stats": {"pick_rate": 0.0892, "pick_rank": 155, "win_rate": 0.5064, "win_rank": 155, "champions": [13, 63, 81, 38, 876, 120]}},
+ {"id": 3016, "key": "ThirdTimesTheHarm", "name": "伤不过三", "rarity": "prismatic", "desc": "对一个敌方英雄的每第三次连续攻击会造成真实伤害并永久提升由这个技能造成的伤害。", "tags": [], "stats": {"pick_rate": 0.0802, "pick_rank": 162, "win_rate": 0.4933, "win_rank": 186, "champions": [67, 200, 55, 222, 157, 11]}},
+ {"id": 2157, "key": "Upgrade_DeathDance", "name": "升级：死亡之舞", "rarity": "silver", "desc": "获得 250。 死亡之舞的无视痛苦提升至所受伤害，并且在参与一次击杀后，即刻治疗更多生命值。", "tags": [], "stats": {"pick_rate": 0.2399, "pick_rank": 54, "win_rate": 0.5438, "win_rank": 60, "champions": [777, 157, 114, 141, 64, 266]}},
+ {"id": 3086, "key": "BEES", "name": "小蜜蜂！！！", "rarity": "gold", "desc": "每过一段时间，你的下一个命中敌方英雄的技能会发射一个会爆炸的小蜜蜂巢穴，在一段短时间里造成魔法伤害和减速。 小蜜蜂附带攻击特效。", "tags": ["攻击"], "stats": {"pick_rate": 0.5571, "pick_rank": 3, "win_rate": 0.636, "win_rank": 2, "champions": [17, 145, 4, 63, 136, 22]}},
+ {"id": 1310, "key": "ARAM_ClownCollege", "name": "小丑学院", "rarity": "prismatic", "desc": "获得召唤师技能欺诈魔术。 获得背刺被动。 在你阵亡时，对附近的敌人们造成大量真实伤害和恐惧。", "tags": [], "stats": {"pick_rate": 0.2774, "pick_rank": 40, "win_rate": 0.5535, "win_rank": 43, "champions": [35, 238, 59, 91, 121, 107]}},
+ {"id": 3078, "key": "TheBoomAndTheBass", "name": "鼓声暴起 低音轰鸣", "rarity": "gold", "desc": "施放技能后，你的下一次攻击变得更快，造成额外魔法伤害并为你提供持续衰减的移动速度。", "tags": [], "stats": {"pick_rate": 0.4519, "pick_rank": 9, "win_rate": 0.6183, "win_rank": 4, "champions": [157, 777, 114, 120, 81, 245]}},
+ {"id": 3116, "key": "TakeemDownDownDown", "name": "将他们放倒倒倒", "rarity": "gold", "desc": "普攻和技能在命中时造成额外魔法伤害并对敌方英雄施加层数。 在满层时，消耗所有层数，基于已损失生命值造成魔法伤害，并基于造成的伤害回复生命值。", "tags": [], "stats": {"pick_rate": 0.3522, "pick_rank": 22, "win_rate": 0.5812, "win_rank": 17, "champions": [120, 157, 5, 55, 136, 777]}},
+ {"id": 3049, "key": "ArmoredImpact", "name": "装甲冲击", "rarity": "gold", "desc": "施放技能后，你的下一次普通攻击会对附近敌人造成25~125（随等级）（+220%额外护甲）额外物理伤害。", "tags": [], "stats": {"pick_rate": 0.1875, "pick_rank": 80, "win_rate": 0.5707, "win_rank": 23, "champions": [412, 36, 54, 223, 89, 111]}},
+ {"id": 3121, "key": "Fruitify", "name": "水果化", "rarity": "silver", "desc": "参与击杀会引发水果爆炸。 水果可回复生命值和法力值。", "tags": [], "stats": {"pick_rate": 0.0746, "pick_rank": 170, "win_rate": 0.5279, "win_rank": 94, "champions": [223, 412, 16, 37, 36, 53]}},
+ {"id": 3123, "key": "JeweledBracelet", "name": "珠光手镯", "rarity": "gold", "desc": "指定技能可以暴击。 获得25%暴击几率。", "tags": ["攻击"], "stats": {"pick_rate": 0.2922, "pick_rank": 37, "win_rate": 0.5506, "win_rank": 49, "champions": [236, 51, 104, 81, 119, 202]}},
+ {"id": 3004, "key": "GetJinxed", "name": "罪恶快感！", "rarity": "gold", "desc": "将一个召唤师技能替换为罪恶快感！ 罪恶快感！驾驭一枚飞弹，它会在命中敌方英雄、建筑物或墙体后爆炸。爆炸半径内的敌人会受到物理伤害。", "tags": [], "stats": {"pick_rate": 0.1691, "pick_rank": 94, "win_rate": 0.5089, "win_rank": 142, "champions": [875, 59, 141, 120, 54, 80]}},
+ {"id": 3131, "key": "StillHere", "name": "屹立不倒", "rarity": "gold", "desc": "基于你的已损失生命值获得攻击速度和生命偷取。", "tags": ["攻击"], "stats": {"pick_rate": 0.3696, "pick_rank": 17, "win_rate": 0.5917, "win_rank": 9, "champions": [157, 777, 5, 11, 67, 104]}},
+ {"id": 3129, "key": "SapMagic", "name": "吸元秘术", "rarity": "gold", "desc": "每秒，你的下次攻击造成额外物理伤害，并为你回复生命值攻击特效。 施放技能会缩减该效果的冷却时间。", "tags": ["攻击"], "stats": {"pick_rate": 0.1547, "pick_rank": 102, "win_rate": 0.543, "win_rank": 62, "champions": [223, 266, 114, 36, 120, 5]}},
+ {"id": 3132, "key": "HeavyIsTheCrown", "name": "王冠之重", "rarity": "gold", "desc": "获得攻击力、法术强度和攻击速度，但移动速度降低。 每次参与击杀都会获得一层【背负】以提升该效果。阵亡时失去一半层数", "tags": ["AP", "攻击"], "stats": {"pick_rate": 0.1497, "pick_rank": 105, "win_rate": 0.5214, "win_rank": 113, "champions": [30, 22, 55, 81, 145, 41]}},
+ {"id": 3051, "key": "BlueBarrier", "name": "蓝色屏障", "rarity": "silver", "desc": "护盾值至多为300~800（随等级）", "tags": [], "stats": {"pick_rate": 0.1144, "pick_rank": 134, "win_rate": 0.5551, "win_rank": 40, "champions": [13, 38, 81, 136, 37, 517]}},
+ {"id": 3088, "key": "CrimsonCobalt", "name": "深红钴蓝闪光", "rarity": "gold", "desc": "被指定技能伤害过的敌方英雄会被标记。攻击带标记的敌人会造成额外魔法伤害并缩减指定技能的冷却时间。", "tags": [], "stats": {"pick_rate": 0.2306, "pick_rank": 56, "win_rate": 0.5144, "win_rank": 126, "champions": [13, 223, 4, 21, 901, 145]}},
+ {"id": 3081, "key": "WeaponOfDestiny", "name": "命运之武器", "rarity": "gold", "desc": "你的第一件传说级装备成为命运之武器，属性基于参与击杀英雄数提升。", "tags": [], "stats": {"pick_rate": 0.5169, "pick_rank": 5, "win_rate": 0.6399, "win_rank": 1, "champions": [136, 202, 30, 901, 22, 67]}},
+ {"id": 3085, "key": "FlowOfSpirit", "name": "灵魂乐流", "rarity": "silver", "desc": "施放指定技能会为你提供持续一段时间的攻击速度。", "tags": ["攻击"], "stats": {"pick_rate": 0.1453, "pick_rank": 111, "win_rate": 0.5366, "win_rank": 73, "champions": [67, 5, 10, 48, 23, 22]}},
+ {"id": 3149, "key": "GroupHug", "name": "一起抱抱", "rarity": "prismatic", "desc": "用指定技能 为友方英雄提供治疗或护盾时，会对2名其他附近友方英雄再次施放该技能。", "tags": [], "stats": {"pick_rate": 0.0176, "pick_rank": 230, "win_rate": 0.5252, "win_rank": 99, "champions": [25, 350, 43, 40, 117, 76]}},
+ {"id": 3163, "key": "EnchantingButterflies", "name": "迷人蝴蝶", "rarity": "gold", "desc": "为友方英雄提供治疗或护盾时，会聚集蝴蝶。 在收集只蝴蝶之后，对一个敌方英雄造成伤害时会将它们发射出去以造成魔法伤害。", "tags": [], "stats": {"pick_rate": 0.0661, "pick_rank": 181, "win_rate": 0.5596, "win_rank": 32, "champions": [37, 350, 16, 147, 235, 43]}},
+ {"id": 3055, "key": "UltimateRecursion", "name": "终极循环往复", "rarity": "silver", "desc": "获得50终极技能急速。", "tags": [], "stats": {"pick_rate": 0.4328, "pick_rank": 10, "win_rate": 0.53, "win_rank": 84, "champions": [17, 30, 22, 54, 236, 81]}},
+ {"id": 3052, "key": "HandsOffTheTalent", "name": "远射天资", "rarity": "silver", "desc": "在接近最大攻击距离处打出的攻击会附带额外物理伤害攻击特效。", "tags": ["攻击"], "stats": {"pick_rate": 0.0851, "pick_rank": 160, "win_rate": 0.4686, "win_rank": 225, "champions": [51, 202, 81, 222, 235, 22]}},
+ {"id": 3134, "key": "LonelyWarrior", "name": "孤勇者", "rarity": "silver", "desc": "附近每有一个敌方英雄，你就会获得攻击速度、护甲和魔法抗性。", "tags": ["攻击"], "stats": {"pick_rate": 0.172, "pick_rank": 93, "win_rate": 0.5214, "win_rank": 112, "champions": [223, 5, 777, 157, 36, 412]}},
+ {"id": 3170, "key": "GoH_PentakillAug_Q", "name": "重型", "rarity": "gold", "desc": "强化指定技能!", "tags": []},
+ {"id": 3171, "key": "GoH_PentakillAug_W", "name": "力量", "rarity": "gold", "desc": "强化指定技能!", "tags": []},
+ {"id": 3172, "key": "GoH_PentakillAug_E", "name": "鞭挞", "rarity": "gold", "desc": "强化指定技能!", "tags": []},
+ {"id": 3173, "key": "GoH_PentakillAug_R", "name": "厄运", "rarity": "gold", "desc": "强化指定技能!", "tags": []},
+ {"id": 3118, "key": "ArcaneAxiom", "name": "奥术公理", "rarity": "gold", "desc": "在你对一名敌方英雄造成伤害后，如果该英雄在3秒内阵亡，则会返还你终极技能的部分总冷却时间。", "tags": [], "stats": {"pick_rate": 0.311, "pick_rank": 29, "win_rate": 0.5161, "win_rank": 122, "champions": [30, 22, 236, 17, 54, 238]}},
+ {"id": 3150, "key": "Upgrade_Stormsurge", "name": "升级：风暴狂涌", "rarity": "gold", "desc": "风暴狂涌 - 风啸现在总会在一个区域内引爆，基于最大生命值造成魔法伤害。 被初段引爆命中的敌方英雄会被风啸标记。 获得500金币。", "tags": [], "stats": {"pick_rate": 0.2984, "pick_rank": 34, "win_rate": 0.5463, "win_rank": 54, "champions": [30, 4, 76, 54, 145, 105]}},
+ {"id": 3159, "key": "RISE", "name": "登峰造极境", "rarity": "prismatic", "desc": "如果你使用指定技能击杀了一个敌方英雄，则可以再次施放一次该技能。 后续每次再次施放 都会造成额外伤害。", "tags": [], "stats": {"pick_rate": 0.1103, "pick_rank": 138, "win_rate": 0.4539, "win_rank": 231, "champions": [81, 31, 51, 875, 119, 104]}},
+ {"id": 3060, "key": "OneHitWonder", "name": "单曲红人", "rarity": "gold", "desc": "每拥有技能急速，指定技能的伤害就会提升，但它不再受益于技能急速。", "tags": [], "stats": {"pick_rate": 0.2297, "pick_rank": 58, "win_rate": 0.516, "win_rank": 123, "champions": [126, 145, 81, 4, 110, 25]}},
+ {"id": 3265, "key": "Fortified", "name": "坚不可破", "rarity": "silver", "stats": {"pick_rate": 0.1749, "pick_rank": 89, "win_rate": 0.5233, "win_rank": 104, "champions": [223, 36, 412, 89, 54, 98]}},
+ {"id": 3263, "key": "SteadfastPresence", "name": "超坚定风采", "rarity": "gold", "stats": {"pick_rate": 0.2508, "pick_rank": 50, "win_rate": 0.5291, "win_rank": 89, "champions": [36, 223, 50, 412, 27, 111]}},
+ {"id": 3262, "key": "ARAM_SlimeTime", "name": "史莱姆时间", "rarity": "silver", "stats": {"pick_rate": 0.1095, "pick_rank": 139, "win_rate": 0.5514, "win_rank": 46, "champions": [223, 36, 50, 412, 57, 3]}},
+ {"id": 3264, "key": "MysticGuard", "name": "秘术卫士", "rarity": "silver", "stats": {"pick_rate": 0.1341, "pick_rank": 116, "win_rate": 0.5044, "win_rank": 163, "champions": [223, 36, 412, 50, 3, 31]}},
+ {"id": 2083, "key": "BurstingTeeth", "name": "牙仙子", "rarity": "gold", "desc": "爆裂敌人会掉落牙齿。拾取牙齿会提供给你永久的穿甲和法术穿透。", "tags": [], "stats": {"pick_rate": 0.4064, "pick_rank": 12, "win_rate": 0.5839, "win_rank": 16, "champions": [104, 126, 238, 30, 141, 236]}}
+]}

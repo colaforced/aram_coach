@@ -50,7 +50,8 @@ const STYLE = `
 #cc-aug { position: fixed; right: 20px; top: 96px; width: 340px; max-width: calc(100vw - 40px); z-index: 9001;
   max-height: calc(100vh - 120px); overflow-y: auto;
   background: #121c2a; border: 1px solid #7e57c2; border-radius: 14px; padding: 14px 16px; box-shadow: 0 10px 36px rgba(0,0,0,0.55); }
-#cc-aug h3 { font-size: 15px; color: #ce93d8; margin: 0 0 10px; display: flex; justify-content: space-between; }
+#cc-aug h3 { font-size: 15px; color: #ce93d8; margin: 0 0 10px; display: flex; justify-content: space-between;
+  cursor: move; user-select: none; touch-action: none; }
 #cc-aug h3 span { cursor: pointer; color: #78909c; }
 #cc-aug input { width: 100%; box-sizing: border-box; background: #0a121c; border: 1px solid #2d4a5a; color: #eceff1;
   border-radius: 8px; padding: 8px 10px; font-size: 14px; margin-bottom: 6px; }
@@ -60,6 +61,7 @@ const STYLE = `
 .cc-rank.top .cc-rname { color: #ffd54f; font-weight: 800; font-size: 16px; }
 .cc-rname { font-weight: 600; }
 .cc-rwhy { font-size: 12px; color: #90a4ae; margin-top: 2px; }
+.cc-rdesc { font-size: 12px; color: #b0bec5; margin-top: 3px; line-height: 1.5; }
 .cc-rar { font-size: 10px; padding: 1px 5px; border-radius: 4px; margin-left: 6px; vertical-align: 2px; }
 .cc-rar.silver { background: #607d8b; color: #fff; } .cc-rar.gold { background: #c9a227; color: #000; }
 .cc-rar.prismatic { background: linear-gradient(90deg,#64b5f6,#ce93d8,#ffb74d); color: #000; }
@@ -191,6 +193,57 @@ window.CoachActions = {
 
 // ---------------------------------------------------------------- 强化符文三选一
 
+// 面板默认在右上角，会挡住页面内容：按住标题栏可以拖走，位置记在本机，下次打开还在那；双击标题栏回到默认位置
+const AUG_POS_KEY = 'cc-aug-pos';
+
+/** 把面板放到 (x, y)，限制在窗口内（至少露出标题栏），内容太长就在面板里滚动。 */
+function placeAug(el, x, y) {
+    x = Math.min(Math.max(0, x), Math.max(0, window.innerWidth - el.offsetWidth));
+    y = Math.min(Math.max(0, y), Math.max(0, window.innerHeight - 48));
+    el.style.left = `${x}px`;
+    el.style.top = `${y}px`;
+    el.style.right = 'auto';
+    el.style.maxHeight = `${window.innerHeight - y - 8}px`;
+}
+
+function restoreAugPos(el) {
+    let p = null;
+    try { p = JSON.parse(localStorage.getItem(AUG_POS_KEY)); } catch (e) { /* 存储不可用就用默认位置 */ }
+    if (p && Number.isFinite(p.x) && Number.isFinite(p.y)) placeAug(el, p.x, p.y);
+}
+
+function makeAugDraggable(el) {
+    const handle = el.querySelector('h3');
+    handle.addEventListener('pointerdown', e => {
+        if (e.button !== 0 || e.target.closest('span')) return;   // ✕ 是关闭按钮，不拖
+        e.preventDefault();
+        const r = el.getBoundingClientRect();
+        const dx = e.clientX - r.left, dy = e.clientY - r.top;
+        handle.setPointerCapture(e.pointerId);
+        const move = ev => placeAug(el, ev.clientX - dx, ev.clientY - dy);
+        const up = () => {
+            handle.removeEventListener('pointermove', move);
+            handle.removeEventListener('pointerup', up);
+            handle.removeEventListener('pointercancel', up);
+            try { localStorage.setItem(AUG_POS_KEY, JSON.stringify({ x: el.offsetLeft, y: el.offsetTop })); } catch (err) { /* 记不住也能拖 */ }
+        };
+        handle.addEventListener('pointermove', move);
+        handle.addEventListener('pointerup', up);
+        handle.addEventListener('pointercancel', up);
+    });
+    handle.addEventListener('dblclick', e => {
+        if (e.target.closest('span')) return;
+        try { localStorage.removeItem(AUG_POS_KEY); } catch (err) { /* ignore */ }
+        ['left', 'top', 'right', 'maxHeight'].forEach(k => { el.style[k] = ''; });
+    });
+}
+
+// 窗口变小时把拖过的面板拉回可见范围
+window.addEventListener('resize', () => {
+    const el = document.getElementById('cc-aug');
+    if (el && el.style.left) placeAug(el, el.offsetLeft, el.offsetTop);
+});
+
 const AugmentPicker = {
     pool: null,
     llm: false,
@@ -247,9 +300,9 @@ const AugmentPicker = {
         el.id = 'cc-aug';
         const rarity = { silver: '银', gold: '金', prismatic: '彩' };
         el.innerHTML = `
-            <h3>🎲 强化符文三选一 <span title="关闭">✕</span></h3>
+            <h3 title="按住拖动，双击回到默认位置">🎲 强化符文三选一 <span title="关闭">✕</span></h3>
             <datalist id="cc-aug-list">${this.pool.map(a =>
-                `<option value="${esc(a.name)}">${esc(rarity[a.rarity] || '')}</option>`).join('')}</datalist>
+                `<option value="${esc(a.name)}">${esc([rarity[a.rarity], a.desc].filter(Boolean).join(' · '))}</option>`).join('')}</datalist>
             ${[1, 2, 3].map(i => `<input list="cc-aug-list" placeholder="选项 ${i}（输入几个字筛选）" autocomplete="off">`).join('')}
             <div class="cc-actions">
                 <button class="cc-btn" data-act="rank">推荐</button>
@@ -258,6 +311,8 @@ const AugmentPicker = {
             </div>
             <div class="cc-res">${this.auto ? '选项出现在屏幕上时会自动识别填好' : ''}</div>`;
         document.body.appendChild(el);
+        restoreAugPos(el);
+        makeAugDraggable(el);
         el.querySelector('h3 span').onclick = () => this.close();
         el.querySelector('[data-act="rank"]').onclick = () => this.rank();
         const ai = el.querySelector('[data-act="ai"]');
@@ -281,11 +336,13 @@ const AugmentPicker = {
                 <span class="cc-rname">${i === 0 && r.pick ? '👉 ' : ''}${esc(x.name)}</span>
                 ${x.rarity ? `<span class="cc-rar ${esc(x.rarity)}">${{ silver: '银', gold: '金', prismatic: '彩' }[x.rarity] || ''}</span>` : ''}
                 ${known.has(x.name) ? '' : '<span class="cc-rar silver">不在符文池</span>'}
-                <div class="cc-rwhy">${x.reasons && x.reasons.length ? esc(x.reasons.join('；')) : '知识库没有这个强化符文的数据'}</div>
+                ${x.reasons && x.reasons.length ? `<div class="cc-rwhy">${esc(x.reasons.join('；'))}</div>` : ''}
+                ${x.desc ? `<div class="cc-rdesc">${esc(x.desc)}</div>` : ''}
+                ${x.known ? '' : '<div class="cc-rwhy">没有这个强化符文的数据（名字可能没认对）</div>'}
             </div>`).join('');
         const head = r.pick
             ? (r.confident ? '' : '<div class="cc-rwhy">分差不大，按阵容和手感选也行</div>')
-            : `<div class="cc-rwhy">知识库没覆盖这几个${this.llm ? '，可以点“问 AI”' : ''}</div>`;
+            : `<div class="cc-rwhy">这几个都没有数据${this.llm ? '，可以点“问 AI”' : ''}</div>`;
         res.innerHTML = head + rows;
     },
     async ai() {

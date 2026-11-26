@@ -4,6 +4,7 @@
 - OP.GG 大乱斗：英雄梯度 / 胜率 / 出装 / 符文 / 召唤师技能 / 加点（非官方接口）
 - Meraki lolstaticdata：大乱斗平衡修正（造成/承受伤害、治疗、护盾、韧性、急速…），源自 LoL wiki
 - CommunityDragon zh_cn：符文/装备/召唤师技能中文名、装备合成树与当前版本价格、海克斯大乱斗强化符文池
+- 腾讯 101（掌盟）海斗强化符文榜：国服统计的胜率 / 选取率 / 最适合的英雄（强化符文的效果描述见 augment_text.py）
 
 各数据源互相独立：任何一个失败，只沿用它上一次的结果，不影响其他来源；
 每个数据源单独判断是否过期，失败的数据源下次启动会重试。
@@ -38,7 +39,10 @@ OPGG_CONCURRENCY = 4
 
 # OP.GG 的 T 级 1~5（1 最强，0 是 OP 级）→ 与 champions.json 里 aram_strength 同一量纲（手写数据 55~92，均值 75）
 TIER_STRENGTH = {0: 95, 1: 90, 2: 82, 3: 74, 4: 66, 5: 58}
-SOURCES = ("cdragon", "balance", "opgg")
+# 腾讯 101 的海斗强化符文榜（国服统计，每天更新，免 Key；接口来自 RankPeek 的 HextechRankSourceClient）
+AUGMENT_STATS_URL = "https://mlol.qt.qq.com/go/battle_info/odp_proxy/fuwen_aram_rune_rank_v2?augmentid_level=255"
+AUGMENT_STATS_REFERER = "https://101.qq.com/"
+SOURCES = ("cdragon", "balance", "opgg", "augment_stats")
 
 # Meraki stats 字段 → 输出字段与中文名
 ARAM_BALANCE_FIELDS = {
@@ -111,6 +115,39 @@ def parse_cdragon_augments(lists: list, augments: list, mode: str = AUGMENT_MODE
             out.append({"id": a["id"], "key": a["augmentNameId"], "name": a["nameTRA"],
                         "rarity": AUGMENT_RARITY.get(a.get("rarity"), "")})
     return out
+
+
+def parse_augment_stats(body: Any) -> Dict[str, Any]:
+    """101 强化符文榜 → {date, augments: {平台 ID: {pick_rate, pick_rank, win_rate, win_rank, champions}}}。
+
+    data._fieldValues 里唯一的值是一段 JSON 字符串；其中 augmentlist 是 # 分隔的条目，每条按 _ 分隔：
+    ID_等级_选取率_选取排名_排名变化_胜率_胜率排名_排名变化_最适合的英雄 ID（逗号分隔）。
+    ID 就是强化符文池里的 id（AugmentPlatformId）。
+    """
+    data = body.get("data") if isinstance(body, dict) else None
+    fields = data.get("_fieldValues") if isinstance(data, dict) else None
+    inner = next(iter(fields.values()), None) if isinstance(fields, dict) else None
+    if isinstance(inner, str):
+        try:
+            inner = json.loads(inner)
+        except ValueError:
+            return {}
+    if not isinstance(inner, dict):
+        return {}
+    out: Dict[str, Dict[str, Any]] = {}
+    for entry in str(inner.get("augmentlist") or "").split("#"):
+        f = entry.split("_")
+        if len(f) < 8:
+            continue
+        try:
+            out[str(int(f[0]))] = {
+                "pick_rate": float(f[2]), "pick_rank": int(f[3]),
+                "win_rate": float(f[5]), "win_rank": int(f[6]),
+                "champions": [int(x) for x in (f[8] if len(f) > 8 else "").split(",") if x.strip().isdigit()],
+            }
+        except ValueError:
+            continue    # 单条脏数据不影响整体
+    return {"date": str(inner.get("dtstatdate") or ""), "augments": out} if out else {}
 
 
 def parse_meraki_balance(champions: dict) -> Dict[str, Dict[str, float]]:
@@ -343,6 +380,15 @@ async def _fetch_augments(client: httpx.AsyncClient) -> List[Dict[str, Any]]:
     return parse_cdragon_augments(lists, augments)
 
 
+async def fetch_augment_stats(client: httpx.AsyncClient) -> Dict[str, Any]:
+    resp = await client.get(AUGMENT_STATS_URL, headers={"Referer": AUGMENT_STATS_REFERER})
+    resp.raise_for_status()
+    stats = parse_augment_stats(resp.json())
+    if not stats:
+        raise ValueError("返回里没有强化符文数据")
+    return stats
+
+
 def _err(e: Exception) -> str:
     # httpx 的连接错误 str() 常为空，退到底层原因
     detail = str(e) or repr(e.__cause__ or e.__context__ or "")
@@ -363,6 +409,7 @@ async def sync(data_dir: Path, item_map: Dict[str, Dict[str, Any]],
     sources: Dict[str, Dict[str, Any]] = dict(old.get("sources") or {})
     champions: Dict[str, Dict[str, Any]] = {k: dict(v) for k, v in (old.get("champions") or {}).items()}
     cdragon: Dict[str, Any] = dict(old.get("cdragon") or {})
+    augment_stats: Dict[str, Any] = dict(old.get("augment_stats") or {})
     item_names = {k: v.get("name", "") for k, v in item_map.items()}
     report: Dict[str, Any] = {}
     now = int(time.time())
@@ -404,6 +451,17 @@ async def sync(data_dir: Path, item_map: Dict[str, Dict[str, Any]],
         if "opgg" in wanted:
             await _sync_opgg(client, champions, sources, report, names, item_names, now)
 
+        # 4) 海斗强化符文的国服胜率 / 选取率（拉不到就用 data/augments.json 里的快照）
+        if "augment_stats" in wanted:
+            try:
+                augment_stats = await fetch_augment_stats(client)
+                n = len(augment_stats["augments"])
+                sources["augment_stats"] = {"synced_at": now, "date": augment_stats["date"], "count": n}
+                report["augment_stats"] = f"ok ({n} 个，统计日期 {augment_stats['date']})"
+            except Exception as e:
+                report["augment_stats"] = _err(e)
+                log.warning("强化符文统计拉取失败: %s", report["augment_stats"])
+
     payload = {
         "schema_version": SCHEMA_VERSION,
         "generated_at": now,  # 最近一次尝试的时间（是否过期按 sources 里各自的成功时间判断）
@@ -411,8 +469,9 @@ async def sync(data_dir: Path, item_map: Dict[str, Dict[str, Any]],
         "last_report": report,
         "cdragon": cdragon,
         "champions": champions,
+        "augment_stats": augment_stats,
     }
-    if champions or cdragon:
+    if champions or cdragon or augment_stats:
         await asyncio.to_thread(_write_atomic, meta_path(data_dir), payload)
     return report
 

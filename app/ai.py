@@ -11,6 +11,7 @@
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional
 
+from app import augments
 from app.advice import enemy_threats, moment_text
 from app.items import ItemDB
 from app.lcd_client import resolve_my_enemy_teams
@@ -20,7 +21,9 @@ HISTORY_ANSWER_CHARS = 1200
 PREVIOUS_ANSWER_CHARS = 400   # 深度分析带上上次的结论
 MAX_PRICE_ITEMS = 16
 
-SYSTEM_BASE = """你是英雄联盟「海克斯大乱斗」（ARAM: Mayhem）教练。
+SYSTEM_BASE = """你是英雄联盟大乱斗教练，玩家正在玩的模式见【模式】。
+地图是嚎哭深渊：只有一条路连着两边基地，路边有回血包；没有河道、野区、打野、小龙、大龙、峡谷先锋，也不能插眼。
+不要套用召唤师峡谷的打法（过河道、控龙、打野、换线、带线、做视野、回城补给），这些在大乱斗里都不存在。
 规则：
 - 大乱斗不能回城：只有开局在泉水、或阵亡后才能买装备，不要建议"回城"。
 - 数值只用【对局数据】里给出的：价格、属性、胜率、梯度、经济都以它为准；数据里没有的数字不要报，也不要凭记忆补。
@@ -60,7 +63,8 @@ TASK_DEEP_SELECT = """现在是选人阶段（看不到敌方），玩家要在�
 TASK_AUGMENT = """玩家正在强化符文三选一。只输出三行，每行不超过 30 字：
 1. 选哪个
 2. 为什么
-3. 拿了之后出装或打法要怎么调整"""
+3. 拿了之后出装或打法要怎么调整
+强化符文的效果以玩家消息里给的描述为准，不要凭记忆补效果；国服胜率是所有英雄的平均，要结合我的英雄和阵容判断。"""
 
 # 定位 → 知识库里对应的出装公式
 ROLE_RECIPES = {
@@ -80,6 +84,8 @@ class Deps:
     kb_specific_for: Callable[[str], Optional[Dict[str, Any]]]
     banned: Dict[str, str] = field(default_factory=dict)        # 禁用装备 → 替代
     alias: Dict[str, str] = field(default_factory=dict)         # 英雄 ID → 本名
+    augments: List[Dict[str, Any]] = field(default_factory=list)  # 强化符文池（含效果描述、国服统计）
+    augment_levels: List[int] = field(default_factory=lambda: [3, 7, 11, 15])
 
 
 # ---------------------------------------------------------------- 事实
@@ -92,9 +98,24 @@ def _champ(p: Dict[str, Any]) -> str:
     return p.get("champion") or p.get("champion_name") or "?"
 
 
+def is_mayhem(state: Dict[str, Any]) -> bool:
+    # 拿不到模式时按海斗算：这个工具主要给海斗用
+    return state.get("game_mode") in (None, "", "KIWI")
+
+
+def mode_line(state: Dict[str, Any], deps: Deps) -> str:
+    mode = state.get("game_mode")
+    if is_mayhem(state):
+        levels = "/".join(map(str, deps.augment_levels))
+        return f"【模式】海克斯大乱斗（海斗，ARAM: Mayhem），地图嚎哭深渊；升到 {levels} 级时强化符文三选一"
+    if mode == "ARAM":
+        return "【模式】极地大乱斗（普通大乱斗，没有强化符文），地图嚎哭深渊"
+    return f"【模式】{mode}（不是大乱斗，大乱斗的经验未必适用）"
+
+
 def build_facts(state: Dict[str, Any], deps: Deps) -> str:
     """【对局数据】：只放英雄名，不放召唤师名（不需要，也不该发给第三方）。"""
-    lines: List[str] = []
+    lines: List[str] = [mode_line(state, deps)]
     coach = state.get("my_coach") or {}
     phase = state.get("phase", "")
     me_name = coach.get("name") or state.get("my_champion_name") or "?"
@@ -279,6 +300,12 @@ def kb_slices(state: Dict[str, Any], deps: Deps, task: str) -> str:
             seq = " → ".join("/".join(r.get(k) or []) for k in ("first", "second", "third", "late") if r.get(k))
             lines.append(f"{rname}：{seq}。{r.get('note', '')}")
 
+    if task in ("ask", "deep_select", "augment") and is_mayhem(state):
+        best = augments.for_champion(deps.augments, state.get("my_champion_id"))
+        if best:
+            lines.append(f"国服数据里最适合{coach.get('name') or '我的英雄'}的强化符文（胜率从高到低）："
+                         + "、".join(f"{a['name']}（{a['stats']['win_rate'] * 100:.0f}%）" for a in best))
+
     if task in ("deep_select", "augment"):
         aug = kb.get("hextech_augments") or {}
         for group, label in (("prismatic_s_tier", "棱彩S级"), ("gold_key", "金色核心"), ("situational", "看情况")):
@@ -290,17 +317,24 @@ def kb_slices(state: Dict[str, Any], deps: Deps, task: str) -> str:
 
 # ---------------------------------------------------------------- 组装消息
 
-def _system(task_prompt: str, state: Dict[str, Any], deps: Deps, task: str) -> Dict[str, str]:
+def _system(task_prompt: str, state: Dict[str, Any], deps: Deps, task: str, extra: str = "") -> Dict[str, str]:
     kb = kb_slices(state, deps, task)
     content = f"{SYSTEM_BASE}\n\n任务：{task_prompt}\n\n【对局数据】\n{build_facts(state, deps)}"
     if kb:
         content += f"\n\n【知识库（本局相关）】\n{kb}"
+    if extra:
+        content += f"\n\n{extra}"
     return {"role": "system", "content": content}
 
 
 def ask_messages(state: Dict[str, Any], deps: Deps, question: str,
                  history: Optional[List[Dict[str, str]]] = None) -> List[Dict[str, str]]:
-    msgs = [_system(TASK_ASK, state, deps, "ask")]
+    # 问题（含追问前的几轮）里提到了哪个强化符文，就把它的效果和国服数据带上，免得模型凭记忆编
+    asked = " ".join([question] + [t.get("q") or "" for t in (history or [])[-HISTORY_TURNS:]])
+    hits = augments.mentioned(deps.augments, asked)
+    extra = ("【问题里提到的强化符文】\n" + "\n".join(f"- {augments.describe(a, deps.alias)}" for a in hits)
+             if hits else "")
+    msgs = [_system(TASK_ASK, state, deps, "ask", extra)]
     for turn in (history or [])[-HISTORY_TURNS:]:
         q, a = (turn.get("q") or "").strip(), (turn.get("a") or "").strip()
         if q and a:
@@ -351,8 +385,15 @@ def deep_messages(state: Dict[str, Any], deps: Deps,
 
 def augment_messages(state: Dict[str, Any], deps: Deps, options: List[str],
                      ranking: List[Dict[str, Any]]) -> List[Dict[str, str]]:
-    known = "\n".join(f"- {r['name']}：{'；'.join(r.get('reasons') or []) or '知识库无数据'}" for r in ranking)
+    by_name = {a["name"]: a for a in deps.augments}
+    lines = []
+    for r in ranking:
+        a = by_name.get(r["name"])
+        lines.append(f"- {augments.describe(a, deps.alias)}" if a
+                     else f"- {r['name']}：不在海斗强化符文池里（可能名字没认对），没有效果描述")
+        if r.get("reasons"):
+            lines.append(f"  本地评分 {r['score']}：{'；'.join(r['reasons'])}")
     return [
         _system(TASK_AUGMENT, state, deps, "augment"),
-        {"role": "user", "content": f"三个选项：{' / '.join(options)}\n本地知识库的参考：\n{known}"},
+        {"role": "user", "content": f"三个选项：{' / '.join(options)}\n效果和数据：\n" + "\n".join(lines)},
     ]
